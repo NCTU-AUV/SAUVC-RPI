@@ -1,0 +1,3 @@
+[submodule "ros_workspace/src/rosserial"]
+	path = ros_workspace/src/rosserial
+	url = git@github.com:ros-drivers/rosserial.git
