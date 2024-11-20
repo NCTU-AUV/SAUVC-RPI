@@ -1,0 +1,2 @@
+
+-DCATKIN_DEVEL_PREFIX=/SAUVC2024-RPI/ros_workspace/devel -DCMAKE_INSTALL_PREFIX=/SAUVC2024-RPI/ros_workspace/install -G Unix Makefiles

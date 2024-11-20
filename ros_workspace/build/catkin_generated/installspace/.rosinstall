@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /SAUVC2024-RPI/ros_workspace/install/setup.sh
