@@ -2,6 +2,10 @@
 
 This repository should contain all the codes that need to be run on the Raspberry PI of the Orca-AUV.
 
+## use-ros2
+
+This branch is intended to be developed alongside [SAUVC2024_STM32/start_over_attempt](https://github.com/NCTU-AUV/SAUVC2024_STM32/tree/start_over_attempt).
+
 ## Test ROS2 in docker
 
 1. Follow: [Getting started with ROS and Docker](https://wiki.ros.org/docker/Tutorials/Docker)
