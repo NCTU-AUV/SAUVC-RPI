@@ -1,0 +1,13 @@
+# Target labels
+ uagent
+# Source files and their labels
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-build/CMakeFiles/uagent
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-build/CMakeFiles/uagent.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-build/CMakeFiles/uagent-complete.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-build/uagent-prefix/src/uagent-stamp/uagent-build.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-build/uagent-prefix/src/uagent-stamp/uagent-configure.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-build/uagent-prefix/src/uagent-stamp/uagent-download.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-build/uagent-prefix/src/uagent-stamp/uagent-install.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-build/uagent-prefix/src/uagent-stamp/uagent-mkdir.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-build/uagent-prefix/src/uagent-stamp/uagent-patch.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-build/uagent-prefix/src/uagent-stamp/uagent-update.rule

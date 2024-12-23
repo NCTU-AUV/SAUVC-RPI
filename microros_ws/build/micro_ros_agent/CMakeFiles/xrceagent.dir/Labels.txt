@@ -1,0 +1,13 @@
+# Target labels
+ xrceagent
+# Source files and their labels
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/CMakeFiles/xrceagent
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/CMakeFiles/xrceagent.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/CMakeFiles/xrceagent-complete.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-stamp/xrceagent-build.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-stamp/xrceagent-configure.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-stamp/xrceagent-download.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-stamp/xrceagent-install.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-stamp/xrceagent-mkdir.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-stamp/xrceagent-patch.rule
+/SAUVC2024-RPI/microros_ws/build/micro_ros_agent/agent/src/xrceagent-stamp/xrceagent-update.rule

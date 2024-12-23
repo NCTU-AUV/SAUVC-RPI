@@ -1,0 +1,231 @@
+[0.000000] (-) TimerEvent: {}
+[0.000425] (micro_ros_setup) JobQueued: {'identifier': 'micro_ros_setup', 'dependencies': OrderedDict()}
+[0.003651] (micro_ros_setup) JobStarted: {'identifier': 'micro_ros_setup'}
+[0.022467] (micro_ros_setup) JobProgress: {'identifier': 'micro_ros_setup', 'progress': 'cmake'}
+[0.023667] (micro_ros_setup) Command: {'cmd': ['/usr/bin/cmake', '/SAUVC2024-RPI/microros_ws/src/micro_ros_setup', '-DCMAKE_INSTALL_PREFIX=/SAUVC2024-RPI/microros_ws/install/micro_ros_setup'], 'cwd': '/SAUVC2024-RPI/microros_ws/build/micro_ros_setup', 'env': OrderedDict([('HOSTNAME', 'docker-desktop'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/SAUVC2024-RPI'), ('ROS_PYTHON_VERSION', '3'), ('COLCON_PREFIX_PATH', '/SAUVC2024-RPI/microros_ws/install'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('LANG', 'C.UTF-8'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/SAUVC2024-RPI/microros_ws/install/micro_ros_setup:/opt/ros/humble'), ('PWD', '/SAUVC2024-RPI/microros_ws/build/micro_ros_setup'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/SAUVC2024-RPI/microros_ws/install/micro_ros_setup:/opt/ros/humble')]), 'shell': False}
+[0.100766] (-) TimerEvent: {}
+[0.129637] (micro_ros_setup) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[0.201553] (-) TimerEvent: {}
+[0.222531] (micro_ros_setup) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[0.234718] (micro_ros_setup) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.302540] (-) TimerEvent: {}
+[0.342547] (micro_ros_setup) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.360757] (micro_ros_setup) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[0.361351] (micro_ros_setup) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.362171] (micro_ros_setup) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.368302] (micro_ros_setup) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.403610] (-) TimerEvent: {}
+[0.497377] (micro_ros_setup) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.504553] (-) TimerEvent: {}
+[0.516877] (micro_ros_setup) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.517955] (micro_ros_setup) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.518887] (micro_ros_setup) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.522417] (micro_ros_setup) StdoutLine: {'line': b'-- Found ament_cmake: 1.3.10 (/opt/ros/humble/share/ament_cmake/cmake)\n'}
+[0.605411] (-) TimerEvent: {}
+[0.706609] (-) TimerEvent: {}
+[0.733116] (micro_ros_setup) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[0.807394] (-) TimerEvent: {}
+[0.867651] (micro_ros_setup) StdoutLine: {'line': b'-- Found ament_lint_auto: 0.12.11 (/opt/ros/humble/share/ament_lint_auto/cmake)\n'}
+[0.908469] (-) TimerEvent: {}
+[0.990855] (micro_ros_setup) StdoutLine: {'line': b"-- Added test 'copyright' to check source files copyright and LICENSE\n"}
+[1.009530] (-) TimerEvent: {}
+[1.020092] (micro_ros_setup) StdoutLine: {'line': b"-- Added test 'flake8' to check Python code syntax and style conventions\n"}
+[1.024457] (micro_ros_setup) StdoutLine: {'line': b"-- Added test 'lint_cmake' to check CMake code style\n"}
+[1.026974] (micro_ros_setup) StdoutLine: {'line': b"-- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257\n"}
+[1.042792] (micro_ros_setup) StdoutLine: {'line': b"-- Added test 'xmllint' to check XML markup files\n"}
+[1.045459] (micro_ros_setup) StdoutLine: {'line': b'-- Configuring done\n'}
+[1.050989] (micro_ros_setup) StdoutLine: {'line': b'-- Generating done\n'}
+[1.053125] (micro_ros_setup) StdoutLine: {'line': b'-- Build files have been written to: /SAUVC2024-RPI/microros_ws/build/micro_ros_setup\n'}
+[1.060983] (micro_ros_setup) CommandEnded: {'returncode': 0}
+[1.064340] (micro_ros_setup) JobProgress: {'identifier': 'micro_ros_setup', 'progress': 'build'}
+[1.064486] (micro_ros_setup) Command: {'cmd': ['/usr/bin/cmake', '--build', '/SAUVC2024-RPI/microros_ws/build/micro_ros_setup', '--', '-j4', '-l4'], 'cwd': '/SAUVC2024-RPI/microros_ws/build/micro_ros_setup', 'env': OrderedDict([('HOSTNAME', 'docker-desktop'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/SAUVC2024-RPI'), ('ROS_PYTHON_VERSION', '3'), ('COLCON_PREFIX_PATH', '/SAUVC2024-RPI/microros_ws/install'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('LANG', 'C.UTF-8'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/SAUVC2024-RPI/microros_ws/install/micro_ros_setup:/opt/ros/humble'), ('PWD', '/SAUVC2024-RPI/microros_ws/build/micro_ros_setup'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/SAUVC2024-RPI/microros_ws/install/micro_ros_setup:/opt/ros/humble')]), 'shell': False}
+[1.110492] (-) TimerEvent: {}
+[1.121711] (micro_ros_setup) CommandEnded: {'returncode': 0}
+[1.164714] (micro_ros_setup) JobProgress: {'identifier': 'micro_ros_setup', 'progress': 'install'}
+[1.178289] (micro_ros_setup) Command: {'cmd': ['/usr/bin/cmake', '--install', '/SAUVC2024-RPI/microros_ws/build/micro_ros_setup'], 'cwd': '/SAUVC2024-RPI/microros_ws/build/micro_ros_setup', 'env': OrderedDict([('HOSTNAME', 'docker-desktop'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/SAUVC2024-RPI'), ('ROS_PYTHON_VERSION', '3'), ('COLCON_PREFIX_PATH', '/SAUVC2024-RPI/microros_ws/install'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('LANG', 'C.UTF-8'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/SAUVC2024-RPI/microros_ws/install/micro_ros_setup:/opt/ros/humble'), ('PWD', '/SAUVC2024-RPI/microros_ws/build/micro_ros_setup'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/SAUVC2024-RPI/microros_ws/install/micro_ros_setup:/opt/ros/humble')]), 'shell': False}
+[1.188463] (micro_ros_setup) StdoutLine: {'line': b'-- Install configuration: ""\n'}
+[1.189004] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/ament_index/resource_index/package_run_dependencies/micro_ros_setup\n'}
+[1.189573] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/ament_index/resource_index/parent_prefix_path/micro_ros_setup\n'}
+[1.190254] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/micro_ros_setup/environment/ament_prefix_path.sh\n'}
+[1.190637] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/micro_ros_setup/environment/ament_prefix_path.dsv\n'}
+[1.191343] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/micro_ros_setup/environment/path.sh\n'}
+[1.191607] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/micro_ros_setup/environment/path.dsv\n'}
+[1.192007] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/micro_ros_setup/local_setup.bash\n'}
+[1.192698] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/micro_ros_setup/local_setup.sh\n'}
+[1.193072] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/micro_ros_setup/local_setup.zsh\n'}
+[1.193736] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/micro_ros_setup/local_setup.dsv\n'}
+[1.194147] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/micro_ros_setup/package.dsv\n'}
+[1.194839] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/ament_index/resource_index/packages/micro_ros_setup\n'}
+[1.195483] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/micro_ros_setup/cmake/micro_ros_setupConfig.cmake\n'}
+[1.195944] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/micro_ros_setup/cmake/micro_ros_setupConfig-version.cmake\n'}
+[1.196723] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/share/micro_ros_setup/package.xml\n'}
+[1.196955] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config\n'}
+[1.197588] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/renesas_ra\n'}
+[1.197819] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/renesas_ra/dev_uros_packages.repos\n'}
+[1.198219] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/renesas_ra/list_apps.sh\n'}
+[1.199094] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/renesas_ra/dev_ros2_packages.txt\n'}
+[1.199673] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/renesas_ra/ra6m5\n'}
+[1.199923] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/renesas_ra/ra6m5/build.sh\n'}
+[1.200544] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/renesas_ra/ra6m5/board.repos\n'}
+[1.200711] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/renesas_ra/ra6m5/client-colcon.meta\n'}
+[1.201089] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/renesas_ra/ra6m5/create.sh\n'}
+[1.201569] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/renesas_ra/ra6m5/flash.sh\n'}
+[1.201784] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/renesas_ra/ra6m5/configure.sh\n'}
+[1.202021] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/renesas_ra/ra6m5/client_uros_packages.repos\n'}
+[1.202331] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/mbed\n'}
+[1.202998] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/mbed/dev_uros_packages.repos\n'}
+[1.203546] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/mbed/list_apps.sh\n'}
+[1.203974] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/mbed/generic\n'}
+[1.204365] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/mbed/generic/supported_platforms\n'}
+[1.204850] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/mbed/generic/build.sh\n'}
+[1.205058] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/mbed/generic/board.repos\n'}
+[1.205462] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/mbed/generic/create.sh\n'}
+[1.206042] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/mbed/generic/flash.sh\n'}
+[1.206420] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/mbed/generic/package.xml\n'}
+[1.206650] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/mbed/generic/client_uros_packages.repos\n'}
+[1.207094] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/mbed/dev_ros2_packages.txt\n'}
+[1.207678] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/raspbian\n'}
+[1.208149] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/raspbian/dev_uros_packages.repos\n'}
+[1.209077] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/raspbian/generic\n'}
+[1.209672] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/raspbian/generic/supported_platforms\n'}
+[1.210092] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/raspbian/generic/build.sh\n'}
+[1.210492] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/raspbian/generic/client-colcon.meta\n'}
+[1.211489] (-) TimerEvent: {}
+[1.212104] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/raspbian/generic/create.sh\n'}
+[1.212569] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/raspbian/generic/flash.sh\n'}
+[1.212922] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/raspbian/generic/configure.sh\n'}
+[1.213185] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/raspbian/generic/client_uros_packages.repos\n'}
+[1.213476] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/raspbian/dev_ros2_packages.txt\n'}
+[1.213832] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/generate_lib\n'}
+[1.214042] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/generate_lib/dev_uros_packages.repos\n'}
+[1.214173] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/generate_lib/generic\n'}
+[1.214534] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/generate_lib/generic/build.sh\n'}
+[1.215021] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/generate_lib/generic/client-colcon.meta\n'}
+[1.215571] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/generate_lib/generic/create.sh\n'}
+[1.215838] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/generate_lib/generic/flash.sh\n'}
+[1.216139] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/generate_lib/generic/demo_toolchain.cmake\n'}
+[1.216680] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/generate_lib/generic/package.xml\n'}
+[1.216958] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/generate_lib/generic/client_uros_packages.repos\n'}
+[1.217445] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/generate_lib/dev_ros2_packages.txt\n'}
+[1.217750] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr\n'}
+[1.218047] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/dev_uros_packages.repos\n'}
+[1.218408] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/list_apps.sh\n'}
+[1.218611] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/generic\n'}
+[1.219166] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/generic/supported_platforms\n'}
+[1.219595] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/generic/build.sh\n'}
+[1.219764] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/generic/board.repos\n'}
+[1.220086] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/generic/client-colcon.meta\n'}
+[1.220553] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/generic/create.sh\n'}
+[1.221009] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/generic/flash.sh\n'}
+[1.221263] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/generic/configure.sh\n'}
+[1.221655] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/generic/package.xml\n'}
+[1.222022] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/generic/client_uros_packages.repos\n'}
+[1.222562] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/zephyr/dev_ros2_packages.txt\n'}
+[1.222783] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/utils.sh\n'}
+[1.223104] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/host\n'}
+[1.223531] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/host/dev_uros_packages.repos\n'}
+[1.224042] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/host/generic\n'}
+[1.224333] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/host/generic/build.sh\n'}
+[1.224829] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/host/generic/create.sh\n'}
+[1.225101] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/host/generic/client-host-colcon.meta\n'}
+[1.225494] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/host/generic/flash.sh\n'}
+[1.226026] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/host/generic/client_host_packages.repos\n'}
+[1.226506] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/host/generic/package.xml\n'}
+[1.226814] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/host/dev_ros2_packages.txt\n'}
+[1.227296] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/host/client_ros2_packages.txt\n'}
+[1.227487] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/android\n'}
+[1.227722] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/android/dev_uros_packages.repos\n'}
+[1.228063] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/android/generic\n'}
+[1.228743] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/android/generic/build.sh\n'}
+[1.229148] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/android/generic/client-colcon.meta\n'}
+[1.229723] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/android/generic/create.sh\n'}
+[1.229891] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/android/generic/flash.sh\n'}
+[1.230211] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/android/generic/package.xml\n'}
+[1.230557] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/android/generic/client_uros_packages.repos\n'}
+[1.230844] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/android/dev_ros2_packages.txt\n'}
+[1.231041] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/agent_uros_packages.repos\n'}
+[1.231595] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/agent_ros2_packages.txt\n'}
+[1.231946] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos\n'}
+[1.232412] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/esp32\n'}
+[1.232867] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/esp32/build.sh\n'}
+[1.233201] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/esp32/board.repos\n'}
+[1.233770] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/esp32/client-colcon.meta\n'}
+[1.234327] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/esp32/README.md\n'}
+[1.234841] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/esp32/create.sh\n'}
+[1.235603] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/esp32/flash.sh\n'}
+[1.235880] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/esp32/configure.sh\n'}
+[1.236170] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/esp32/package.xml\n'}
+[1.236470] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/esp32/client_uros_packages.repos\n'}
+[1.236711] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/dev_uros_packages.repos\n'}
+[1.236902] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/olimex-stm32-e407\n'}
+[1.237494] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/olimex-stm32-e407/build.sh\n'}
+[1.237752] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/olimex-stm32-e407/board.repos\n'}
+[1.238405] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/olimex-stm32-e407/client-colcon.meta\n'}
+[1.238769] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/olimex-stm32-e407/create.sh\n'}
+[1.239319] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/olimex-stm32-e407/flash.sh\n'}
+[1.239549] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/olimex-stm32-e407/configure.sh\n'}
+[1.239888] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/olimex-stm32-e407/package.xml\n'}
+[1.240346] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/olimex-stm32-e407/client_uros_packages.repos\n'}
+[1.240879] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446re\n'}
+[1.241198] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446re/build.sh\n'}
+[1.241836] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446re/board.repos\n'}
+[1.242065] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446re/client-colcon.meta\n'}
+[1.242700] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446re/create.sh\n'}
+[1.243085] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446re/flash.sh\n'}
+[1.243583] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446re/configure.sh\n'}
+[1.243767] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446re/package.xml\n'}
+[1.244013] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446re/client_uros_packages.repos\n'}
+[1.244640] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/crazyflie21\n'}
+[1.245036] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/crazyflie21/build.sh\n'}
+[1.245432] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/crazyflie21/board.repos\n'}
+[1.245591] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/crazyflie21/client-colcon.meta\n'}
+[1.246017] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/crazyflie21/create.sh\n'}
+[1.246243] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/crazyflie21/flash.sh\n'}
+[1.246547] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/crazyflie21/configure.sh\n'}
+[1.246677] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/crazyflie21/package.xml\n'}
+[1.247056] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/crazyflie21/client_uros_packages.repos\n'}
+[1.247867] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/list_apps.sh\n'}
+[1.248510] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446ze\n'}
+[1.249059] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446ze/build.sh\n'}
+[1.249522] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446ze/board.repos\n'}
+[1.250044] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446ze/client-colcon.meta\n'}
+[1.250361] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446ze/create.sh\n'}
+[1.250585] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446ze/flash.sh\n'}
+[1.250716] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446ze/configure.sh\n'}
+[1.250838] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446ze/package.xml\n'}
+[1.250954] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f446ze/client_uros_packages.repos\n'}
+[1.251074] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f746zg\n'}
+[1.251188] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f746zg/build.sh\n'}
+[1.251543] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f746zg/board.repos\n'}
+[1.252692] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f746zg/client-colcon.meta\n'}
+[1.253097] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f746zg/create.sh\n'}
+[1.253519] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f746zg/flash.sh\n'}
+[1.253837] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f746zg/configure.sh\n'}
+[1.254159] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f746zg/package.xml\n'}
+[1.255002] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f746zg/client_uros_packages.repos\n'}
+[1.256281] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f767zi\n'}
+[1.257535] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f767zi/build.sh\n'}
+[1.258012] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f767zi/board.repos\n'}
+[1.261592] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f767zi/client-colcon.meta\n'}
+[1.261889] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f767zi/create.sh\n'}
+[1.262113] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f767zi/flash.sh\n'}
+[1.262555] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f767zi/configure.sh\n'}
+[1.262799] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f767zi/package.xml\n'}
+[1.263364] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/nucleo_f767zi/client_uros_packages.repos\n'}
+[1.263635] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/freertos/dev_ros2_packages.txt\n'}
+[1.263834] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/client_ros2_packages.txt\n'}
+[1.264046] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/./config/client_uros_packages.repos\n'}
+[1.264439] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/lib/micro_ros_setup/create_ws.sh\n'}
+[1.264635] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/lib/micro_ros_setup/create_agent_ws.sh\n'}
+[1.264840] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/lib/micro_ros_setup/create_firmware_ws.sh\n'}
+[1.265101] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/lib/micro_ros_setup/configure_firmware.sh\n'}
+[1.265993] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/lib/micro_ros_setup/flash_firmware.sh\n'}
+[1.266823] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/lib/micro_ros_setup/build_firmware.sh\n'}
+[1.267090] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/lib/micro_ros_setup/build_agent.sh\n'}
+[1.267632] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/lib/micro_ros_setup/yaml_filter.py\n'}
+[1.267829] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/lib/micro_ros_setup/clean_env.sh\n'}
+[1.268408] (micro_ros_setup) StdoutLine: {'line': b'-- Installing: /SAUVC2024-RPI/microros_ws/install/micro_ros_setup/lib/micro_ros_setup/component\n'}
+[1.268611] (micro_ros_setup) CommandEnded: {'returncode': 0}
+[1.313396] (-) TimerEvent: {}
+[1.346009] (micro_ros_setup) JobEnded: {'identifier': 'micro_ros_setup', 'rc': 0}
+[1.347410] (-) EventReactorShutdown: {}
