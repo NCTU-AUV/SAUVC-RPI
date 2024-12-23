@@ -15,6 +15,7 @@ else
   --name $CONTAINER_NAME \
   ros:humble \
   bash -c "
+      source /opt/ros/\$ROS_DISTRO/setup.bash
       echo 'Updating dependencies...';
       sudo apt update && rosdep update && \
       rosdep install --from-paths src --ignore-src -y && \
