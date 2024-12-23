@@ -1,5 +1,7 @@
 #!/bin/bash
 
+git submodule update --init --recursive
+
 # Following instructions from: https://micro.ros.org/docs/tutorials/core/first_application_rtos/freertos/
 
 CONTAINER_NAME="orca-auv-ros2-container"
