@@ -4,7 +4,7 @@ CONTAINER_NAME := orca-auv-ros2-container
 WORKSPACE := orca_auv_ros2_ws
 DOCKER_IMAGE := ros:$(ROS_DISTRO)
 
-.PHONY: all build_container run_container exec_container clean
+.PHONY: all build_container run_container exec_container clean flash_stm32 reset_stm32
 
 all: build_container
 
@@ -49,3 +49,11 @@ exec_container:
 clean:
 	docker rm -f $(CONTAINER_NAME) || true
 	rm -rf $(WORKSPACE)/build $(WORKSPACE)/install $(WORKSPACE)/log
+
+flash_stm32:
+	git submodule sync SAUVC2024_STM32
+	git submodule update --init SAUVC2024_STM32
+	st-flash --reset write SAUVC2024_STM32/build/SAUVC2022.bin 0x08000000
+
+reset_stm32:
+	st-flash reset
