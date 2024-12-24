@@ -1,7 +1,12 @@
 #!/bin/bash
 
+ROS_DISTRO=humble
+
 git submodule sync
 git submodule update --init --recursive
+cd orca_auv_ros2_ws/src/micro_ros_setup
+git checkout $ROS_DISTRO
+cd ../../..
 
 # Following instructions from: https://github.com/micro-ROS/micro_ros_setup
 
@@ -14,7 +19,7 @@ docker run -it \
     -v /$PWD/orca_auv_ros2_ws:/orca_auv_ros2_ws \
     --privileged \
     --name $CONTAINER_NAME \
-    ros:humble \
+    ros:$ROS_DISTRO \
     bash -c "
         source /opt/ros/\$ROS_DISTRO/setup.bash && \
         cd orca_auv_ros2_ws && \
