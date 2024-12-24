@@ -4,16 +4,13 @@ CONTAINER_NAME := orca-auv-ros2-container
 WORKSPACE := orca_auv_ros2_ws
 DOCKER_IMAGE := ros:$(ROS_DISTRO)
 
-.PHONY: all setup build_container run_container exec_container clean
+.PHONY: all build_container run_container exec_container clean
 
-all: setup build_container
-
-setup:
-	git submodule sync
-	git submodule update --init --recursive
-	cd $(WORKSPACE)/src/micro_ros_setup && git checkout $(ROS_DISTRO)
+all: build_container
 
 build_container:
+	git submodule sync orca_auv_ros2_ws/src/micro_ros_setup
+	git submodule update --init orca_auv_ros2_ws/src/micro_ros_setup
 	@echo "Creating and starting a new container: $(CONTAINER_NAME)"
 	docker run -dit \
 	    --net=host \
