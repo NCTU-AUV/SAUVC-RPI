@@ -10,13 +10,13 @@ echo "Creating and starting a new container: $CONTAINER_NAME"
 docker run -it \
     --net=host \
     -v /dev:/dev \
-    -v /$PWD/microros_ws:/microros_ws \
+    -v /$PWD/orca_auv_ros2_ws:/orca_auv_ros2_ws \
     --privileged \
     --name $CONTAINER_NAME \
     ros:humble \
     bash -c "
         source /opt/ros/\$ROS_DISTRO/setup.bash && \
-        cd microros_ws && \
+        cd orca_auv_ros2_ws && \
         echo 'Updating dependencies...';
         sudo apt update && rosdep update && \
         rosdep install --from-paths src --ignore-src -y && \
