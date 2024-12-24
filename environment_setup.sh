@@ -1,5 +1,6 @@
 #!/bin/bash
 
+git submodule sync
 git submodule update --init --recursive
 
 # Following instructions from: https://github.com/micro-ROS/micro_ros_setup
