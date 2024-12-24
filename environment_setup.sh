@@ -2,7 +2,7 @@
 
 git submodule update --init --recursive
 
-# Following instructions from: https://micro.ros.org/docs/tutorials/core/first_application_rtos/freertos/
+# Following instructions from: https://github.com/micro-ROS/micro_ros_setup
 
 CONTAINER_NAME="orca-auv-ros2-container"
 
@@ -26,6 +26,9 @@ docker run -it \
         colcon build && \
         echo 'Sourcing setup...' && \
         source install/local_setup.bash && \
+        ros2 run micro_ros_setup create_agent_ws.sh && \
+        ros2 run micro_ros_setup build_agent.sh && \
+        source install/local_setup.sh && \
         echo 'Setup complete. Starting container shell.';
         exec bash
     "
