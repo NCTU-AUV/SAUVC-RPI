@@ -2,7 +2,7 @@
 ROS_DISTRO := humble
 CONTAINER_NAME := orca-auv-ros2-container
 WORKSPACE := orca_auv_ros2_ws
-DOCKER_IMAGE := ros:$(ROS_DISTRO)
+DOCKER_IMAGE := ros:$(ROS_DISTRO)-ros-core
 
 .PHONY: all build_container run_container exec_container clean flash_stm32 reset_stm32
 
