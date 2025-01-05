@@ -31,7 +31,7 @@ build_container:
 	    rosdep install --from-paths src --ignore-src -y && \
 	    echo 'Installing pip...' && \
 	    apt-get install -y python3-pip && \
-	    echo 'Building micro-ROS tools...' && \
+	    apt install -y python3-colcon-common-extensions && \
 	    colcon build && \
 	    echo 'Sourcing setup...' && \
 	    source install/local_setup.bash && \
