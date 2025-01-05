@@ -14,7 +14,7 @@ build_container:
 	git submodule update --init orca_auv_ros2_ws/src/micro_ros_setup
 	docker build -t $(IMAGE_NAME) .
 	@echo "Creating and starting a new container: $(CONTAINER_NAME)"
-	docker run -it $(DOCKER_IMAGE)
+	docker run -it --name $(CONTAINER_NAME) $(DOCKER_IMAGE)
 
 run_container:
 	@echo "Starting existing container: $(CONTAINER_NAME)"
