@@ -1,7 +1,7 @@
 FROM ubuntu:22.04
 
 RUN locale  # check for UTF-8
-RUN apt update --allow-unauthenticated && apt install locales
+RUN apt update && apt install locales
 RUN locale-gen en_US en_US.UTF-8
 RUN update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 ENV LANG=en_US.UTF-8
