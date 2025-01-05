@@ -32,3 +32,5 @@ ENV DEBIAN_FRONTEND=dialog
 RUN apt install -y ros-dev-tools
 
 RUN echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc
+
+CMD ["/bin/bash"]
