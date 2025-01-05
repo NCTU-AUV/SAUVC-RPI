@@ -24,8 +24,10 @@ build_container:
 	docker exec -it $(CONTAINER_NAME) bash -c "\
 	    source /opt/ros/$(ROS_DISTRO)/setup.bash && \
 	    cd /$(WORKSPACE) && \
-	    echo 'Updating dependencies...' && \
-	    apt update && rosdep update && \
+	    apt update && \
+	    apt-get install -y python3-rosdep && \
+	    rosdep init && \
+	    rosdep update && \
 	    rosdep install --from-paths src --ignore-src -y && \
 	    echo 'Installing pip...' && \
 	    apt-get install -y python3-pip && \
