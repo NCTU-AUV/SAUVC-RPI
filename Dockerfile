@@ -10,9 +10,9 @@ ENV LANG=en_US.UTF-8
 
 RUN locale  # verify settings
 
-RUN apt update && \
-    apt install -y software-properties-common && \
-    add-apt-repository universe
+RUN apt update
+RUN apt install -y software-properties-common
+RUN add-apt-repository universe
 
 RUN apt update && apt install curl -y && \
     curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
