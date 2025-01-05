@@ -10,5 +10,6 @@ ENV LANG=en_US.UTF-8
 
 RUN locale  # verify settings
 
-RUN apt install software-properties-common && \
+RUN apt update && \
+    apt install software-properties-common && \
     add-apt-repository universe
