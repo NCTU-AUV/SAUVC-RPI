@@ -22,3 +22,11 @@ RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/r
 RUN apt update
 
 RUN apt upgrade
+
+# Set environment variable to prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt install -y ros-humble-ros-base
+# Reset DEBIAN_FRONTEND to avoid issues with interactive shells later
+ENV DEBIAN_FRONTEND=dialog
+
+RUN apt install -y ros-dev-tools
