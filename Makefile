@@ -12,7 +12,6 @@ all: build_container
 build_container:
 	git submodule sync orca_auv_ros2_ws/src/micro_ros_setup
 	git submodule update --init orca_auv_ros2_ws/src/micro_ros_setup
-	docker pull ubuntu:22.04
 	docker build -t $(IMAGE_NAME) .
 	@echo "Creating and starting a new container: $(CONTAINER_NAME)"
 	docker run -it --name $(CONTAINER_NAME) $(DOCKER_IMAGE)

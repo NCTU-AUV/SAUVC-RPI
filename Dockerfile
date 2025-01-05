@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:latest
 
 RUN locale  # check for UTF-8
 RUN apt update && apt install locales
