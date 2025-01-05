@@ -25,10 +25,10 @@ build_container:
 	    source /opt/ros/$(ROS_DISTRO)/setup.bash && \
 	    cd /$(WORKSPACE) && \
 	    echo 'Updating dependencies...' && \
-	    sudo apt update && rosdep update && \
+	    apt update && rosdep update && \
 	    rosdep install --from-paths src --ignore-src -y && \
 	    echo 'Installing pip...' && \
-	    sudo apt-get install -y python3-pip && \
+	    apt-get install -y python3-pip && \
 	    echo 'Building micro-ROS tools...' && \
 	    colcon build && \
 	    echo 'Sourcing setup...' && \
