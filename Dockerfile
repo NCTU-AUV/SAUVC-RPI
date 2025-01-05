@@ -10,7 +10,7 @@ ENV LANG=en_US.UTF-8
 
 RUN locale  # verify settings
 
-RUN apt update
+RUN apt update --allow-unauthenticated
 RUN apt install -y software-properties-common
 RUN add-apt-repository universe
 
