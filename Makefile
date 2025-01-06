@@ -2,6 +2,7 @@
 IMAGE_NAME := orca-auv-ros2-image
 CONTAINER_NAME := orca-auv-ros2-container
 WORKSPACE := orca_auv_ros2_ws
+IMAGE_OWNER_NAME := dianyueguo
 
 .PHONY: all build_container run_container exec_container update_image clean flash_stm32 reset_stm32
 
@@ -15,7 +16,7 @@ build_container:
 	    -v $(PWD)/$(WORKSPACE):/$(WORKSPACE) \
 	    --privileged \
 	    --name $(CONTAINER_NAME) \
-	    dianyueguo/$(IMAGE_NAME):latest
+	    $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest
 
 run_container:
 	@echo "Starting existing container: $(CONTAINER_NAME)"
@@ -26,7 +27,7 @@ exec_container:
 	docker exec -it $(CONTAINER_NAME) bash
 
 update_image:
-	docker buildx build --platform=linux/arm64,linux/arm/v7 -t dianyueguo/$(IMAGE_NAME):latest . --push
+	docker buildx build --platform=linux/arm64,linux/arm/v7 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
 
 clean:
 	docker rm -f $(CONTAINER_NAME) || true
