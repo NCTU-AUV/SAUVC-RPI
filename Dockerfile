@@ -1,5 +1,7 @@
 FROM ubuntu:22.04
 
+ENV ROS_DISTRO=humble
+
 RUN locale  # check for UTF-8
 RUN apt-get update && apt-get install locales
 RUN locale-gen en_US en_US.UTF-8
