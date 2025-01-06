@@ -6,7 +6,7 @@ IMAGE_OWNER_NAME := dianyueguo
 
 .PHONY: all build_container start_container stop_container enter_container update_image clean flash_stm32 reset_stm32
 
-all: build_container
+all: build_container enter_container
 
 build_container:
 	@echo "Creating and starting a new container: $(CONTAINER_NAME)"
