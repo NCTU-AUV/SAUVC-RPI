@@ -4,7 +4,7 @@ CONTAINER_NAME := orca-auv-ros2-container
 WORKSPACE := orca_auv_ros2_ws
 IMAGE_OWNER_NAME := dianyueguo
 
-.PHONY: all build_container run_container start_container update_image clean flash_stm32 reset_stm32
+.PHONY: all build_container start_container exec_container update_image clean flash_stm32 reset_stm32
 
 all: build_container
 
