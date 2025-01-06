@@ -10,7 +10,7 @@ all: build_container
 
 build_container:
 	@echo "Creating and starting a new container: $(CONTAINER_NAME)"
-	docker run \
+	docker run -dit \
 	    --net=host \
 	    -v /dev:/dev \
 	    -v $(PWD)/$(WORKSPACE):/$(WORKSPACE) \
