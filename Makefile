@@ -13,7 +13,7 @@ build_container:
 	docker run -dit \
 	    --net=host \
 	    -v /dev:/dev \
-	    -v $(PWD)/$(WORKSPACE):~/$(WORKSPACE) \
+	    -v $(PWD)/$(WORKSPACE):/root/$(WORKSPACE) \
 	    --privileged \
 	    --name $(CONTAINER_NAME) \
 	    $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest
