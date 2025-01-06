@@ -3,7 +3,7 @@ IMAGE_NAME := orca-auv-ros2-image
 CONTAINER_NAME := orca-auv-ros2-container
 WORKSPACE := orca_auv_ros2_ws
 
-.PHONY: all build_container run_container exec_container clean flash_stm32 reset_stm32
+.PHONY: all build_container run_container exec_container update_image clean flash_stm32 reset_stm32
 
 all: build_container
 
@@ -28,6 +28,9 @@ run_container:
 exec_container:
 	@echo "Executing a shell inside container: $(CONTAINER_NAME)"
 	docker exec -it $(CONTAINER_NAME) bash
+
+update_image:
+	docker buildx build --platform=linux/arm64,linux/arm/v7 -t dianyueguo/$(IMAGE_NAME):latest . --push
 
 clean:
 	docker rm -f $(CONTAINER_NAME) || true
