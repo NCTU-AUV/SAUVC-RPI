@@ -14,7 +14,30 @@ build_container:
 	git submodule update --init orca_auv_ros2_ws/src/micro_ros_setup
 	docker build -t $(IMAGE_NAME) .
 	@echo "Creating and starting a new container: $(CONTAINER_NAME)"
-	docker run -it --name $(CONTAINER_NAME) $(IMAGE_NAME)
+	docker run -dit \
+	    --net=host \
+	    -v /dev:/dev \
+	    -v $(PWD)/$(WORKSPACE):/$(WORKSPACE) \
+	    --privileged \
+	    --name $(CONTAINER_NAME) \
+	    $(IMAGE_NAME) \
+	    bash
+	@echo "Initializing container: $(CONTAINER_NAME)"
+	docker exec -it $(CONTAINER_NAME) bash -c "\
+	    cd /$(WORKSPACE) && \
+	    echo 'Updating dependencies...' && \
+	    sudo apt update && rosdep update && \
+	    rosdep install --from-paths src --ignore-src -y && \
+	    echo 'Installing pip...' && \
+	    sudo apt-get install -y python3-pip && \
+	    echo 'Building micro-ROS tools...' && \
+	    colcon build && \
+	    echo 'Sourcing setup...' && \
+	    source install/local_setup.bash && \
+	    ros2 run micro_ros_setup create_agent_ws.sh && \
+	    ros2 run micro_ros_setup build_agent.sh && \
+	    source install/local_setup.sh && \
+	    echo 'Initialization complete.'"
 
 run_container:
 	@echo "Starting existing container: $(CONTAINER_NAME)"
