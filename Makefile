@@ -40,7 +40,7 @@ clean:
 flash_stm32:
 	git submodule sync SAUVC2024_STM32
 	git submodule update --init SAUVC2024_STM32
-	st-flash --reset write SAUVC2024_STM32/build/SAUVC2022.bin 0x08000000
+	st-flash --reset write SAUVC2024_STM32/build/SAUVC2024.bin 0x08000000
 
 reset_stm32:
 	st-flash reset
