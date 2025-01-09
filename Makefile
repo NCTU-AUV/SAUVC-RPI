@@ -14,6 +14,7 @@ build_container:
 	    --net=host \
 	    -v /dev:/dev \
 	    -v $(PWD)/$(WORKSPACE):/root/$(WORKSPACE) \
+	    -v $(PWD)/SAUVC2024_STM32/build:/root/$(WORKSPACE)/stm32_binary \
 	    --privileged \
 	    --name $(CONTAINER_NAME) \
 	    $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest
