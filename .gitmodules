@@ -1,4 +1,4 @@
 [submodule "SAUVC2024_STM32"]
 	path = SAUVC2024_STM32
 	url = git@github.com:NCTU-AUV/SAUVC2024_STM32.git
-	branch = start_over_attempt
+	branch = use-micro-ros
