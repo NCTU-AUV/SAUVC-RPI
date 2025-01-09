@@ -69,4 +69,22 @@ RUN source ~/ros2_humble/install/local_setup.bash && \
 
 RUN echo "source ~/uros_ws/install/local_setup.bash" >> /etc/bash.bashrc
 
+
+RUN apt-get install gcc build-essential cmake rpm libusb-1.0 libusb-1.0-0-dev libgtk-3-dev pandoc -y
+
+RUN mkdir ~/git
+WORKDIR /root/git
+RUN git clone https://github.com/stlink-org/stlink.git
+WORKDIR /root/git/stlink
+RUN make clean
+RUN make release
+RUN make install
+RUN ldconfig
+RUN make debug
+RUN make package
+
+
+WORKDIR /root
+
+
 CMD ["/bin/bash"]
