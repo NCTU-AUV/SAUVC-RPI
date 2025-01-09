@@ -31,7 +31,7 @@ enter_container:
 	docker exec -it $(CONTAINER_NAME) bash
 
 update_image:
-	docker buildx build --platform=linux/arm64,linux/arm/v7 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
+	docker buildx build --no-cache --platform=linux/arm64,linux/arm/v7 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
 
 clean:
 	docker rm -f $(CONTAINER_NAME) || true
