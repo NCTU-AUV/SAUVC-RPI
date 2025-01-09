@@ -28,7 +28,7 @@ stop_container:
 
 enter_container:
 	@echo "Executing a shell inside container: $(CONTAINER_NAME)"
-	docker exec -it $(CONTAINER_NAME) bash -c "cd ~ && /bin/bash"
+	docker exec -it $(CONTAINER_NAME) bash
 
 update_image:
 	docker buildx build --platform=linux/arm64,linux/arm/v7 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
