@@ -17,6 +17,7 @@ build_container:
 	    -v $(PWD)/SAUVC2024_STM32/build:/root/$(WORKSPACE)/stm32_binary \
 	    --privileged \
 	    --name $(CONTAINER_NAME) \
+	    --pull always \
 	    $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest
 
 	docker exec $(CONTAINER_NAME) /bin/bash -c "cd $(WORKSPACE) && colcon build --symlink-install"
