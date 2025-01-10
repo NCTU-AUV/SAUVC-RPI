@@ -39,7 +39,7 @@ update_image:
 
 clean:
 	docker rm -f $(CONTAINER_NAME) || true
-	rm -rf $(WORKSPACE)/build $(WORKSPACE)/install $(WORKSPACE)/log
+	sudo rm -rf $(WORKSPACE)/build $(WORKSPACE)/install $(WORKSPACE)/log
 
 flash_stm32:
 	git submodule sync SAUVC2024_STM32
