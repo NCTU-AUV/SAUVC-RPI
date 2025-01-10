@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            "thruster_controller_node = orca_auv_thruster_pkg.thruster_controller_node:main",
         ],
     },
 )
