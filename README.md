@@ -4,7 +4,7 @@ This repository should contain all the codes that need to be run on the Raspberr
 
 ## use-ros2
 
-This branch is intended to be developed alongside [SAUVC2024_STM32/start_over_attempt](https://github.com/NCTU-AUV/SAUVC2024_STM32/tree/start_over_attempt).
+This branch is intended to be developed alongside [SAUVC2024_STM32/use-micro-ros](https://github.com/NCTU-AUV/SAUVC2024_STM32/tree/use-micro-ros).
 
 ## Test ROS2 in docker
 
