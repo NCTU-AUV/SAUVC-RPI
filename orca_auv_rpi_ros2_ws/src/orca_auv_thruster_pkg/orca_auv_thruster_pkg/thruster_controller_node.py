@@ -39,7 +39,7 @@ class ThrusterControllerNode(Node):
                 self,
                 InitializeThrusterAction,
                 f"thruster_{thruster_number}/initialize_thruster",
-                lambda goal_handle: self.__execute_callback_with_thruster_number(goal_handle, thruster_number)
+                lambda goal_handle, thruster_number=thruster_number: self.__execute_callback_with_thruster_number(goal_handle, thruster_number)
             )
             for thruster_number in range(8)
         ]
