@@ -15,7 +15,7 @@ class ThrusterControllerNode(Node):
     def __init__(self):
         super().__init__("thruster_controller_node", namespace="orca_auv")
 
-        self.__set_pwm_output_on_value_publishers = [
+        self.__set_pwm_output_on_publishers = [
             self.create_publisher(
                 msg_type=Bool,
                 topic=f"thruster_{thruster_number}/set_pwm_output_on",
