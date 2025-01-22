@@ -39,12 +39,12 @@ class ThrusterControllerNode(Node):
                 self,
                 InitializeThrusterAction,
                 f"thruster_{thruster_number}/initialize_thruster",
-                lambda goal_handle, thruster_number=thruster_number: self.__execute_callback_with_thruster_number(goal_handle, thruster_number)
+                lambda goal_handle, thruster_number=thruster_number: self.__initialize_thruster_action_callback_with_thruster_number(goal_handle, thruster_number)
             )
             for thruster_number in range(8)
         ]
 
-    def __execute_callback_with_thruster_number(self, goal_handle, thruster_number):
+    def __initialize_thruster_action_callback_with_thruster_number(self, goal_handle, thruster_number):
         self.get_logger().info(f"Execute thruster_{thruster_number}/initialize_thruster action")
 
         set_pwm_output_on_msg = Bool()
