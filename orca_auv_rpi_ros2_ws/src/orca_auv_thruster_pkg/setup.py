@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             "thruster_controller_node = orca_auv_thruster_pkg.thruster_controller_node:main",
+            "thruster_force_to_pwm_output_signal_node = orca_auv_thruster_pkg.thruster_force_to_pwm_output_signal_node:main",
         ],
     },
 )
