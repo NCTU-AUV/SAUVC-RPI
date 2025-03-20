@@ -62,12 +62,12 @@ class WrenchToIndividualThrusterOutputForcesNode(Node):
         self.__set_output_force_publishers[thruster_number].publish(set_output_force_N)
 
     def __set_output_wrench_at_center_subscribers_callback(self, msg):
-        wrench_N_Nm = np.array([msg.data.force.x,
-                           msg.data.force.y,
-                           msg.data.force.z,
-                           msg.data.torque.x,
-                           msg.data.torque.y,
-                           msg.data.torque.z])
+        wrench_N_Nm = np.array([msg.force.x,
+                                msg.force.y,
+                                msg.force.z,
+                                msg.torque.x,
+                                msg.torque.y,
+                                msg.torque.z])
 
         output_forces_N = self.__output_force_allocation_matrix @ wrench_N_Nm
 
