@@ -20,7 +20,9 @@ build_container:
 	    --pull always \
 	    $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest
 
-	docker exec $(CONTAINER_NAME) /bin/bash -i -c "cd $(WORKSPACE) && colcon build --symlink-install"
+	docker exec $(CONTAINER_NAME) /bin/bash -i -c "cd $(WORKSPACE) \
+	                                            && colcon build --symlink-install \
+												&& echo \"source $(WORKSPACE)/install/setup.bash\" >> /etc/bash.bashrc"
 
 start_container:
 	@echo "Starting existing container: $(CONTAINER_NAME)"
@@ -32,7 +34,7 @@ stop_container:
 
 enter_container:
 	@echo "Executing a shell inside container: $(CONTAINER_NAME)"
-	docker exec -it $(CONTAINER_NAME) /bin/bash -i -c "source $(WORKSPACE)/install/setup.bash && /bin/bash"
+	docker exec -it $(CONTAINER_NAME) /bin/bash
 
 update_image:
 	docker buildx build --pull --platform=linux/arm64,linux/arm/v7 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
