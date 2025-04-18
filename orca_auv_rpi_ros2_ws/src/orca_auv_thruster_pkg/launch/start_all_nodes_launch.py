@@ -7,7 +7,7 @@ def generate_launch_description():
         Node(
             package='orca_auv_thruster_pkg',
             namespace='orca_auv',
-            executable='thruster_initializer_node'
+            executable='thruster_initialization_node'
         ),
        Node(
             package='orca_auv_thruster_pkg',
