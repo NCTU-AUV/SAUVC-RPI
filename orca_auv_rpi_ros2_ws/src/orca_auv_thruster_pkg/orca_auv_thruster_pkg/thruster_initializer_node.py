@@ -11,10 +11,10 @@ from std_msgs.msg import Int32
 from orca_auv_thruster_interfaces_pkg.action import InitializeThrusterAction
 
 
-class ThrusterControllerNode(Node):
+class ThrusterInitializerNode(Node):
 
     def __init__(self):
-        super().__init__("thruster_controller_node", namespace="orca_auv")
+        super().__init__("thruster_initializer_node", namespace="orca_auv")
 
         self.__set_pwm_output_on_publishers = [
             self.create_publisher(
@@ -72,8 +72,8 @@ class ThrusterControllerNode(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    thruster_controller_node = ThrusterControllerNode()
-    rclpy.spin(thruster_controller_node)
+    thruster_initializer_node = ThrusterInitializerNode()
+    rclpy.spin(thruster_initializer_node)
 
     rclpy.shutdown()
 
