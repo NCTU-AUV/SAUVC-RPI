@@ -38,11 +38,11 @@ class ThrusterForceToPWMOutputSignalNode(Node):
 
         pwm_output_signal_value_us = int(94.385 * output_force_kg_f + 1500)
 
-        MAX_PWM_OUTPUT_SIGNAL_VALUE_US = 1900
+        MAX_PWM_OUTPUT_SIGNAL_VALUE_US = 1500 + 250
         if pwm_output_signal_value_us > MAX_PWM_OUTPUT_SIGNAL_VALUE_US:
             pwm_output_signal_value_us = MAX_PWM_OUTPUT_SIGNAL_VALUE_US
 
-        MIN_PWM_OUTPUT_SIGNAL_VALUE_US = 1100
+        MIN_PWM_OUTPUT_SIGNAL_VALUE_US = 1500 - 250
         if pwm_output_signal_value_us < MIN_PWM_OUTPUT_SIGNAL_VALUE_US:
             pwm_output_signal_value_us = MIN_PWM_OUTPUT_SIGNAL_VALUE_US
 
