@@ -51,19 +51,19 @@ class ThrusterInitializerNode(Node):
         set_pwm_output_on_msg.data = False
         self.__set_pwm_output_on_publishers[thruster_number].publish(set_pwm_output_on_msg)
 
-        time.sleep(0.5)
+        time.sleep(0.0)
 
         set_pwm_output_signal_value = Int32()
         set_pwm_output_signal_value.data = 1500
         self.__set_pwm_output_signal_value_publishers[thruster_number].publish(set_pwm_output_signal_value)
 
-        time.sleep(0.5)
+        time.sleep(0.2)
 
         set_pwm_output_on_msg = Bool()
         set_pwm_output_on_msg.data = True
         self.__set_pwm_output_on_publishers[thruster_number].publish(set_pwm_output_on_msg)
 
-        time.sleep(2)
+        time.sleep(0.5)
 
         goal_handle.succeed()
         return InitializeThrusterAction.Result()
