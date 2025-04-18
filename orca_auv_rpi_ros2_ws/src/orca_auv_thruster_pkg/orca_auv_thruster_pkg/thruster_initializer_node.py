@@ -44,6 +44,13 @@ class ThrusterInitializerNode(Node):
             for thruster_number in range(8)
         ]
 
+        self.__initialize_all_thrusters_action_servers = ActionServer(
+                self,
+                InitializeThrusterAction,
+                "initialize_all_thrusters",
+                self.__initialize_all_thrusters_action_callback
+            )
+
     def __initialize_thruster_action_callback_with_thruster_number(self, goal_handle, thruster_number):
         self.get_logger().info(f"Execute thruster_{thruster_number}/initialize_thruster action")
 
@@ -62,6 +69,33 @@ class ThrusterInitializerNode(Node):
         set_pwm_output_on_msg = Bool()
         set_pwm_output_on_msg.data = True
         self.__set_pwm_output_on_publishers[thruster_number].publish(set_pwm_output_on_msg)
+
+        time.sleep(0.5)
+
+        goal_handle.succeed()
+        return InitializeThrusterAction.Result()
+
+    def __initialize_all_thrusters_action_callback(self, goal_handle):
+        self.get_logger().info(f"Execute initialize_all_thrusters action")
+
+        for thruster_number in range(8):
+            set_pwm_output_on_msg = Bool()
+            set_pwm_output_on_msg.data = False
+            self.__set_pwm_output_on_publishers[thruster_number].publish(set_pwm_output_on_msg)
+
+        time.sleep(0.0)
+
+        for thruster_number in range(8):
+            set_pwm_output_signal_value = Int32()
+            set_pwm_output_signal_value.data = 1500
+            self.__set_pwm_output_signal_value_publishers[thruster_number].publish(set_pwm_output_signal_value)
+
+        time.sleep(0.2)
+
+        for thruster_number in range(8):
+            set_pwm_output_on_msg = Bool()
+            set_pwm_output_on_msg.data = True
+            self.__set_pwm_output_on_publishers[thruster_number].publish(set_pwm_output_on_msg)
 
         time.sleep(0.5)
 
