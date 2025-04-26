@@ -84,6 +84,34 @@ RUN make debug
 RUN make package
 
 
+RUN apt install python3-rosinstall-generator
+
+RUN mkdir -p /root/mavros_ws/src
+WORKDIR /root/mavros_ws
+
+RUN rosinstall_generator --format repos mavlink | tee /tmp/mavlink.repos
+RUN rosinstall_generator --format repos --upstream mavros | tee -a /tmp/mavros.repos
+
+RUN vcs import src < /tmp/mavlink.repos
+RUN vcs import src < /tmp/mavros.repos
+
+WORKDIR /root/mavros_ws/src
+RUN git clone https://github.com/ros/diagnostics.git -b 4.0.3
+RUN git clone https://github.com/ros-geographic-info/geographic_info.git -b 1.0.6
+RUN git clone https://github.com/ros/eigen_stl_containers.git -b 1.1.0
+RUN git clone https://github.com/ros/angles.git -b 1.15.0
+
+WORKDIR /root/mavros_ws/
+RUN apt-get update
+RUN rosdep install --from-paths src --ignore-src -y
+
+RUN ./src/mavros/mavros/scripts/install_geographiclib_datasets.sh
+
+RUN source ~/ros2_humble/install/setup.bash && colcon build
+
+RUN echo "source ~/mavros_ws/install/setup.bash" >> /etc/bash.bashrc
+
+
 WORKDIR /root
 
 
