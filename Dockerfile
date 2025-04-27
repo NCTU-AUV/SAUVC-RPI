@@ -103,7 +103,7 @@ RUN git clone https://github.com/ros/angles.git -b 1.15.0
 
 WORKDIR /root/mavros_ws/
 RUN apt-get update
-RUN rosdep install --from-paths src --ignore-src -y
+RUN source ~/ros2_humble/install/setup.bash && rosdep install --from-paths src --ignore-src -y
 
 RUN ./src/mavros/mavros/scripts/install_geographiclib_datasets.sh
 
