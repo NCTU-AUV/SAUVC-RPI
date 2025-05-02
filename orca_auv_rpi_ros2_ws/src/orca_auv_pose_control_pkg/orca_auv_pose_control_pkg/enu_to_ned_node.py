@@ -19,7 +19,7 @@ class ENUToNEDNode(Node):
             ),
         )
 
-        self.__mavros_imu_data_subscriber = self.create_publisher(
+        self.__mavros_imu_data_ned_publisher = self.create_publisher(
             msg_type=Imu,
             topic="/mavros/imu/data_ned",
             qos_profile=QoSProfile(
@@ -42,6 +42,8 @@ class ENUToNEDNode(Node):
 
         mavros_imu_data_ned_msg.linear_acceleration = mavros_imu_data_msg.linear_acceleration
         mavros_imu_data_ned_msg.linear_acceleration_covariance = mavros_imu_data_msg.linear_acceleration_covariance
+
+        self.__mavros_imu_data_ned_publisher.publish(mavros_imu_data_ned_msg)
 
 
 def main(args=None):
