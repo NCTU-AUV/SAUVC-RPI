@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 from sensor_msgs.msg import Imu
 
 
@@ -12,13 +13,19 @@ class ENUToNEDNode(Node):
             msg_type=Imu,
             topic="/mavros/imu/data",
             callback=self.__mavros_imu_data_subscriber_callback,
-            qos_profile=10
+            qos_profile=QoSProfile(
+                depth=10,
+                reliability=QoSReliabilityPolicy.BEST_EFFORT
+            ),
         )
 
         self.__mavros_imu_data_subscriber = self.create_publisher(
             msg_type=Imu,
             topic="/mavros/imu/data_ned",
-            qos_profile=10
+            qos_profile=QoSProfile(
+                depth=10,
+                reliability=QoSReliabilityPolicy.BEST_EFFORT
+            ),
         )
 
     def __mavros_imu_data_subscriber_callback(self, mavros_imu_data_msg):
