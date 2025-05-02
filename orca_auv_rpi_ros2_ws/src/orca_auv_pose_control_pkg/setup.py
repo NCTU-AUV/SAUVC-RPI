@@ -20,7 +20,6 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "enu_to_ned_node = orca_auv_pose_control_pkg.enu_to_ned_node:main",
         ],
     },
 )
