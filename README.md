@@ -16,3 +16,7 @@ apt install openssh-client
 ```
 3. Set up your access to this repository. See: [Connecting to GitHub with SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
 4. Clone this repository into the container: `git clone git@github.com:NCTU-AUV/SAUVC2024-RPI.git`
+
+## Test Pressure Sensor
+
+See [How to Test Pressure Sensor](./documentation/how_to_test_pressure_sensor.md).
