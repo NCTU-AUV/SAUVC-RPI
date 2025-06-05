@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'gui-pkg'
+package_name = 'gui_pkg'
 
 setup(
     name=package_name,
