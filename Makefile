@@ -12,6 +12,7 @@ build_container:
 	@echo "Creating and starting a new container: $(CONTAINER_NAME)"
 	docker run -dit \
 	    --net=host \
+		-p 80:80 \
 	    -v /dev:/dev \
 	    -v $(PWD)/$(WORKSPACE):/root/$(WORKSPACE) \
 	    -v $(PWD)/SAUVC2024_STM32/build:/root/$(WORKSPACE)/stm32_binary \
