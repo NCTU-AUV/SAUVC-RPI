@@ -26,7 +26,7 @@ async def websocket_handler(request):
     return websocket_response
 
 app = web.Application()
-app.add_routes([web.get('/', hello),
+app.add_routes([web.get('/', respond_index),
                 web.get('/main.js', respond_script),
                 web.get('/websocket', websocket_handler)])
 
