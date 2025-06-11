@@ -4,9 +4,6 @@ from aiohttp import web
 async def respond_index(request):
     return web.FileResponse(path="./index.html")
 
-async def respond_script(request):
-    return web.FileResponse(path="./main.js")
-
 async def websocket_handler(request):
     websocket_response = web.WebSocketResponse(protocols=("protocolOne"))
     await websocket_response.prepare(request)
@@ -25,9 +22,15 @@ async def websocket_handler(request):
 
     return websocket_response
 
-app = web.Application()
+@web.middleware
+async def no_cache_middleware(request, handler):
+    response = await handler(request)
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+app = web.Application(middlewares=[no_cache_middleware])
 app.add_routes([web.get('/', respond_index),
-                web.get('/main.js', respond_script),
+                web.static('/', "./", show_index=True),
                 web.get('/websocket', websocket_handler)])
 
 web.run_app(app, port=80)
