@@ -1,4 +1,10 @@
-const websocket = new WebSocket("ws://localhost/websocket", "protocolOne");
+let websocket;
+
+if (window.location.hostname == "localhost") {
+    websocket = new WebSocket("ws://localhost/websocket", "protocolOne");
+} else {
+    websocket = new WebSocket("ws://192.168.0.118/websocket", "protocolOne");
+}
 
 websocket.onmessage = (event) => {
   console.log(event.data);
