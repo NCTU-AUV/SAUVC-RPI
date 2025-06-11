@@ -6,4 +6,8 @@ websocket.onmessage = (event) => {
 
 websocket.onopen = (event) => {
     websocket.send("hello from the frontend!");
+
+    for (let index = 0; index <= 10; index++) {
+        websocket.send("count: " + index);
+    }
 };
