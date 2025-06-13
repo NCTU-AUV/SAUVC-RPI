@@ -1,5 +1,6 @@
 import aiohttp
 from aiohttp import web
+import asyncio
 
 async def respond_index(request):
     return web.FileResponse(path="./index.html")
@@ -28,13 +29,21 @@ async def no_cache_middleware(request, handler):
     response.headers['Cache-Control'] = 'no-store'
     return response
 
-def main():
+async def main():
     app = web.Application(middlewares=[no_cache_middleware])
     app.add_routes([web.get('/', respond_index),
                 web.static('/', "./", show_index=True),
                 web.get('/websocket', websocket_handler)])
 
-    web.run_app(app, port=80)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, 'localhost', 80)
+    await site.start()
+
+    while True:
+        await asyncio.sleep(3600)  # sleep forever
+
+    await runner.cleanup()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
