@@ -52,11 +52,15 @@ class AIOHTTPServer:
 
         await self.site.start()
 
-        while True:
-            await asyncio.sleep(3600)  # sleep forever
-
+    async def stop(self):
         await self.runner.cleanup()
+
+    def run_loop(self):
+        self.event_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.event_loop)
+        self.event_loop.run_until_complete(self.start())
+        self.event_loop.run_forever()
 
 if __name__ == "__main__":
     aiohttp_server = AIOHTTPServer(lambda msg: print(msg))
-    asyncio.run(aiohttp_server.start())
+    aiohttp_server.run_loop()
