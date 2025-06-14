@@ -5,6 +5,9 @@ import json
 
 from std_msgs.msg import Bool
 
+from rclpy.action import ActionClient
+from orca_auv_thruster_interfaces_pkg.action import InitializeThrusterAction
+
 
 class GUINode(Node):
 
@@ -21,6 +24,8 @@ class GUINode(Node):
                 qos_profile=10
             )
 
+        self._initialize_all_thrusters_action_client = ActionClient(self, InitializeThrusterAction, '/orca_auv/initialize_all_thrusters')
+
     def _is_kill_switch_closed_callback(self, msg):
         self.aiohttp_server.send_topic("is_kill_switch_closed", msg.data)
 
@@ -28,7 +33,8 @@ class GUINode(Node):
         msg_json_object = json.loads(msg)
 
         if msg_json_object["type"] == "action":
-            print("action")
+            if msg_json_object["data"]["action_name"] == "initialize_all_thrusters":
+                self._initialize_all_thrusters_action_client.send_goal_async(InitializeThrusterAction.Goal())
 
 def main(args=None):
     rclpy.init(args=args)
