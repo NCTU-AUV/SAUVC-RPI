@@ -2,13 +2,17 @@ import aiohttp
 from aiohttp import web
 import asyncio
 import json
+import threading
 
 class AIOHTTPServer:
     async def respond_index(request):
         return web.FileResponse(path="./index.html")
 
-    async def send_topic(self, topic_name, msg):
-        await self.websocket_response.send_str(json.dumps({"type": "topic", "data": {"topic_name": topic_name, "msg": msg}}))
+    def send_topic(self, topic_name, msg):
+        asyncio.run_coroutine_threadsafe(
+            self.websocket_response.send_str(json.dumps({"type": "topic", "data": {"topic_name": topic_name, "msg": msg}})),
+            self.event_loop
+        )
 
     async def websocket_handler(self, request):
         websocket_response = web.WebSocketResponse(protocols=("protocolOne"))
@@ -61,6 +65,13 @@ class AIOHTTPServer:
         self.event_loop.run_until_complete(self.start())
         self.event_loop.run_forever()
 
+    def start_threading(self):
+        self.loop = asyncio.new_event_loop()
+        threading.Thread(target=self.run_loop).start()
+
 if __name__ == "__main__":
     aiohttp_server = AIOHTTPServer(lambda msg: print(msg))
-    aiohttp_server.run_loop()
+    aiohttp_server.start_threading()
+
+    while True:
+        pass
