@@ -13,9 +13,11 @@ websocket.onmessage = (event) => {
 };
 
 websocket.onopen = (event) => {
-    websocket.send("hello from the frontend!");
-
-    for (let index = 0; index <= 10; index++) {
-        websocket.send("count: " + index);
-    }
+    console.log("websocket.onopen");
 };
+
+function initialize_all_thrusters_button_onclick(){
+      console.log("initialize_all_thrusters_button_onclick");
+
+      websocket.send(JSON.stringify({type: "action", data: {action_name: "initialize_all_thrusters", goal: ""}}));
+}
