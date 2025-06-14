@@ -30,21 +30,25 @@ class AIOHTTPServer:
         response.headers['Cache-Control'] = 'no-store'
         return response
 
-    async def main():
+    def __init__(self):
         app = web.Application(middlewares=[AIOHTTPServer.no_cache_middleware])
         app.add_routes([web.get('/', AIOHTTPServer.respond_index),
                 web.static('/', "./", show_index=True),
                 web.get('/websocket', AIOHTTPServer.websocket_handler)])
 
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, 'localhost', 80)
-        await site.start()
+        self.runner = web.AppRunner(app)
+
+    async def start(self):
+        await self.runner.setup()
+        self.site = web.TCPSite(self.runner, 'localhost', 80)
+
+        await self.site.start()
 
         while True:
             await asyncio.sleep(3600)  # sleep forever
 
-        await runner.cleanup()
+        await self.runner.cleanup()
 
 if __name__ == "__main__":
-    asyncio.run(AIOHTTPServer.main())
+    aiohttp_server = AIOHTTPServer()
+    asyncio.run(aiohttp_server.start())
