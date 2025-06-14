@@ -3,10 +3,12 @@ from aiohttp import web
 import asyncio
 import json
 import threading
+from pathlib import Path
+import gui_pkg
 
 class AIOHTTPServer:
     async def respond_index(request):
-        return web.FileResponse(path="./index.html")
+        return web.FileResponse(path=Path(gui_pkg.__file__).parent/"index.html")
 
     def send_topic(self, topic_name, msg):
         asyncio.run_coroutine_threadsafe(
@@ -45,7 +47,7 @@ class AIOHTTPServer:
 
         app = web.Application(middlewares=[AIOHTTPServer.no_cache_middleware])
         app.add_routes([web.get('/', AIOHTTPServer.respond_index),
-                web.static('/', "./", show_index=True),
+                web.static('/', Path(gui_pkg.__file__).parent, show_index=True),
                 web.get('/websocket', self.websocket_handler)])
 
         self.runner = web.AppRunner(app)

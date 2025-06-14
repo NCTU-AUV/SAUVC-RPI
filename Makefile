@@ -21,6 +21,7 @@ build_container:
 	    $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest
 
 	docker exec $(CONTAINER_NAME) /bin/bash -i -c "cd $(WORKSPACE) \
+												&& pip install aiohttp \
 	                                            && colcon build --symlink-install \
 												&& echo \"source $(WORKSPACE)/install/setup.bash\" >> /etc/bash.bashrc"
 
