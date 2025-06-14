@@ -14,6 +14,8 @@ class AIOHTTPServer:
         websocket_response = web.WebSocketResponse(protocols=("protocolOne"))
         await websocket_response.prepare(request)
 
+        self.websocket_response = websocket_response
+
         async for msg in websocket_response:
             if msg.type == aiohttp.WSMsgType.TEXT:
                 if msg.data == 'close':
