@@ -1,12 +1,16 @@
 import aiohttp
 from aiohttp import web
 import asyncio
+import json
 
 class AIOHTTPServer:
     async def respond_index(request):
         return web.FileResponse(path="./index.html")
 
-    async def websocket_handler(request):
+    async def send_topic(self, topic_name, msg):
+        await self.websocket_response.send_str(json.dumps({"type": "topic", "data": {"topic_name": topic_name, "msg": msg}}))
+
+    async def websocket_handler(self, request):
         websocket_response = web.WebSocketResponse(protocols=("protocolOne"))
         await websocket_response.prepare(request)
 
@@ -15,7 +19,7 @@ class AIOHTTPServer:
                 if msg.data == 'close':
                     await websocket_response.close()
                 else:
-                    await websocket_response.send_str(msg.data + '/answer')
+                    self._msg_callback(msg.data)
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 print('websocket connection closed with exception %s' %
                     websocket_response.exception())
@@ -30,11 +34,13 @@ class AIOHTTPServer:
         response.headers['Cache-Control'] = 'no-store'
         return response
 
-    def __init__(self):
+    def __init__(self, msg_callback):
+        self._msg_callback = msg_callback
+
         app = web.Application(middlewares=[AIOHTTPServer.no_cache_middleware])
         app.add_routes([web.get('/', AIOHTTPServer.respond_index),
                 web.static('/', "./", show_index=True),
-                web.get('/websocket', AIOHTTPServer.websocket_handler)])
+                web.get('/websocket', self.websocket_handler)])
 
         self.runner = web.AppRunner(app)
 
@@ -50,5 +56,5 @@ class AIOHTTPServer:
         await self.runner.cleanup()
 
 if __name__ == "__main__":
-    aiohttp_server = AIOHTTPServer()
+    aiohttp_server = AIOHTTPServer(lambda msg: print(msg))
     asyncio.run(aiohttp_server.start())
