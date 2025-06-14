@@ -54,7 +54,7 @@ class AIOHTTPServer:
 
     async def start(self):
         await self.runner.setup()
-        self.site = web.TCPSite(self.runner, 'localhost', 80)
+        self.site = web.TCPSite(self.runner, '0.0.0.0', 80)
 
         await self.site.start()
 
