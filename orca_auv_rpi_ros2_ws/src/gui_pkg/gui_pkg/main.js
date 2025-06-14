@@ -21,3 +21,14 @@ function initialize_all_thrusters_button_onclick(){
 
       websocket.send(JSON.stringify({type: "action", data: {action_name: "initialize_all_thrusters", goal: ""}}));
 }
+
+function set_pwm_output_signal_value_us_button_onclick() {
+    thruster_number = document.getElementById("thruster_number_input").value;
+    set_pwm_output_signal_value_us = document.getElementById("set_pwm_output_signal_value_us_input").value;
+
+    console.log("set_pwm_output_signal_value_us_button_onclick",
+                "thruster_number: " + thruster_number,
+                "set_pwm_output_signal_value_us: " + set_pwm_output_signal_value_us);
+
+    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "set_pwm_output_signal_value_us", thruster_number: thruster_number, msg: {data: set_pwm_output_signal_value_us}}}));
+}
