@@ -3,6 +3,7 @@ IMAGE_NAME := orca-auv-rpi-ros2-image
 CONTAINER_NAME := orca-auv-rpi-ros2-container
 WORKSPACE := orca_auv_rpi_ros2_ws
 IMAGE_OWNER_NAME := dianyueguo
+PWD := $(shell pwd)
 
 .PHONY: all build_container start_container stop_container enter_container update_image clean flash_stm32 reset_stm32
 
