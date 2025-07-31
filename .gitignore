@@ -4,3 +4,4 @@ orca_auv_rpi_ros2_ws/log/
 orca_auv_rpi_ros2_ws/src/orca_auv_thruster_pkg/orca_auv_thruster_pkg/__pycache__/
 .vscode/
 *.pyc
+*.DS_Store
