@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            "depth_controller_node = orca_auv_pose_control_pkg.depth_controller_node:main",
         ],
     },
 )
