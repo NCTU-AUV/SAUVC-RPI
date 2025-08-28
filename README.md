@@ -1,10 +1,10 @@
-# SAUVC2024-RPI
+# SAUVC-RPI
 
 This repository should contain all the codes that need to be run on the Raspberry PI of the Orca-AUV.
 
 ## use-ros2
 
-This branch is intended to be developed alongside [SAUVC2024_STM32/use-micro-ros](https://github.com/NCTU-AUV/SAUVC2024_STM32/tree/use-micro-ros).
+This branch is intended to be developed alongside [SAUVC-STM32/use-micro-ros](https://github.com/NCTU-AUV/SAUVC-STM32/tree/use-micro-ros).
 
 ## Test ROS2 in docker
 
@@ -15,7 +15,7 @@ apt update
 apt install openssh-client
 ```
 3. Set up your access to this repository. See: [Connecting to GitHub with SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
-4. Clone this repository into the container: `git clone git@github.com:NCTU-AUV/SAUVC2024-RPI.git`
+4. Clone this repository into the container: `git clone git@github.com:NCTU-AUV/SAUVC-RPI.git`
 
 ## Test Pressure Sensor
 

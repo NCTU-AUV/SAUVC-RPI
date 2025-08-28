@@ -14,7 +14,7 @@ build_container:
 	    --net=host \
 	    -v /dev:/dev \
 	    -v $(PWD)/$(WORKSPACE):/root/$(WORKSPACE) \
-	    -v $(PWD)/SAUVC2024_STM32/build:/root/$(WORKSPACE)/stm32_binary \
+	    -v $(PWD)/SAUVC-STM32/build:/root/$(WORKSPACE)/stm32_binary \
 	    --privileged \
 	    --name $(CONTAINER_NAME) \
 	    --pull always \
@@ -44,9 +44,9 @@ clean:
 	sudo rm -rf $(WORKSPACE)/build $(WORKSPACE)/install $(WORKSPACE)/log
 
 flash_stm32:
-	git submodule sync SAUVC2024_STM32
-	git submodule update --init SAUVC2024_STM32
-	st-flash --reset write SAUVC2024_STM32/build/SAUVC2024.bin 0x08000000
+	git submodule sync SAUVC-STM32
+	git submodule update --init SAUVC-STM32
+	st-flash --reset write SAUVC-STM32/build/SAUVC2024.bin 0x08000000
 
 reset_stm32:
 	st-flash reset
