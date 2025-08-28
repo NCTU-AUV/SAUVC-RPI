@@ -34,7 +34,10 @@ class DepthControllerNode(Node):
 
         self._force_on_z_direction_N = 0.0
 
-        self._integration_factor_N_per_m_s = 1.0
+        self._integration_factor_N_per_m_s = 2.0
+        self._integrated_force_on_z_direction_N = 0.0
+
+        self._proportional_factor_N_per_m = 20.0
 
     def _pressure_sensor_depth_subscription_callback(self, msg):
         self._pressure_sensor_depth_m = msg.data
@@ -45,11 +48,16 @@ class DepthControllerNode(Node):
     def _integral_controller_loop_timer_callback(self):
         current_time = self.get_clock().now()
 
-        self._force_on_z_direction_N += (
+        self._integrated_force_on_z_direction_N += (
             (self._target_depth_m - self._pressure_sensor_depth_m)
             * (current_time - self._previous_time).nanoseconds / (10**9)
             * self._integration_factor_N_per_m_s
         )
+
+        self._force_on_z_direction_N = (
+            (self._target_depth_m - self._pressure_sensor_depth_m)
+            * self._proportional_factor_N_per_m
+        ) + self._integrated_force_on_z_direction_N
 
         self._publish_force_on_z_direction(self._force_on_z_direction_N)
 
