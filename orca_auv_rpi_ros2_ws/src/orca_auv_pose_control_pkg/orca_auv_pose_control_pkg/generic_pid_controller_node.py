@@ -23,7 +23,8 @@ class GenericPIDControllerNode(Node):
 
         self._manipulated_variable_publisher = self.create_publisher(Float64, 'manipulated_variable', 10)
 
-        self._controller_loop_timer_period_s = 1 / 100
+        self.declare_parameter('controller_loop_timer_period_s', 1 / 100)
+        self._controller_loop_timer_period_s = self.get_parameter('controller_loop_timer_period_s').get_parameter_value().string_double
         self._controller_loop_timer = self.create_timer(self._controller_loop_timer_period_s, self._controller_loop_timer_callback)
 
         self.declare_parameter('proportional_gain', 0.0)
