@@ -61,7 +61,7 @@ class GenericPIDControllerNode(Node):
         assert 0.0 <= derivative_smoothing_factor <= 1.0
 
         self._derivative_controller_new_stored_value = (
-            (1 - derivative_smoothing_factor) ** self._controller_loop_timer_period_s * error
+            (1 - derivative_smoothing_factor ** self._controller_loop_timer_period_s) * error
             + derivative_smoothing_factor ** self._controller_loop_timer_period_s * self._derivative_controller_previous_stored_value
         )
 
