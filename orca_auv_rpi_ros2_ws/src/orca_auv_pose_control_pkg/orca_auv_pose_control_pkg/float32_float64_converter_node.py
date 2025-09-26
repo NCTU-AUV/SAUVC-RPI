@@ -24,7 +24,7 @@ class Float32Float64ConverterNode(Node):
             self._float64_topic_subscription_callback,
             10)
 
-        self._float64_topic_publisher = self.create_publisher(Float64, 'float32_topic', 10)
+        self._float64_topic_publisher = self.create_publisher(Float64, 'float64_topic', 10)
 
     def _float32_topic_subscription_callback(self, msg):
         self._float64_topic_publisher.publish(msg.data)
