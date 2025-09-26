@@ -23,6 +23,7 @@ setup(
             "depth_controller_node = orca_auv_pose_control_pkg.depth_controller_node:main",
             "generic_pid_controller_node = orca_auv_pose_control_pkg.generic_pid_controller_node:main",
             "float32_float64_converter_node = orca_auv_pose_control_pkg.float32_float64_converter_node:main",
+            "output_sink_force_to_output_wrench_node = orca_auv_pose_control_pkg.output_sink_to_output_wrench_node:main",
         ],
     },
 )
