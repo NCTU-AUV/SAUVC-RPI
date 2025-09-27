@@ -14,6 +14,12 @@ def generate_launch_description():
                 ('/orca_auv/output_feedback', '/orca_auv/pressure_sensor_depth_float64_m'),
                 ('/orca_auv/manipulated_variable', '/orca_auv/output_sink_force_N'),
             ],
+            parameters=[{
+                'proportional_gain': 20.0,
+                'integral_gain': 2.0,
+                'derivative_gain': 0.0,
+                'derivative_smoothing_factor': 0.0,
+            }],
         ),
         Node(
             package='orca_auv_pose_control_pkg',
