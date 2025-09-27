@@ -15,9 +15,9 @@ def generate_launch_description():
                 ('/orca_auv/manipulated_variable', '/orca_auv/output_sink_force_N'),
             ],
             parameters=[{
-                'proportional_gain': 20.0,
+                'proportional_gain': 30.0,
                 'integral_gain': 2.0,
-                'derivative_gain': 0.0,
+                'derivative_gain': 30.0,
                 'derivative_smoothing_factor': 0.0,
             }],
         ),
