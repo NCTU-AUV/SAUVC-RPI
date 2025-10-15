@@ -7,10 +7,10 @@ Use the arduino code provided by BlueRobotics: [https://github.com/bluerobotics/
 ## Test on OrcaAUV
 
 1. `ssh gorden@192.168.0.118` connect to the Raspberry PI.
-2. Change directory to SAUVC2024-RPI `cd ~/SAUVC2024-RPI`.
+2. Change directory to SAUVC-RPI `cd ~/SAUVC-RPI`.
 3. Start the docker container `make start_container`.
 
-To enter the docker container, after starting it, run `make enter_container` in `~/SAUVC2024-RPI` directory.
+To enter the docker container, after starting it, run `make enter_container` in `~/SAUVC-RPI` directory.
 
 Each of the following steps are all run in the docker container in new terminal windows.
 

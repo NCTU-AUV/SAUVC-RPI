@@ -3,11 +3,15 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float64, Int32
 
+from orca_auv_thruster_pkg.thruster_lookup_table import ThrusterLookupTable
+
 
 class ThrusterForceToPWMOutputSignalNode(Node):
 
     def __init__(self):
         super().__init__("thruster_force_to_pwm_output_signal_node", namespace="orca_auv")
+
+        self._thruster_lookup_table = ThrusterLookupTable()
 
         self.__set_output_force_subscribers = [
             self.create_subscription(
@@ -29,24 +33,7 @@ class ThrusterForceToPWMOutputSignalNode(Node):
         ]
 
     def __get_pwm_output_signal_value_us(self, output_force_N):
-        # Using a linear approximation of the technical data from https://bluerobotics.com/store/thrusters/t100-t200-thrusters/t200-thruster-r2-rp/
-        # Approximation line: pwm_output_signal_value_us = 94.385 * output_force_kg_f + 1500
-
-        STANDARD_GRAVITY_M_PER_S_SQUARED = 9.80665
-
-        output_force_kg_f = output_force_N / STANDARD_GRAVITY_M_PER_S_SQUARED
-
-        pwm_output_signal_value_us = int(94.385 * output_force_kg_f + 1500)
-
-        MAX_PWM_OUTPUT_SIGNAL_VALUE_US = 1500 + 250
-        if pwm_output_signal_value_us > MAX_PWM_OUTPUT_SIGNAL_VALUE_US:
-            pwm_output_signal_value_us = MAX_PWM_OUTPUT_SIGNAL_VALUE_US
-
-        MIN_PWM_OUTPUT_SIGNAL_VALUE_US = 1500 - 250
-        if pwm_output_signal_value_us < MIN_PWM_OUTPUT_SIGNAL_VALUE_US:
-            pwm_output_signal_value_us = MIN_PWM_OUTPUT_SIGNAL_VALUE_US
-
-        return pwm_output_signal_value_us
+        return self._thruster_lookup_table.get_pwm_signal_us(output_force_N)
 
     def __set_output_force_subscribers_callback(self, msg, thruster_number):
         output_force_N = msg.data

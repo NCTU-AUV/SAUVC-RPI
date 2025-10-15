@@ -1,3 +1,5 @@
+import os
+from glob import glob
 from setuptools import find_packages, setup
 
 package_name = 'orca_auv_pose_control_pkg'
@@ -10,6 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -20,6 +23,10 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            "depth_controller_node = orca_auv_pose_control_pkg.depth_controller_node:main",
+            "generic_pid_controller_node = orca_auv_pose_control_pkg.generic_pid_controller_node:main",
+            "float32_float64_converter_node = orca_auv_pose_control_pkg.float32_float64_converter_node:main",
+            "output_sink_force_to_output_wrench_node = orca_auv_pose_control_pkg.output_sink_force_to_output_wrench_node:main",
         ],
     },
 )
