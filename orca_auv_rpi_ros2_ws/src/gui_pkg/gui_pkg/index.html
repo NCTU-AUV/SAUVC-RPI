@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hello World</title>
+    <script src="main.js"></script>
+</head>
+<body>
+    <p>is_kill_switch_closed: <i id="is_kill_switch_closed">none</i></p>
+
+    <button onclick="initialize_all_thrusters_button_onclick()">initialize_all_thrusters</button>
+
+    <div>
+        <div>
+            thruster number: <input type="number" id="thruster_number_input">
+        </div>
+        <div>
+            set_pwm_output_signal_value_us: <input type="number" id="set_pwm_output_signal_value_us_input">
+            <button onclick="set_pwm_output_signal_value_us_button_onclick()">publish topic</button>
+        </div>
+    </div>
+
+    <img src="orca_auv_thruster_numbering.png" height="400">
+</body>
+</html>
