@@ -6,7 +6,7 @@ Use the arduino code provided by BlueRobotics: [https://github.com/bluerobotics/
 
 ## Test on OrcaAUV
 
-1. `ssh gorden@192.168.0.118` connect to the Raspberry PI.
+1. `ssh orca@raspberrypi.local` connect to the Raspberry PI.
 2. Change directory to SAUVC-RPI `cd ~/SAUVC-RPI`.
 3. Start the docker container `make start_container`.
 
