@@ -22,9 +22,9 @@ build_container:
 	    $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest
 
 	docker exec $(CONTAINER_NAME) /bin/bash -i -c "cd $(WORKSPACE) \
-												&& rosdep install --from-paths src --ignore-src -y \
-	                      && colcon build --symlink-install \
-												&& echo \"source $(WORKSPACE)/install/setup.bash\" >> /etc/bash.bashrc"
+							&& rosdep install --from-paths src --ignore-src -y \
+							&& colcon build --symlink-install \
+							&& echo \"source $(WORKSPACE)/install/setup.bash\" >> /etc/bash.bashrc"
 
 start_container:
 	@echo "Starting existing container: $(CONTAINER_NAME)"
