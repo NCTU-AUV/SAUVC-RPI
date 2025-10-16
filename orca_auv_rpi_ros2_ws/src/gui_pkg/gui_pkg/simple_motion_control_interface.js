@@ -136,3 +136,61 @@ twist_leftward_button.addEventListener("mouseup", () => {
     simple_motion_control_interface_variale.current_output_wrench.torque.z = 0;
     update_motion_motion_control_wrench();
 });
+
+document.addEventListener("keydown", (event) => {
+    switch (event.key) {
+        case "w":
+            push_forward_button.dispatchEvent(new Event("mousedown"));
+            break;
+        case "s":
+            push_backward_button.dispatchEvent(new Event("mousedown"));
+            break;
+        case "a":
+            push_left_button.dispatchEvent(new Event("mousedown"));
+            break;
+        case "d":
+            push_right_button.dispatchEvent(new Event("mousedown"));
+            break;
+        case "q":
+            twist_leftward_button.dispatchEvent(new Event("mousedown"));
+            break;
+        case "e":
+            twist_rightward_button.dispatchEvent(new Event("mousedown"));
+            break;
+        case "ArrowUp":
+            push_up_button.dispatchEvent(new Event("mousedown"));
+            break;
+        case "ArrowDown":
+            push_down_button.dispatchEvent(new Event("mousedown"));
+            break;
+    }
+});
+
+document.addEventListener("keyup", (event) => {
+    switch (event.key) {
+        case "w":
+            push_forward_button.dispatchEvent(new Event("mouseup"));
+            break;
+        case "s":
+            push_backward_button.dispatchEvent(new Event("mouseup"));
+            break;
+        case "a":
+            push_left_button.dispatchEvent(new Event("mouseup"));
+            break;
+        case "d":
+            push_right_button.dispatchEvent(new Event("mouseup"));
+            break;
+        case "q":
+            twist_leftward_button.dispatchEvent(new Event("mouseup"));
+            break;
+        case "e":
+            twist_rightward_button.dispatchEvent(new Event("mouseup"));
+            break;
+        case "ArrowUp":
+            push_up_button.dispatchEvent(new Event("mouseup"));
+            break;
+        case "ArrowDown":
+            push_down_button.dispatchEvent(new Event("mouseup"));
+            break;
+    }
+});
