@@ -137,6 +137,22 @@ twist_leftward_button.addEventListener("mouseup", () => {
     update_motion_motion_control_wrench();
 });
 
+function set_to_zero_simple_motion_control_interface_variale() {
+    simple_motion_control_interface_variale.constant_sink_force_N = 0;
+    simple_motion_control_interface_variale.translational_push_force_N = 0;
+    simple_motion_control_interface_variale.rotational_twist_torque_Nm = 0;
+
+    simple_motion_control_interface_variale.current_output_wrench.force.x = 0;
+    simple_motion_control_interface_variale.current_output_wrench.force.y = 0;
+    simple_motion_control_interface_variale.current_output_wrench.force.z = 0;
+
+    simple_motion_control_interface_variale.current_output_wrench.torque.x = 0;
+    simple_motion_control_interface_variale.current_output_wrench.torque.y = 0;
+    simple_motion_control_interface_variale.current_output_wrench.torque.z = 0;
+
+    update_motion_motion_control_wrench();
+}
+
 document.addEventListener("keydown", (event) => {
     switch (event.key) {
         case "w":
@@ -162,6 +178,9 @@ document.addEventListener("keydown", (event) => {
             break;
         case "ArrowDown":
             push_down_button.dispatchEvent(new Event("mousedown"));
+            break;
+        case " ":
+            set_to_zero_simple_motion_control_interface_variale();
             break;
     }
 });
