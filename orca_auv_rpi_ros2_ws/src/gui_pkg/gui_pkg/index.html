@@ -55,6 +55,47 @@
         <button onclick="set_output_wrench_at_center_N_Nm_button_onclick()">publish topic</button>
     </div>
 
+    <div>
+        simple motion control interface:
+        <div>
+            constant sink force (N):
+            <input type="number" id="constant_sink_force_N_input">
+            <button onclick="set_constant_sink_force_button_onclick()">set</button>
+        </div>
+
+        <div>
+            translational push force (N):
+            <input type="number" id="translational_push_force_N_input">
+            <button onclick="set_translational_push_force_button_onclick()">set</button>
+        </div>
+
+        <div>
+            rotational twist torque (Nm):
+            <input type="number" id="rotational_twist_torque_Nm_input">
+            <button onclick="set_rotational_twist_torque_button_onclick()">set</button>
+        </div>
+
+        <div>
+            <button id="push_down_button">push down</button>
+            <button id="push_up_button">push up</button>
+        </div>
+        <div>
+            <button id="push_left_button">push left</button>
+            <button id="push_right_button">push right</button>
+        </div>
+        <div>
+            <button id="push_backward_button">push backward</button>
+            <button id="push_forward_button">push forward</button>
+        </div>
+
+        <div>
+            <button id="twist_leftward_button">twist leftward</button>
+            <button id="twist_rightward_button" onup>twist rightward</button>
+        </div>
+    </div>
+
     <img src="/static/orca_auv_thruster_numbering.png" height="400">
+
+    <script src="/static/simple_motion_control_interface.js"></script>
 </body>
 </html>
