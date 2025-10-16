@@ -5,6 +5,7 @@ import json
 
 from std_msgs.msg import Bool
 from std_msgs.msg import Int32
+from geometry_msgs.msg import Wrench
 
 from rclpy.action import ActionClient
 from orca_auv_thruster_interfaces_pkg.action import InitializeThrusterAction
@@ -36,6 +37,8 @@ class GUINode(Node):
             for thruster_number in range(8)
         ]
 
+        self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'set_output_wrench_at_center_N_Nm', 10)
+
     def _is_kill_switch_closed_callback(self, msg):
         self.aiohttp_server.send_topic("is_kill_switch_closed", msg.data)
 
@@ -52,6 +55,18 @@ class GUINode(Node):
                 set_pwm_output_signal_value = Int32()
                 set_pwm_output_signal_value.data = int(msg_json_object["data"]["msg"]["data"])
                 self.__set_pwm_output_signal_value_publishers[int(msg_json_object["data"]["thruster_number"])].publish(set_pwm_output_signal_value)
+
+            if msg_json_object["data"]["topic_name"] == "set_output_wrench_at_center_N_Nm":
+                msg = Wrench()
+
+                msg.force.x = float(msg_json_object["data"]["msg"]["force"]["x"])
+                msg.force.z = float(msg_json_object["data"]["msg"]["force"]["z"])
+                msg.force.y = float(msg_json_object["data"]["msg"]["force"]["y"])
+                msg.torque.x = float(msg_json_object["data"]["msg"]["torque"]["x"])
+                msg.torque.y = float(msg_json_object["data"]["msg"]["torque"]["y"])
+                msg.torque.z = float(msg_json_object["data"]["msg"]["torque"]["z"])
+
+                self._set_output_wrench_at_center_publisher.publish(msg)
 
 def main(args=None):
     rclpy.init(args=args)

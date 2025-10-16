@@ -20,6 +20,41 @@
         </div>
     </div>
 
+    <div>
+        set_output_wrench_at_center_N_Nm:
+        <div>
+            force:
+            <div>
+                x:
+                <input type="number" id="set_output_wrench_at_center_N_Nm_force_x">
+            </div>
+            <div>
+                y:
+                <input type="number" id="set_output_wrench_at_center_N_Nm_force_y">
+            </div>
+            <div>
+                z:
+                <input type="number" id="set_output_wrench_at_center_N_Nm_force_z">
+            </div>
+        </div>
+        <div>
+            torque:
+            <div>
+                x:
+                <input type="number" id="set_output_wrench_at_center_N_Nm_torque_x">
+            </div>
+            <div>
+                y:
+                <input type="number" id="set_output_wrench_at_center_N_Nm_torque_y">
+            </div>
+            <div>
+                z:
+                <input type="number" id="set_output_wrench_at_center_N_Nm_torque_z">
+            </div>
+        </div>
+        <button onclick="set_output_wrench_at_center_N_Nm_button_onclick()">publish topic</button>
+    </div>
+
     <img src="/static/orca_auv_thruster_numbering.png" height="400">
 </body>
 </html>

@@ -32,3 +32,22 @@ function set_pwm_output_signal_value_us_button_onclick() {
 
     websocket.send(JSON.stringify({type: "topic", data: {topic_name: "set_pwm_output_signal_value_us", thruster_number: thruster_number, msg: {data: set_pwm_output_signal_value_us}}}));
 }
+
+function set_output_wrench_at_center_N_Nm_button_onclick() {
+    var msg = {
+        force: {
+            x: document.getElementById("set_output_wrench_at_center_N_Nm_force_x").value,
+            y: document.getElementById("set_output_wrench_at_center_N_Nm_force_y").value,
+            z: document.getElementById("set_output_wrench_at_center_N_Nm_force_z").value,
+        },
+        torque: {
+            x: document.getElementById("set_output_wrench_at_center_N_Nm_torque_x").value,
+            y: document.getElementById("set_output_wrench_at_center_N_Nm_torque_y").value,
+            z: document.getElementById("set_output_wrench_at_center_N_Nm_torque_z").value,
+        }
+    }
+
+    console.log("set_output_wrench_at_center_N_Nm_button_onclick", msg);
+
+    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "set_output_wrench_at_center_N_Nm", msg: msg}}));
+}
