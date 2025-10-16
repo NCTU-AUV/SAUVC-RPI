@@ -38,6 +38,11 @@ enter_container:
 	@echo "Executing a shell inside container: $(CONTAINER_NAME)"
 	docker exec -it $(CONTAINER_NAME) /bin/bash
 
+quick_launch: clean build_container
+	docker start $(CONTAINER_NAME)
+	docker exec -it $(CONTAINER_NAME) /bin/bash -ic "cd $(WORKSPACE) \
+							&& ros2 launch src/launch/test_launch.py"
+
 update_image:
 	docker buildx build --pull --platform=linux/arm64,linux/arm/v7 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
 
