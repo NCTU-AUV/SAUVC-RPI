@@ -6,6 +6,13 @@ This repository should contain all the codes that need to be run on the Raspberr
 
 This branch is intended to be developed alongside [SAUVC-STM32/use-micro-ros](https://github.com/NCTU-AUV/SAUVC-STM32/tree/use-micro-ros).
 
+## Quick Start
+
+1. `ssh orca@raspberrypi.local`
+2. `cd SAUVC-RPI`
+3. `make quick_launch`
+4. Open GUI in you browser [http://raspberrypi.local](http://raspberrypi.local)
+
 ## Test ROS2 in docker
 
 1. Follow: [Getting started with ROS and Docker](https://wiki.ros.org/docker/Tutorials/Docker)
