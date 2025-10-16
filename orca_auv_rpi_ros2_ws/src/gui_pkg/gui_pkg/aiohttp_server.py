@@ -46,9 +46,10 @@ class AIOHTTPServer:
         self._msg_callback = msg_callback
 
         app = web.Application(middlewares=[AIOHTTPServer.no_cache_middleware])
-        app.add_routes([web.get('/', AIOHTTPServer.respond_index),
-                web.static('/', Path(gui_pkg.__file__).parent, show_index=True),
-                web.get('/websocket', self.websocket_handler)])
+
+        app.router.add_get('/websocket', self.websocket_handler)
+        app.router.add_get('/', AIOHTTPServer.respond_index)
+        app.router.add_static('/static/', Path(gui_pkg.__file__).parent)
 
         self.runner = web.AppRunner(app)
 
