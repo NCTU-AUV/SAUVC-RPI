@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'bottom_camera_node = bottom_camera_pkg.bottom_camera_node:main',
         ],
     },
 )

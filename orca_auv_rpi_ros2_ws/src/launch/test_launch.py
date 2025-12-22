@@ -27,6 +27,14 @@ def generate_launch_description():
         executable='gui_node',
     )
 
+    bottom_camera_node = Node(
+        package='bottom_camera_pkg',
+        executable='bottom_camera_node',
+        parameters=[
+            {'camera_device': '/dev/video0'}
+        ]
+    )
+
     micro_ros_agent = Node(
         package='micro_ros_agent',
         executable='micro_ros_agent',
@@ -45,4 +53,4 @@ def generate_launch_description():
         )
     )
 
-    return LaunchDescription([thruster_pkg_launch, mavros, gui_node, micro_ros_agent, event])
+    return LaunchDescription([thruster_pkg_launch, mavros, gui_node, bottom_camera_node, micro_ros_agent, event])
