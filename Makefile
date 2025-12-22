@@ -4,6 +4,20 @@ CONTAINER_NAME := orca-auv-rpi-ros2-container
 WORKSPACE := orca_auv_rpi_ros2_ws
 IMAGE_OWNER_NAME := dianyueguo
 PWD := $(shell pwd)
+# Host display/X11 wiring varies by platform; set defaults and skip mounts when missing
+ifeq ($(OS),Windows_NT)
+	HOST_DISPLAY ?= host.docker.internal:0.0
+	XAUTH_FILE :=
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Darwin)
+		HOST_DISPLAY ?= host.docker.internal:0
+	else
+		HOST_DISPLAY ?= $(DISPLAY)
+	endif
+	XAUTH_FILE ?= $(HOME)/.Xauthority
+endif
+XAUTH_FLAGS := $(if $(and $(XAUTH_FILE),$(wildcard $(XAUTH_FILE))),-v $(XAUTH_FILE):/tmp/.Xauthority:ro -e XAUTHORITY=/tmp/.Xauthority,)
 
 .PHONY: all build_container start_container stop_container enter_container update_image clean flash_stm32 reset_stm32
 
@@ -16,9 +30,8 @@ build_container:
 	    -v /dev:/dev \
 	    -v $(PWD)/$(WORKSPACE):/root/$(WORKSPACE) \
 	    -v $(PWD)/SAUVC-STM32/build:/root/$(WORKSPACE)/stm32_binary \
-		-v /home/orca/.Xauthority:/tmp/.Xauthority:ro \
-		-e XAUTHORITY=/tmp/.Xauthority \
-		-e DISPLAY=$(DISPLAY) \
+		$(XAUTH_FLAGS) \
+		-e DISPLAY=$(HOST_DISPLAY) \
 	    --privileged \
 	    --name $(CONTAINER_NAME) \
 	    --pull always \
