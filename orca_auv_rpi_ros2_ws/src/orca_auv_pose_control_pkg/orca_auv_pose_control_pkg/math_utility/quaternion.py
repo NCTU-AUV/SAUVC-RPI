@@ -1,4 +1,4 @@
-from vector_3d import Vector3D
+from .vector_3d import Vector3D
 
 
 class Quaternion:
@@ -14,6 +14,8 @@ class Quaternion:
             other.__vector_part.scalar_multiple(self.__real_part) +
             self.__vector_part.cross_product(other.__vector_part)
         )
+
+        return Quaternion(real_part, vector_part.x, vector_part.y, vector_part.z)
 
     @property
     def inverse(self):

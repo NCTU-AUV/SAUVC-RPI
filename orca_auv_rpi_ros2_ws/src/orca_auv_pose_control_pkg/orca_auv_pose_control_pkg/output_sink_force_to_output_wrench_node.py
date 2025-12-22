@@ -5,7 +5,7 @@ from std_msgs.msg import Float64
 from geometry_msgs.msg import Quaternion as QuaternionMsg
 from geometry_msgs.msg import Wrench
 
-from math_utility.quaternion import Quaternion
+from .math_utility.quaternion import Quaternion
 
 
 class OutputSinkForceToOutputWrenchNode(Node):
@@ -40,13 +40,13 @@ class OutputSinkForceToOutputWrenchNode(Node):
     def _output_sink_force_subscription_callback(self, msg):
         output_sink_force_N = msg.data
 
-        output_force_direction_unit_vector = self._get_output_force_direction_unit_vector()
+        sink_force_direction_unit_vector = self._get_sink_force_direction_unit_vector()
 
         msg = Wrench()
 
-        msg.force.x = output_sink_force_N * output_force_direction_unit_vector.x
-        msg.force.y = output_sink_force_N * output_force_direction_unit_vector.y
-        msg.force.z = output_sink_force_N * output_force_direction_unit_vector.z
+        msg.force.x = output_sink_force_N * sink_force_direction_unit_vector.x
+        msg.force.y = output_sink_force_N * sink_force_direction_unit_vector.y
+        msg.force.z = output_sink_force_N * sink_force_direction_unit_vector.z
         msg.torque.x = 0.0
         msg.torque.y = 0.0
         msg.torque.z = 0.0

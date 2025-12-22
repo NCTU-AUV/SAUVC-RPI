@@ -35,4 +35,9 @@ def generate_launch_description():
                 ('/orca_auv/float64_topic', '/orca_auv/pressure_sensor_depth_float64_m'),
             ],
         ),
+        Node(
+            package='orca_auv_pose_control_pkg',
+            namespace='orca_auv',
+            executable='imu_to_orientation_node',
+        ),
     ])
