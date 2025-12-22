@@ -47,7 +47,7 @@ quick_launch: clean build_container
 							&& ros2 launch src/launch/test_launch.py"
 
 update_image:
-	docker buildx build --pull --platform=linux/arm64,linux/arm/v7 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
+	docker buildx build --pull --platform=linux/arm64,linux/amd64 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
 
 clean:
 	docker rm -f $(CONTAINER_NAME) || true
