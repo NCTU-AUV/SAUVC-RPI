@@ -24,6 +24,9 @@ RUN sudo apt -y install ros-humble-mavros
 RUN source /opt/ros/humble/setup.bash && ros2 run mavros install_geographiclib_datasets.sh
 
 
+RUN apt-get install -y ros-humble-rqt*
+
+
 WORKDIR /root
 
 
