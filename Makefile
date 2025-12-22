@@ -24,7 +24,8 @@ build_container:
 	    --pull always \
 	    $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest
 
-	docker exec $(CONTAINER_NAME) /bin/bash -i -c "cd $(WORKSPACE) \
+	docker exec $(CONTAINER_NAME) /bin/bash -i -c "source /opt/ros/humble/setup.bash \
+							&& cd $(WORKSPACE) \
 							&& rosdep install --from-paths src --ignore-src -y \
 							&& colcon build --symlink-install \
 							&& echo \"source $(WORKSPACE)/install/setup.bash\" >> /etc/bash.bashrc"
