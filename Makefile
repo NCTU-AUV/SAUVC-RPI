@@ -39,13 +39,31 @@ compose_build:
 	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) build --pull
 
 compose_shell:
-	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "source /opt/ros/humble/setup.bash; if [ -f /root/uros_ws/install/local_setup.bash ]; then source /root/uros_ws/install/local_setup.bash; fi; if [ -f $(WORKSPACE)/install/setup.bash ]; then source $(WORKSPACE)/install/setup.bash; fi; exec bash"
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
+		source /opt/ros/humble/setup.bash; \
+		if [ -f /root/uros_ws/install/local_setup.bash ]; then \
+			source /root/uros_ws/install/local_setup.bash; \
+		fi; \
+		if [ -f $(WORKSPACE)/install/setup.bash ]; then \
+			source $(WORKSPACE)/install/setup.bash; \
+		fi; \
+		exec bash"
 
 compose_init: compose_up
-	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "source /opt/ros/humble/setup.bash && cd $(WORKSPACE) && rosdep install --from-paths src --ignore-src -y && colcon build --symlink-install && echo \"source $(WORKSPACE)/install/setup.bash\" >> /etc/bash.bashrc"
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
+		source /opt/ros/humble/setup.bash && \
+		cd $(WORKSPACE) && \
+		rosdep install --from-paths src --ignore-src -y && \
+		colcon build --symlink-install && \
+		echo \"source $(WORKSPACE)/install/setup.bash\" >> /etc/bash.bashrc"
 
 compose_launch: compose_up
-	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "cd $(WORKSPACE) && source /opt/ros/humble/setup.bash && source /root/uros_ws/install/local_setup.bash && source install/setup.bash && ros2 launch src/launch/test_launch.py"
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
+		cd $(WORKSPACE) && \
+		source /opt/ros/humble/setup.bash && \
+		source /root/uros_ws/install/local_setup.bash && \
+		source install/setup.bash && \
+		ros2 launch src/launch/test_launch.py"
 
 compose_clean:
 	$(COMPOSE) down -v
