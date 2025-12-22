@@ -16,6 +16,9 @@ build_container:
 	    -v /dev:/dev \
 	    -v $(PWD)/$(WORKSPACE):/root/$(WORKSPACE) \
 	    -v $(PWD)/SAUVC-STM32/build:/root/$(WORKSPACE)/stm32_binary \
+		-v /home/orca/.Xauthority:/tmp/.Xauthority:ro \
+		-e XAUTHORITY=/tmp/.Xauthority \
+		-e DISPLAY=$(DISPLAY) \
 	    --privileged \
 	    --name $(CONTAINER_NAME) \
 	    --pull always \
