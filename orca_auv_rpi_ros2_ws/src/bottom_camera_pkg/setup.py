@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             'bottom_camera_node = bottom_camera_pkg.bottom_camera_node:main',
             'frame_transform_node = bottom_camera_pkg.frame_transform_node:main',
+            'total_transform_node = bottom_camera_pkg.total_transform_node:main',
         ],
     },
 )
