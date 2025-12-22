@@ -10,7 +10,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'publish_debug_image',
-            default_value='false',
+            default_value='true',
             description='Whether to publish debug keypoint overlay images'
         ),
         Node(
