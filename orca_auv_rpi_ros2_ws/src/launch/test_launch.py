@@ -35,6 +35,14 @@ def generate_launch_description():
         ]
     )
 
+    frame_transform_node = Node(
+        package='bottom_camera_pkg',
+        executable='frame_transform_node',
+        parameters=[
+            {'image_topic': 'bottom_camera/image_raw'}
+        ]
+    )
+
     micro_ros_agent = Node(
         package='micro_ros_agent',
         executable='micro_ros_agent',
@@ -53,4 +61,4 @@ def generate_launch_description():
         )
     )
 
-    return LaunchDescription([thruster_pkg_launch, mavros, gui_node, bottom_camera_node, micro_ros_agent, event])
+    return LaunchDescription([thruster_pkg_launch, mavros, gui_node, bottom_camera_node, frame_transform_node, micro_ros_agent, event])
