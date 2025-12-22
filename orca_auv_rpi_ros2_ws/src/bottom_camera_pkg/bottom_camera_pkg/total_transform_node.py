@@ -26,33 +26,33 @@ class TotalTransformNode(Node):
         self._transform_pub = self.create_publisher(Float64MultiArray, output_topic, 10)
 
     def _transform_callback(self, msg: Float64MultiArray):
-        if len(msg.data) < 4:
-            self.get_logger().warn('Transform message missing components (expected tx, ty, rotation, scale)')
+        if len(msg.data) < 6:
+            self.get_logger().warn('Transform message missing components (expected 6 values for 2x3 matrix)')
             return
 
-        tx, ty, rotation, scale = msg.data[:4]
-        increment = self._matrix_from_transform(tx, ty, rotation, scale)
+        m00, m01, tx, m10, m11, ty = msg.data[:6]
+        increment = np.array([
+            [m00, m01, tx],
+            [m10, m11, ty],
+            [0.0, 0.0, 1.0],
+        ], dtype=np.float64)
         self._total_matrix = self._total_matrix @ increment
 
-        total_tx, total_ty, total_rotation, total_scale = self._transform_from_matrix(self._total_matrix)
+        total_tx, total_ty, total_rotation, total_scale = self._extract_similarity(self._total_matrix)
         out_msg = Float64MultiArray()
         out_msg.data = [float(total_tx), float(total_ty), float(total_rotation), float(total_scale)]
         self._transform_pub.publish(out_msg)
 
     @staticmethod
-    def _matrix_from_transform(tx, ty, rotation, scale):
-        cos_r = math.cos(rotation)
-        sin_r = math.sin(rotation)
-        return np.array([
-            [scale * cos_r, -scale * sin_r, tx],
-            [scale * sin_r,  scale * cos_r, ty],
-            [0.0,            0.0,           1.0],
-        ], dtype=np.float64)
-
-    @staticmethod
-    def _transform_from_matrix(matrix):
-        a, b, tx = matrix[0]
-        c, d, ty = matrix[1]
+    def _extract_similarity(matrix):
+        """
+        Derive translation, rotation, and isotropic scale from the accumulated affine.
+        This discards shear/non-uniform scale in the projection to similarity.
+        """
+        tx = matrix[0, 2]
+        ty = matrix[1, 2]
+        a = matrix[0, 0]
+        c = matrix[1, 0]
         scale = math.sqrt(a * a + c * c)
         rotation = math.atan2(c, a)
         return tx, ty, rotation, scale

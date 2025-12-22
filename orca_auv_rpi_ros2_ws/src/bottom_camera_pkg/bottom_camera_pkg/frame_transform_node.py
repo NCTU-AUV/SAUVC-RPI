@@ -1,5 +1,3 @@
-import math
-
 import cv2
 import numpy as np
 import rclpy
@@ -156,8 +154,6 @@ class FrameTransformNode(Node):
         first_row, second_row = matrix
         m00, m01, translation_x = first_row
         m10, m11, translation_y = second_row
-        scale = math.sqrt(m00 * m00 + m01 * m01)
-        rotation_rad = math.atan2(m01, m00)
 
         # Convert translation back to original pixel scale.
         if scale_factor > 0:
@@ -165,7 +161,10 @@ class FrameTransformNode(Node):
             translation_y /= scale_factor
 
         transform_msg = Float64MultiArray()
-        transform_msg.data = [float(translation_x), float(translation_y), float(rotation_rad), float(scale)]
+        transform_msg.data = [
+            float(m00), float(m01), float(translation_x),
+            float(m10), float(m11), float(translation_y),
+        ]
         self._transform_pub.publish(transform_msg)
 
     def destroy_node(self):
