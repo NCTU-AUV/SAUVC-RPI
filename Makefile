@@ -4,7 +4,18 @@ CONTAINER_NAME := orca-auv-rpi-ros2-container
 WORKSPACE := orca_auv_rpi_ros2_ws
 IMAGE_OWNER_NAME := dianyueguo
 PWD := $(shell pwd)
-COMPOSE := docker compose
+# Prefer Docker Compose v2 (docker compose) but fall back to v1 (docker-compose); allow override via env/CLI
+COMPOSE ?= $(shell \
+	if docker compose version >/dev/null 2>&1; then \
+		printf "docker compose"; \
+	elif docker-compose --version >/dev/null 2>&1; then \
+		printf "docker-compose"; \
+	else \
+		printf ""; \
+	fi)
+ifeq ($(strip $(COMPOSE)),)
+$(error Docker Compose not found: install Docker Compose v2 (docker compose) or v1 (docker-compose), or set COMPOSE to your compose binary)
+endif
 # Host display/X11 wiring varies by platform; set defaults and skip mounts when missing
 ifeq ($(OS),Windows_NT)
 	HOST_DISPLAY ?= host.docker.internal:0.0
