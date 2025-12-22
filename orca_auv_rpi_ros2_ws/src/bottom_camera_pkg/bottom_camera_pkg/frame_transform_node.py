@@ -58,25 +58,25 @@ class FrameTransformNode(Node):
             self._init_reference_frame(gray_small, scale_factor, frame_bgr)
             return
 
-        kp_prev, desc_prev, kp_curr, desc_curr = self._detect_keypoints(gray_small)
-        if not self._has_enough_features(kp_prev, kp_curr, desc_prev, desc_curr):
+        keypoints_prev, descriptors_prev, keypoints_curr, descriptors_curr = self._detect_keypoints(gray_small)
+        if not self._has_enough_features(keypoints_prev, keypoints_curr, descriptors_prev, descriptors_curr):
             self._update_reference_frame(gray_small, scale_factor)
             return
 
-        matches = self._match_features(desc_prev, desc_curr)
+        matches = self._match_features(descriptors_prev, descriptors_curr)
         if not matches:
             self._update_reference_frame(gray_small, scale_factor)
             return
 
-        matrix, inliers = self._estimate_transform(kp_prev, kp_curr, matches)
+        matrix, inliers = self._estimate_transform(keypoints_prev, keypoints_curr, matches)
         self._update_reference_frame(gray_small, scale_factor)
 
-        if not self._transform_valid(matrix, inliers, kp_curr, frame_bgr, scale_factor):
+        if not self._transform_valid(matrix, inliers, keypoints_curr, frame_bgr, scale_factor):
             return
 
         self._publish_transform(matrix, scale_factor)
         if self._publish_debug_image:
-            inlier_keypoints = [kp_curr[i] for i, flag in enumerate(inliers.flatten()) if flag]
+            inlier_keypoints = [keypoints_curr[i] for i, flag in enumerate(inliers.flatten()) if flag]
             self._publish_keypoints_debug(frame_bgr, inlier_keypoints, scale_factor)
 
     def _to_bgr(self, msg: Image):
@@ -97,20 +97,20 @@ class FrameTransformNode(Node):
             self._publish_keypoints_debug(frame_bgr, [], scale_factor)
 
     def _detect_keypoints(self, gray_small):
-        kp_prev, desc_prev = self._orb.detectAndCompute(self._prev_gray, None)
-        kp_curr, desc_curr = self._orb.detectAndCompute(gray_small, None)
-        return kp_prev, desc_prev, kp_curr, desc_curr
+        keypoints_prev, descriptors_prev = self._orb.detectAndCompute(self._prev_gray, None)
+        keypoints_curr, descriptors_curr = self._orb.detectAndCompute(gray_small, None)
+        return keypoints_prev, descriptors_prev, keypoints_curr, descriptors_curr
 
-    def _has_enough_features(self, kp_prev, kp_curr, desc_prev, desc_curr):
-        if desc_prev is None or desc_curr is None or len(kp_prev) < 4 or len(kp_curr) < 4:
+    def _has_enough_features(self, keypoints_prev, keypoints_curr, descriptors_prev, descriptors_curr):
+        if descriptors_prev is None or descriptors_curr is None or len(keypoints_prev) < 4 or len(keypoints_curr) < 4:
             self.get_logger().warn('Not enough features to estimate transform', throttle_duration_sec=5.0)
             return
 
         return True
 
-    def _match_features(self, desc_prev, desc_curr):
+    def _match_features(self, descriptors_prev, descriptors_curr):
         matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-        matches = matcher.match(desc_prev, desc_curr)
+        matches = matcher.match(descriptors_prev, descriptors_curr)
         if len(matches) < 4:
             self.get_logger().warn('Not enough matches to estimate transform', throttle_duration_sec=5.0)
             return None
@@ -118,9 +118,9 @@ class FrameTransformNode(Node):
         matches = sorted(matches, key=lambda m: m.distance)
         return matches
 
-    def _estimate_transform(self, kp_prev, kp_curr, matches):
-        src_pts = np.float32([kp_prev[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
-        dst_pts = np.float32([kp_curr[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
+    def _estimate_transform(self, keypoints_prev, keypoints_curr, matches):
+        src_pts = np.float32([keypoints_prev[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+        dst_pts = np.float32([keypoints_curr[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
         matrix, inliers = cv2.estimateAffinePartial2D(
             src_pts,
             dst_pts,
@@ -133,11 +133,11 @@ class FrameTransformNode(Node):
         self._prev_gray = gray_small
         self._prev_scale_factor = scale_factor
 
-    def _transform_valid(self, matrix, inliers, kp_curr, frame_bgr, scale_factor):
+    def _transform_valid(self, matrix, inliers, keypoints_curr, frame_bgr, scale_factor):
         if matrix is None or inliers is None:
             self.get_logger().warn('Failed to estimate transform (matrix is None)', throttle_duration_sec=5.0)
             if self._publish_debug_image:
-                self._publish_keypoints_debug(frame_bgr, kp_curr, scale_factor)
+                self._publish_keypoints_debug(frame_bgr, keypoints_curr, scale_factor)
             return False
 
         inlier_count = int(inliers.sum())
@@ -147,24 +147,25 @@ class FrameTransformNode(Node):
                 throttle_duration_sec=5.0
             )
             if self._publish_debug_image:
-                self._publish_keypoints_debug(frame_bgr, kp_curr, scale_factor)
+                self._publish_keypoints_debug(frame_bgr, keypoints_curr, scale_factor)
             return False
 
         return True
 
     def _publish_transform(self, matrix, scale_factor):
-        a, b, tx = matrix[0]
-        c, d, ty = matrix[1]
-        scale = math.sqrt(a * a + b * b)
-        rotation_rad = math.atan2(b, a)
+        first_row, second_row = matrix
+        m00, m01, translation_x = first_row
+        m10, m11, translation_y = second_row
+        scale = math.sqrt(m00 * m00 + m01 * m01)
+        rotation_rad = math.atan2(m01, m00)
 
         # Convert translation back to original pixel scale.
         if scale_factor > 0:
-            tx /= scale_factor
-            ty /= scale_factor
+            translation_x /= scale_factor
+            translation_y /= scale_factor
 
         transform_msg = Float64MultiArray()
-        transform_msg.data = [float(tx), float(ty), float(rotation_rad), float(scale)]
+        transform_msg.data = [float(translation_x), float(translation_y), float(rotation_rad), float(scale)]
         self._transform_pub.publish(transform_msg)
 
     def destroy_node(self):
