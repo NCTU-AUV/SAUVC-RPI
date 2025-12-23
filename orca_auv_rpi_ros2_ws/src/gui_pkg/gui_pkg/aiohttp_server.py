@@ -11,16 +11,30 @@ class AIOHTTPServer:
         return web.FileResponse(path=Path(gui_pkg.__file__).parent/"index.html")
 
     def send_topic(self, topic_name, msg):
-        asyncio.run_coroutine_threadsafe(
-            self.websocket_response.send_str(json.dumps({"type": "topic", "data": {"topic_name": topic_name, "msg": msg}})),
-            self.event_loop
-        )
+        payload = json.dumps({"type": "topic", "data": {"topic_name": topic_name, "msg": msg}})
+
+        # Queue messages when no websocket client is connected yet to avoid crashing.
+        with self._pending_lock:
+            if not self.event_loop or not self.websocket_response or self.websocket_response.closed:
+                self._pending_topic_payloads.append(payload)
+                return
+            loop = self.event_loop
+            websocket_response = self.websocket_response
+
+        asyncio.run_coroutine_threadsafe(websocket_response.send_str(payload), loop)
 
     async def websocket_handler(self, request):
         websocket_response = web.WebSocketResponse(protocols=("protocolOne"))
         await websocket_response.prepare(request)
 
         self.websocket_response = websocket_response
+
+        # Flush any pending messages accumulated before a client connected.
+        pending_payloads = []
+        with self._pending_lock:
+            pending_payloads, self._pending_topic_payloads = self._pending_topic_payloads, []
+        for payload in pending_payloads:
+            await websocket_response.send_str(payload)
 
         async for msg in websocket_response:
             if msg.type == aiohttp.WSMsgType.TEXT:
@@ -52,6 +66,10 @@ class AIOHTTPServer:
         app.router.add_static('/static/', Path(gui_pkg.__file__).parent)
 
         self.runner = web.AppRunner(app)
+        self.websocket_response = None
+        self.event_loop = None
+        self._pending_topic_payloads = []
+        self._pending_lock = threading.Lock()
 
     async def start(self):
         await self.runner.setup()
