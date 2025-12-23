@@ -15,17 +15,6 @@ This branch is intended to be developed alongside [SAUVC-STM32/use-micro-ros](ht
 5. `make compose_launch` to run `ros2 launch src/launch/test_launch.py`
 6. Open GUI in your browser: [http://raspberrypi.local](http://raspberrypi.local)
 
-## Test ROS2 in docker
-
-1. Follow: [Getting started with ROS and Docker](https://wiki.ros.org/docker/Tutorials/Docker)
-2. Install ssh in the container: 
-```
-apt update
-apt install openssh-client
-```
-3. Set up your access to this repository. See: [Connecting to GitHub with SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
-4. Clone this repository into the container: `git clone git@github.com:NCTU-AUV/SAUVC-RPI.git`
-
 ## Test Pressure Sensor
 
 See [How to Test Pressure Sensor](./documentation/how_to_test_pressure_sensor.md).
