@@ -4,54 +4,81 @@ CONTAINER_NAME := orca-auv-rpi-ros2-container
 WORKSPACE := orca_auv_rpi_ros2_ws
 IMAGE_OWNER_NAME := dianyueguo
 PWD := $(shell pwd)
+# Prefer Docker Compose v2 (docker compose) but fall back to v1 (docker-compose); allow override via env/CLI
+COMPOSE ?= $(shell \
+	if docker compose version >/dev/null 2>&1; then \
+		printf "docker compose"; \
+	elif docker-compose --version >/dev/null 2>&1; then \
+		printf "docker-compose"; \
+	else \
+		printf ""; \
+	fi)
+ifeq ($(strip $(COMPOSE)),)
+$(error Docker Compose not found: install Docker Compose v2 (docker compose) or v1 (docker-compose), or set COMPOSE to your compose binary)
+endif
+# Host display/X11 wiring varies by platform; set defaults and skip mounts when missing
+ifeq ($(OS),Windows_NT)
+	HOST_DISPLAY ?= host.docker.internal:0.0
+	XAUTH_FILE :=
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Darwin)
+		HOST_DISPLAY ?= host.docker.internal:0
+	else
+		HOST_DISPLAY ?= $(DISPLAY)
+	endif
+	XAUTH_FILE ?= $(HOME)/.Xauthority
+endif
+XAUTHORITY ?= /tmp/.Xauthority
+XAUTH_FLAGS := $(if $(and $(XAUTH_FILE),$(wildcard $(XAUTH_FILE))),-v $(XAUTH_FILE):/tmp/.Xauthority:ro -e XAUTHORITY=/tmp/.Xauthority,)
 
-.PHONY: all build_container start_container stop_container enter_container update_image clean flash_stm32 reset_stm32
-
-all: build_container enter_container
-
-build_container:
-	@echo "Creating and starting a new container: $(CONTAINER_NAME)"
-	docker run -dit \
-	    --net=host \
-	    -v /dev:/dev \
-	    -v $(PWD)/$(WORKSPACE):/root/$(WORKSPACE) \
-	    -v $(PWD)/SAUVC-STM32/build:/root/$(WORKSPACE)/stm32_binary \
-		-v /home/orca/.Xauthority:/tmp/.Xauthority:ro \
-		-e XAUTHORITY=/tmp/.Xauthority \
-		-e DISPLAY=$(DISPLAY) \
-	    --privileged \
-	    --name $(CONTAINER_NAME) \
-	    --pull always \
-	    $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest
-
-	docker exec $(CONTAINER_NAME) /bin/bash -i -c "cd $(WORKSPACE) \
-							&& rosdep install --from-paths src --ignore-src -y \
-							&& colcon build --symlink-install \
-							&& echo \"source $(WORKSPACE)/install/setup.bash\" >> /etc/bash.bashrc"
-
-start_container:
-	@echo "Starting existing container: $(CONTAINER_NAME)"
-	docker start $(CONTAINER_NAME)
-
-stop_container:
-	@echo "Stopping container: $(CONTAINER_NAME)"
-	docker stop $(CONTAINER_NAME)
-
-enter_container:
-	@echo "Executing a shell inside container: $(CONTAINER_NAME)"
-	docker exec -it $(CONTAINER_NAME) /bin/bash
-
-quick_launch: clean build_container
-	docker start $(CONTAINER_NAME)
-	docker exec -it $(CONTAINER_NAME) /bin/bash -ic "cd $(WORKSPACE) \
-							&& ros2 launch src/launch/test_launch.py"
+.PHONY: compose_up compose_down compose_build compose_shell compose_init compose_launch compose_clean update_image flash_stm32 reset_stm32
 
 update_image:
-	docker buildx build --pull --platform=linux/arm64,linux/arm/v7 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
+	docker buildx build --pull --platform=linux/arm64,linux/amd64 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
 
-clean:
-	docker rm -f $(CONTAINER_NAME) || true
-	sudo rm -rf $(WORKSPACE)/build $(WORKSPACE)/install $(WORKSPACE)/log
+compose_up:
+	@echo "Starting compose stack"
+	@mkdir -p $(dir $(XAUTH_FILE))
+	@touch $(XAUTH_FILE)
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) pull
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) up -d --no-build
+
+compose_down:
+	$(COMPOSE) down
+
+compose_build:
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) build --pull
+
+compose_shell:
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
+		source /opt/ros/humble/setup.bash; \
+		if [ -f /root/uros_ws/install/local_setup.bash ]; then \
+			source /root/uros_ws/install/local_setup.bash; \
+		fi; \
+		if [ -f $(WORKSPACE)/install/setup.bash ]; then \
+			source $(WORKSPACE)/install/setup.bash; \
+		fi; \
+		exec bash"
+
+compose_init: compose_up
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
+		source /opt/ros/humble/setup.bash && \
+		cd $(WORKSPACE) && \
+		rosdep install --from-paths src --ignore-src -y && \
+		colcon build --symlink-install && \
+		echo \"source $(WORKSPACE)/install/setup.bash\" >> /etc/bash.bashrc"
+
+compose_launch: compose_up
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
+		cd $(WORKSPACE) && \
+		source /opt/ros/humble/setup.bash && \
+		source /root/uros_ws/install/local_setup.bash && \
+		source install/setup.bash && \
+		ros2 launch src/launch/test_launch.py"
+
+compose_clean:
+	$(COMPOSE) down -v
 
 flash_stm32:
 	git submodule sync SAUVC-STM32

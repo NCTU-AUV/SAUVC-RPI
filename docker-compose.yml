@@ -1,0 +1,21 @@
+services:
+  orca:
+    container_name: ${CONTAINER_NAME:-orca-auv-rpi-ros2-container}
+    image: ${IMAGE_OWNER_NAME:-dianyueguo}/${IMAGE_NAME:-orca-auv-rpi-ros2-image}:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    network_mode: host
+    privileged: true
+    stdin_open: true
+    tty: true
+    environment:
+      DISPLAY: ${HOST_DISPLAY:-host.docker.internal:0}
+      XAUTHORITY: ${XAUTHORITY:-/tmp/.Xauthority}
+    volumes:
+      - /dev:/dev
+      - ./orca_auv_rpi_ros2_ws:/root/orca_auv_rpi_ros2_ws
+      - ./SAUVC-STM32/build:/root/orca_auv_rpi_ros2_ws/stm32_binary
+      - ${XAUTH_FILE:-/tmp/.Xauthority}:${XAUTHORITY:-/tmp/.Xauthority}:ro
+    working_dir: /root
+    command: ["/bin/bash", "-lc", "tail -f /dev/null"]
