@@ -1,13 +1,13 @@
-import rclpy
-from rclpy.node import Node
-from .aiohttp_server import AIOHTTPServer
 import json
 
+import rclpy
+from rclpy.node import Node
 from std_msgs.msg import Bool
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Wrench
-
 from rclpy.action import ActionClient
+
+from .aiohttp_server import AIOHTTPServer
 from orca_auv_thruster_interfaces_pkg.action import InitializeThrusterAction
 
 
@@ -43,30 +43,54 @@ class GUINode(Node):
         self.aiohttp_server.send_topic("is_kill_switch_closed", msg.data)
 
     def _msg_callback(self, msg):
-        print(msg)
-        msg_json_object = json.loads(msg)
+        try:
+            msg_json_object = json.loads(msg)
+        except json.JSONDecodeError:
+            self.get_logger().warning(f"Received non-JSON message: {msg}")
+            return
 
-        if msg_json_object["type"] == "action":
-            if msg_json_object["data"]["action_name"] == "initialize_all_thrusters":
+        msg_type = msg_json_object.get("type")
+        msg_data = msg_json_object.get("data", {})
+
+        if msg_type == "action":
+            action_name = msg_data.get("action_name")
+            if action_name == "initialize_all_thrusters":
                 self._initialize_all_thrusters_action_client.send_goal_async(InitializeThrusterAction.Goal())
+            else:
+                self.get_logger().warning(f"Unknown action request: {action_name}")
 
-        if msg_json_object["type"] == "topic":
-            if msg_json_object["data"]["topic_name"] == "set_pwm_output_signal_value_us":
-                set_pwm_output_signal_value = Int32()
-                set_pwm_output_signal_value.data = int(msg_json_object["data"]["msg"]["data"])
-                self.__set_pwm_output_signal_value_publishers[int(msg_json_object["data"]["thruster_number"])].publish(set_pwm_output_signal_value)
+        if msg_type == "topic":
+            topic_name = msg_data.get("topic_name")
+            if topic_name == "set_pwm_output_signal_value_us":
+                try:
+                    thruster_number = int(msg_data["thruster_number"])
+                    if thruster_number < 0 or thruster_number >= len(self.__set_pwm_output_signal_value_publishers):
+                        raise IndexError
+                    set_pwm_output_signal_value = Int32()
+                    set_pwm_output_signal_value.data = int(msg_data["msg"]["data"])
+                except (KeyError, TypeError, ValueError, IndexError):
+                    self.get_logger().warning(f"Invalid PWM set message: {msg_json_object}")
+                else:
+                    self.__set_pwm_output_signal_value_publishers[thruster_number].publish(set_pwm_output_signal_value)
 
-            if msg_json_object["data"]["topic_name"] == "set_output_wrench_at_center_N_Nm":
-                msg = Wrench()
+            if topic_name == "set_output_wrench_at_center_N_Nm":
+                try:
+                    wrench_msg = msg_data["msg"]
+                    msg = Wrench()
 
-                msg.force.x = float(msg_json_object["data"]["msg"]["force"]["x"])
-                msg.force.z = float(msg_json_object["data"]["msg"]["force"]["z"])
-                msg.force.y = float(msg_json_object["data"]["msg"]["force"]["y"])
-                msg.torque.x = float(msg_json_object["data"]["msg"]["torque"]["x"])
-                msg.torque.y = float(msg_json_object["data"]["msg"]["torque"]["y"])
-                msg.torque.z = float(msg_json_object["data"]["msg"]["torque"]["z"])
+                    msg.force.x = float(wrench_msg["force"]["x"])
+                    msg.force.y = float(wrench_msg["force"]["y"])
+                    msg.force.z = float(wrench_msg["force"]["z"])
+                    msg.torque.x = float(wrench_msg["torque"]["x"])
+                    msg.torque.y = float(wrench_msg["torque"]["y"])
+                    msg.torque.z = float(wrench_msg["torque"]["z"])
+                except (KeyError, TypeError, ValueError):
+                    self.get_logger().warning(f"Invalid wrench message: {msg_json_object}")
+                else:
+                    self._set_output_wrench_at_center_publisher.publish(msg)
 
-                self._set_output_wrench_at_center_publisher.publish(msg)
+        if msg_type not in ("action", "topic"):
+            self.get_logger().warning(f"Unknown message type: {msg_json_object}")
 
 def main(args=None):
     rclpy.init(args=args)
