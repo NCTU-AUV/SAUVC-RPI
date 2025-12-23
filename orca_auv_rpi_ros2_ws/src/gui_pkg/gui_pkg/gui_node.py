@@ -46,7 +46,7 @@ class GUINode(Node):
         try:
             msg_json_object = json.loads(msg)
         except json.JSONDecodeError:
-            self.get_logger().warning("Received non-JSON message: %s", msg)
+            self.get_logger().warning(f"Received non-JSON message: {msg}")
             return
 
         msg_type = msg_json_object.get("type")
@@ -57,7 +57,7 @@ class GUINode(Node):
             if action_name == "initialize_all_thrusters":
                 self._initialize_all_thrusters_action_client.send_goal_async(InitializeThrusterAction.Goal())
             else:
-                self.get_logger().warning("Unknown action request: %s", action_name)
+                self.get_logger().warning(f"Unknown action request: {action_name}")
 
         if msg_type == "topic":
             topic_name = msg_data.get("topic_name")
@@ -69,7 +69,7 @@ class GUINode(Node):
                     set_pwm_output_signal_value = Int32()
                     set_pwm_output_signal_value.data = int(msg_data["msg"]["data"])
                 except (KeyError, TypeError, ValueError, IndexError):
-                    self.get_logger().warning("Invalid PWM set message: %s", msg_json_object)
+                    self.get_logger().warning(f"Invalid PWM set message: {msg_json_object}")
                 else:
                     self.__set_pwm_output_signal_value_publishers[thruster_number].publish(set_pwm_output_signal_value)
 
@@ -85,12 +85,12 @@ class GUINode(Node):
                     msg.torque.y = float(wrench_msg["torque"]["y"])
                     msg.torque.z = float(wrench_msg["torque"]["z"])
                 except (KeyError, TypeError, ValueError):
-                    self.get_logger().warning("Invalid wrench message: %s", msg_json_object)
+                    self.get_logger().warning(f"Invalid wrench message: {msg_json_object}")
                 else:
                     self._set_output_wrench_at_center_publisher.publish(msg)
 
         if msg_type not in ("action", "topic"):
-            self.get_logger().warning("Unknown message type: %s", msg_json_object)
+            self.get_logger().warning(f"Unknown message type: {msg_json_object}")
 
 def main(args=None):
     rclpy.init(args=args)
