@@ -70,6 +70,8 @@ class AIOHTTPServer:
         self.event_loop = None
         self._pending_topic_payloads = []
         self._pending_lock = threading.Lock()
+        self._thread = None
+        self._stopped = False
 
     async def start(self):
         await self.runner.setup()
@@ -78,17 +80,35 @@ class AIOHTTPServer:
         await self.site.start()
 
     async def stop(self):
+        if self._stopped:
+            return
+        self._stopped = True
         await self.runner.cleanup()
 
     def run_loop(self):
         self.event_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.event_loop)
         self.event_loop.run_until_complete(self.start())
-        self.event_loop.run_forever()
+        try:
+            self.event_loop.run_forever()
+        finally:
+            # Ensure cleanup if stop_threading did not already run it.
+            self.event_loop.run_until_complete(self.stop())
+            self.event_loop.close()
 
     def start_threading(self):
-        self.loop = asyncio.new_event_loop()
-        threading.Thread(target=self.run_loop).start()
+        self._thread = threading.Thread(target=self.run_loop, daemon=True, name="AIOHTTPServerThread")
+        self._thread.start()
+
+    def stop_threading(self, join_timeout: float = 2.0):
+        loop = self.event_loop
+        if not loop:
+            return
+        asyncio.run_coroutine_threadsafe(self.stop(), loop)
+        loop.call_soon_threadsafe(loop.stop)
+
+        if self._thread:
+            self._thread.join(timeout=join_timeout)
 
 if __name__ == "__main__":
     aiohttp_server = AIOHTTPServer(lambda msg: print(msg))
