@@ -3,7 +3,7 @@ import math
 
 import rclpy
 from rclpy.node import Node
-from rclpy.parameter import SetParametersResult
+from rcl_interfaces.msg import SetParametersResult
 
 from std_msgs.msg import Float64MultiArray
 from geometry_msgs.msg import Wrench
