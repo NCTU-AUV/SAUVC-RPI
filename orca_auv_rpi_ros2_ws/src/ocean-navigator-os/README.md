@@ -61,6 +61,23 @@ To preview the production build locally:
 npm run preview
 ```
 
+## Backend Integration
+
+This application allows real-time control and monitoring of the AUV by connecting to the ROS2 backend provided by `gui_pkg`.
+
+- **Communication Protocol**: WebSocket
+- **Connection Hook**: `src/hooks/useROSWebSocket.ts` manages the connection state and message handling.
+- **Default Endpoint**: `ws://localhost:80/websocket` (The host is dynamically determined based on `window.location.hostname`).
+
+### Key Functionalities
+
+1.  **Manual Control**: The `ManualControl` page sends joystick inputs as Wrench commands (`set_output_wrench_at_center_N_Nm`) to the backend.
+2.  **System Status**: The app listens for critical status updates, such as the Kill Switch status (`is_kill_switch_closed`).
+3.  **Actions**: Can trigger ROS2 actions like `initialize_all_thrusters`.
+
+> [!IMPORTANT]
+> The `gui_pkg` ROS2 node must be running for these features to work in non-demo mode.
+
 ## Project Structure
 
 - `src/` - Source code

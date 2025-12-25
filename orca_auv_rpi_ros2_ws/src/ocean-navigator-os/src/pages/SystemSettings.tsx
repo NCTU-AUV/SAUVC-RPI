@@ -14,10 +14,10 @@ import { useTheme } from "@/hooks/useTheme";
 import { demoSystemSettingsData } from "@/data/demoData";
 
 // 使用 demo 資料中的 AUV 機型配置
-const AUV_MODELS = demoSystemSettingsData.auvModels as const;
+const AUV_MODELS = demoSystemSettingsData.auvModels;
 
 const SystemSettings = () => {
-  const { demoMode, setDemoMode } = useDemoMode();
+  const { demoMode, setDemoMode, testMode, setTestMode } = useDemoMode();
   const { theme, toggleTheme } = useTheme();
   const [deviceName, setDeviceName] = useState(demoSystemSettingsData.device.name);
   const [modelType, setModelType] = useState<keyof typeof AUV_MODELS>(demoSystemSettingsData.defaultModel);
@@ -92,12 +92,28 @@ const SystemSettings = () => {
                         {demoMode ? "✓ 已啟用 - 使用本地演示數據" : "✗ 已禁用 - 連接真實 API 串口"}
                       </p>
                     </div>
-                    <Switch 
-                      checked={demoMode} 
+                    <Switch
+                      checked={demoMode}
                       onCheckedChange={(checked) => {
                         setDemoMode(checked);
                         toast.info(checked ? "已啟用展示模式，使用本地演示數據" : "已禁用展示模式，將連接真實 API 串口");
-                      }} 
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-warning/30 bg-warning/5">
+                    <div>
+                      <Label className="text-base font-semibold">測試模式</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {testMode ? "✓ 已啟用 - 進入模擬測試狀態" : "✗ 已禁用 - 正常運作模式"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={testMode}
+                      onCheckedChange={(checked) => {
+                        setTestMode(checked);
+                        toast.warning(checked ? "已啟用測試模式" : "已禁用測試模式");
+                      }}
                     />
                   </div>
 
@@ -108,7 +124,7 @@ const SystemSettings = () => {
                         {theme === "dark" ? "🌙 深色模式 - 夜間友善介面" : "☀️ 淺色模式 - 日間清晰介面"}
                       </p>
                     </div>
-                    <Button 
+                    <Button
                       size="sm"
                       variant="outline"
                       onClick={() => {
@@ -251,7 +267,7 @@ const SystemSettings = () => {
             <Card className="glass p-6 space-y-6">
               <div className="p-3 rounded-lg border border-accent/30 bg-accent/5">
                 <p className="text-sm">
-                  <span className="font-semibold">當前機型:</span> {currentModel.name} • 
+                  <span className="font-semibold">當前機型:</span> {currentModel.name} •
                   <span className="text-accent font-semibold ml-2">最大深度: {currentModel.maxDepth} 米</span>
                 </p>
               </div>
@@ -267,11 +283,11 @@ const SystemSettings = () => {
                       </div>
                       <span className="text-sm font-medium text-accent">{maxDepth[0]} 米</span>
                     </div>
-                    <Slider 
-                      value={maxDepth} 
-                      onValueChange={setMaxDepth} 
-                      min={0} 
-                      max={currentModel.maxDepth} 
+                    <Slider
+                      value={maxDepth}
+                      onValueChange={setMaxDepth}
+                      min={0}
+                      max={currentModel.maxDepth}
                       step={Math.max(1, Math.floor(currentModel.maxDepth / 20))}
                     />
                   </div>
@@ -284,11 +300,11 @@ const SystemSettings = () => {
                       </div>
                       <span className="text-sm font-medium text-accent">{maxDistance[0]} 米</span>
                     </div>
-                    <Slider 
-                      value={maxDistance} 
-                      onValueChange={setMaxDistance} 
-                      min={0} 
-                      max={currentModel.maxDistance} 
+                    <Slider
+                      value={maxDistance}
+                      onValueChange={setMaxDistance}
+                      min={0}
+                      max={currentModel.maxDistance}
                       step={Math.max(50, Math.floor(currentModel.maxDistance / 20))}
                     />
                   </div>
