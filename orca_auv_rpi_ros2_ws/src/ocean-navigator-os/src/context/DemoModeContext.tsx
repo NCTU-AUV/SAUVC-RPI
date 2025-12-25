@@ -11,7 +11,7 @@ const DemoModeContext = createContext<DemoModeContextType | undefined>(undefined
 
 export const DemoModeProvider = ({ children }: { children: ReactNode }) => {
   const [demoMode, setDemoMode] = useState(false);
-  const [testMode, setTestMode] = useState(false);
+  const [testMode, setTestMode] = useState(true);
 
   return (
     <DemoModeContext.Provider value={{ demoMode, setDemoMode, testMode, setTestMode }}>

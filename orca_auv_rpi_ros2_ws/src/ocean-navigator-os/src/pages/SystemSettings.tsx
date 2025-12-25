@@ -103,7 +103,7 @@ const SystemSettings = () => {
 
                   <div className="flex items-center justify-between p-3 rounded-lg border border-warning/30 bg-warning/5">
                     <div>
-                      <Label className="text-base font-semibold">測試模式</Label>
+                      <Label className="text-base font-semibold">工程模式</Label>
                       <p className="text-xs text-muted-foreground mt-1">
                         {testMode ? "✓ 已啟用 - 進入模擬測試狀態" : "✗ 已禁用 - 正常運作模式"}
                       </p>
@@ -112,7 +112,7 @@ const SystemSettings = () => {
                       checked={testMode}
                       onCheckedChange={(checked) => {
                         setTestMode(checked);
-                        toast.warning(checked ? "已啟用測試模式" : "已禁用測試模式");
+                        toast.warning(checked ? "已啟用工程模式" : "已禁用工程模式");
                       }}
                     />
                   </div>

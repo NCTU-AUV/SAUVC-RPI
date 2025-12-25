@@ -24,7 +24,7 @@ class AIOHTTPServer:
         asyncio.run_coroutine_threadsafe(websocket_response.send_str(payload), loop)
 
     async def websocket_handler(self, request):
-        websocket_response = web.WebSocketResponse(protocols=("protocolOne"))
+        websocket_response = web.WebSocketResponse(protocols=("protocolOne"), heartbeat=5.0)
         await websocket_response.prepare(request)
 
         self.websocket_response = websocket_response
