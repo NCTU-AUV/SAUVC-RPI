@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Gamepad2,
   Camera,
@@ -14,6 +17,7 @@ import {
   ArrowUp,
   Power,
   Navigation,
+  Terminal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useDemoMode } from "@/context/DemoModeContext";
@@ -113,22 +117,18 @@ const Joystick = ({ isEnabled, color = "accent", onMove, title, labels, external
 const ManualControl = () => {
   const { demoMode } = useDemoMode();
 
-  // WebSocket Connection
-  const { isConnected: isWsConnected, lastMessage, sendJsonMessage } = useROSWebSocket({
-    url: "ws://" + window.location.hostname + ":80/websocket",
-  });
-
+  // States
   const [isManualMode, setIsManualMode] = useState(true);
   const [speed, setSpeed] = useState([50]);
+  const [pushForce, setPushForce] = useState(50);
+  const [sinkForce, setSinkForce] = useState(50);
+  const [twistTorque, setTwistTorque] = useState(20);
   const [lightsOn, setLightsOn] = useState(false);
   const [recording, setRecording] = useState(false);
   const [leftJoystick, setLeftJoystick] = useState({ x: 0, y: 0 });
   const [rightJoystick, setRightJoystick] = useState({ x: 0, y: 0 });
-  const keysPressed = useRef<Set<string>>(new Set());
   const [shortcutNotification, setShortcutNotification] = useState<string | null>(null);
-  const shortcutTimeoutRef = useRef<NodeJS.Timeout>();
-
-  // Live Data States
+  const [logs, setLogs] = useState<{ id: string; time: string; msg: string; type: string; source?: string }[]>([]);
   const [cameraImage, setCameraImage] = useState<string | null>(null);
   const [transformData, setTransformData] = useState<{
     tx: number;
@@ -137,26 +137,60 @@ const ManualControl = () => {
     scale: number;
   } | null>(null);
 
-  const isConnected = demoMode ? true : isWsConnected;
+  // Refs
+  const keysPressed = useRef<Set<string>>(new Set());
+  const shortcutTimeoutRef = useRef<NodeJS.Timeout>();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Handle WebSocket Messages
+  // Helper to add log entries
+  const addLog = useCallback((msg: string, type: 'info' | 'success' | 'warning' | 'error' | 'debug' = 'info', source?: string) => {
+    const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setLogs(prev => [...prev, { id: Math.random().toString(36).substring(2, 9), time, msg, type, source }].slice(-500));
+  }, []);
+
+  // Auto-scroll to bottom of logs
   useEffect(() => {
-    if (lastMessage && lastMessage.type === "topic") {
-      if (lastMessage.data.topic_name === "is_kill_switch_closed") {
-        if (lastMessage.data.msg) {
+    if (scrollRef.current) {
+      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
+  }, [logs]);
+
+  // Handle incoming WebSocket messages
+  const handleMessage = useCallback((message: any) => {
+    if (message.type === "topic") {
+      const { topic_name, msg } = message.data;
+
+      if (topic_name === "is_kill_switch_closed") {
+        if (msg) {
           toast.error("Kill Switch Activated!");
+          addLog("!!! 緊急斷電開關已觸發 !!!", "error");
           setIsManualMode(false);
         }
       }
-      if (lastMessage.data.topic_name === "bottom_camera_image") {
-        setCameraImage(`data:image/jpeg;base64,${lastMessage.data.msg}`);
+      if (topic_name === "bottom_camera_image") {
+        setCameraImage(`data:image/jpeg;base64,${msg}`);
       }
-      if (lastMessage.data.topic_name === "total_transform_px") {
-        const [tx, ty, rotation, scale] = lastMessage.data.msg;
+      if (topic_name === "total_transform_px") {
+        const [tx, ty, rotation, scale] = msg;
         setTransformData({ tx, ty, rotation, scale });
       }
+      if (topic_name === "system_log") {
+        const { msg: logMsg, type, source } = msg;
+        addLog(logMsg, type, source);
+      }
     }
-  }, [lastMessage]);
+  }, [addLog]);
+
+  // WebSocket Connection
+  const { isConnected: isWsConnected, sendJsonMessage } = useROSWebSocket({
+    url: "ws://" + window.location.hostname + ":80/websocket",
+    onMessage: handleMessage
+  });
+
+  const isConnected = demoMode ? true : isWsConnected;
 
   const sendWrenchCommand = useCallback((forceX: number, forceY: number, forceZ: number, torqueZ: number) => {
     if (!isWsConnected || !isManualMode) return;
@@ -176,14 +210,14 @@ const ManualControl = () => {
   useEffect(() => {
     if (!isManualMode) return;
     const interval = setInterval(() => {
-      const forceX = -(leftJoystick.y / 80) * 50;
-      const forceY = (leftJoystick.x / 80) * 50;
-      const forceZ = (rightJoystick.y / 80) * 50;
-      const torqueZ = (rightJoystick.x / 80) * 20;
+      const forceX = -(leftJoystick.y / 80) * pushForce;
+      const forceY = (leftJoystick.x / 80) * pushForce;
+      const forceZ = (rightJoystick.y / 80) * sinkForce;
+      const torqueZ = (rightJoystick.x / 80) * twistTorque;
       sendWrenchCommand(forceX, forceY, forceZ, torqueZ);
     }, 100);
     return () => clearInterval(interval);
-  }, [leftJoystick, rightJoystick, isManualMode, sendWrenchCommand]);
+  }, [leftJoystick, rightJoystick, isManualMode, pushForce, sinkForce, twistTorque, sendWrenchCommand]);
 
   const shortcuts = {
     camera: { key: "C", action: "拍照", icon: "📷" },
@@ -206,10 +240,12 @@ const ManualControl = () => {
     }
     setIsManualMode(checked);
     toast.success(checked ? "已切換至手動控制模式" : "已切換至自動模式");
+    addLog(`切換至${checked ? "手動" : "自動"}模式`, "info");
   };
 
   const handleEmergencyStop = () => {
     toast.warning("緊急停止已觸發！");
+    addLog("觸發緊急停止！", "warning");
     setLeftJoystick({ x: 0, y: 0 });
     setRightJoystick({ x: 0, y: 0 });
     keysPressed.current.clear();
@@ -251,14 +287,17 @@ const ManualControl = () => {
         e.preventDefault();
         showShortcutNotification(`${shortcuts.camera.icon} 快捷鍵: ${shortcuts.camera.action}`);
         toast.success("拍照已觸發");
+        addLog("拍照成功", "success");
       } else if (key === "v") {
         e.preventDefault();
         setRecording(!recording);
-        showShortcutNotification(`${shortcuts.record.icon} 快捷鍵: ${recording ? "停止錄影" : "開始錄影"}`);
+        showShortcutNotification(`${shortcuts.record.icon} 快捷鍵: ${!recording ? "開始錄影" : "停止錄影"}`);
+        addLog(`${!recording ? "開始" : "停止"}錄影`, "info");
       } else if (key === "l") {
         e.preventDefault();
         setLightsOn(!lightsOn);
         showShortcutNotification(`${shortcuts.lights.icon} 快捷鍵: 燈光${!lightsOn ? "開啟" : "關閉"}`);
+        addLog(`燈光${!lightsOn ? "開啟" : "關閉"}`, "info");
       } else if (e.code === "Space") {
         e.preventDefault();
         handleEmergencyStop();
@@ -352,7 +391,7 @@ const ManualControl = () => {
           <Card className="glass lg:col-span-1 p-6 space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Navigation className="w-5 h-5 text-accent" />
-              3D 姿態指示器
+              姿態指示器
             </h3>
             <div className="aspect-square rounded-lg bg-muted/20 flex flex-col p-4 border border-border/50">
               <div className="flex-1 space-y-6">
@@ -399,7 +438,7 @@ const ManualControl = () => {
                 <Gamepad2 className="w-5 h-5 text-accent" />
                 搖桿控制器
               </h3>
-              <Badge variant="outline" className={isManualMode ? "border-accent/50 text-accent" : ""}>
+              <Badge variant="outline" className={isManualMode ? "border-accent/50 text-accent text-[10px] h-4 px-1" : "text-[10px] h-4 px-1"}>
                 {isManualMode ? "已啟用" : "未啟用"}
               </Badge>
             </div>
@@ -409,14 +448,101 @@ const ManualControl = () => {
             </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label>速度調節</Label>
-                <Badge variant="outline">{speed[0]}%</Badge>
+                <div className="flex items-center gap-4">
+                  <Label>速度調節</Label>
+                  <div className="flex gap-2">
+                    {[25, 50, 75, 100].map((v) => (
+                      <Button
+                        key={v}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-[10px]"
+                        onClick={() => setSpeed([v])}
+                        disabled={!isManualMode}
+                      >
+                        {v}%
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={speed[0]}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (!isNaN(val)) {
+                        setSpeed([Math.max(0, Math.min(100, val))]);
+                      } else if (e.target.value === "") {
+                        setSpeed([0]);
+                      }
+                    }}
+                    className="w-16 h-8 text-center font-mono"
+                    min={0}
+                    max={100}
+                    disabled={!isManualMode}
+                  />
+                  <Badge variant="outline" className="h-8">%</Badge>
+                </div>
               </div>
-              <Slider value={speed} onValueChange={setSpeed} min={0} max={100} step={10} disabled={!isManualMode} />
+              <Slider value={speed} onValueChange={setSpeed} min={0} max={100} step={1} disabled={!isManualMode} />
             </div>
             <Button onClick={handleEmergencyStop} className="w-full bg-destructive hover:bg-destructive/90 glow-orange" disabled={!isManualMode}>
               <Power className="mr-2 h-5 w-5" /> 緊急停止 (Space)
             </Button>
+          </Card>
+
+          <Card className="glass p-6 space-y-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Navigation className="w-5 h-5 text-accent" />
+              力學配置 (N / Nm)
+            </h3>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label className="text-xs">平移推力 (Push Force)</Label>
+                  <span className="text-xs font-mono text-accent">{pushForce}N</span>
+                </div>
+                <Input
+                  type="number"
+                  value={pushForce}
+                  onChange={(e) => setPushForce(Number(e.target.value))}
+                  className="h-8 glass font-mono"
+                  disabled={!isManualMode}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label className="text-xs">垂直出力 (Vertical Force)</Label>
+                  <span className="text-xs font-mono text-accent">{sinkForce}N</span>
+                </div>
+                <Input
+                  type="number"
+                  value={sinkForce}
+                  onChange={(e) => setSinkForce(Number(e.target.value))}
+                  className="h-8 glass font-mono"
+                  disabled={!isManualMode}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label className="text-xs">旋轉扭矩 (Twist Torque)</Label>
+                  <span className="text-xs font-mono text-accent">{twistTorque}Nm</span>
+                </div>
+                <Input
+                  type="number"
+                  value={twistTorque}
+                  onChange={(e) => setTwistTorque(Number(e.target.value))}
+                  className="h-8 glass font-mono"
+                  disabled={!isManualMode}
+                />
+              </div>
+            </div>
+            <div className="pt-2 border-t border-border/50">
+              <p className="text-[10px] text-muted-foreground italic">
+                * 數值將與「速度調節」百分比相乘後輸出
+              </p>
+            </div>
           </Card>
 
           <Card className="glass p-6 space-y-4">
@@ -437,6 +563,7 @@ const ManualControl = () => {
               <Button variant="outline" className="w-full justify-start border-primary/50 hover:bg-primary/10" disabled={!isManualMode} onClick={() => {
                 sendJsonMessage({ type: 'action', data: { action_name: 'initialize_all_thrusters' } });
                 toast.success("初始化推進器...");
+                addLog("初始化推進器指令已發送", "info");
               }}>
                 <Power className="mr-2 h-4 w-4" /> 初始化推進器
               </Button>
@@ -446,6 +573,94 @@ const ManualControl = () => {
               <p>WASD / QE / RF - 移動控制</p>
               <p>C / V / L - 拍照/錄影/燈光</p>
               <p>Space - 緊急停止</p>
+            </div>
+          </Card>
+
+          {/* Log Panel - Now spans 2 columns to fill the right side */}
+          <Card className="glass lg:col-span-2 flex flex-col h-[500px] border-accent/20 overflow-hidden">
+            <div className="p-3 border-b border-border/50 flex items-center justify-between bg-black/40">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded border border-accent/30 bg-accent/5">
+                  <Terminal className="w-3.5 h-3.5 text-accent" />
+                  <h3 className="text-[10px] font-bold tracking-[0.2em] uppercase text-accent/80">
+                    Console
+                  </h3>
+                </div>
+                <div className="h-4 w-[1px] bg-border/50" />
+                <div className="flex items-center gap-2">
+                  <div className={cn("w-2 h-2 rounded-full", isWsConnected ? "bg-success shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.6)]")} />
+                  <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-tighter">
+                    {isWsConnected ? "Link Active" : "Link Lost"}
+                  </span>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-[10px] font-mono hover:bg-destructive/10 hover:text-destructive group"
+                onClick={() => setLogs([])}
+              >
+                [ <span className="group-hover:scale-110 transition-transform px-1">CLEAR_BUFFER</span> ]
+              </Button>
+            </div>
+
+            <ScrollArea ref={scrollRef} className="flex-1 bg-card/50 backdrop-blur-sm selection:bg-accent/30">
+              <div className="p-3 font-mono space-y-0.5">
+                {logs.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/30">
+                    <Terminal className="w-8 h-8 mb-2 opacity-10" />
+                    <p className="text-[10px] uppercase tracking-[0.3em] font-light">Initializing Stream...</p>
+                  </div>
+                )}
+                {logs.map((log) => (
+                  <div key={log.id} className="group flex items-start gap-2 text-[11px] leading-tight hover:bg-accent/5 py-0.5 px-1 rounded transition-colors whitespace-pre-wrap break-all">
+                    <span className="text-muted-foreground/40 shrink-0 tabular-nums">[{log.time}]</span>
+
+                    <span className={cn(
+                      "shrink-0 font-bold px-1 rounded-[2px] text-[9px] uppercase tracking-tight",
+                      log.type === 'error' ? 'bg-destructive/20 text-destructive' :
+                        log.type === 'warning' ? 'bg-orange-500/20 text-orange-500' :
+                          log.type === 'success' ? 'bg-success/20 text-success' :
+                            log.type === 'debug' ? 'bg-muted/30 text-muted-foreground' :
+                              'bg-accent/20 text-accent'
+                    )}>
+                      {log.type === 'info' ? 'INF' : log.type.substring(0, 3)}
+                    </span>
+
+                    {log.source && (
+                      <span className="text-accent/60 shrink-0 italic opacity-80">
+                        {log.source.split('.').pop()?.split('/').pop()}:
+                      </span>
+                    )}
+
+                    <span className={cn(
+                      "flex-1",
+                      log.type === 'error' ? 'text-destructive font-medium' :
+                        log.type === 'warning' ? 'text-orange-500' :
+                          log.type === 'success' ? 'text-success' :
+                            log.type === 'debug' ? 'text-muted-foreground/40 italic' :
+                              "text-foreground/90"
+                    )}>
+                      {log.msg}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+
+            <div className="p-1 px-3 border-t border-border/10 bg-black/40 flex justify-between items-center select-none h-6">
+              <div className="flex items-center gap-3">
+                <span className="text-[9px] text-muted-foreground/40 font-mono tracking-tighter">
+                  SESSION: {window.location.hostname}
+                </span>
+                <span className="text-[9px] text-muted-foreground/30 font-mono">|</span>
+                <span className="text-[9px] text-muted-foreground/40 font-mono">
+                  LOGS: {logs.length}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] text-muted-foreground/40 font-mono animate-pulse">● EXECUTING</span>
+              </div>
             </div>
           </Card>
         </div>

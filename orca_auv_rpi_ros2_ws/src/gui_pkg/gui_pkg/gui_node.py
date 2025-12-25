@@ -5,14 +5,15 @@ from rclpy.node import Node
 from std_msgs.msg import Bool, Int32, Float64MultiArray
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Wrench
+from rcl_interfaces.msg import Log
 from rclpy.action import ActionClient
 import cv2
 import base64
 from cv_bridge import CvBridge
 
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from .aiohttp_server import AIOHTTPServer
 from orca_auv_thruster_interfaces_pkg.action import InitializeThrusterAction
-
 
 class GUINode(Node):
 
@@ -21,6 +22,20 @@ class GUINode(Node):
 
         self.aiohttp_server = AIOHTTPServer(self._msg_callback)
         self.aiohttp_server.start_threading()
+
+        rosout_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=100,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL
+        )
+
+        self._rosout_sub = self.create_subscription(
+            Log,
+            '/rosout',
+            self._rosout_callback,
+            rosout_qos
+        )
 
         self._is_kill_switch_closed_subscribers = self.create_subscription(
                 msg_type=Bool,
@@ -56,6 +71,34 @@ class GUINode(Node):
             self._transform_callback,
             10
         )
+
+    def _rosout_callback(self, msg):
+        # Map ROS log levels (DEBUG=10, INFO=20, WARN=30, ERROR=40, FATAL=50)
+        log_type = "info"
+        if msg.level >= 40:
+            log_type = "error"
+        elif msg.level >= 30:
+            log_type = "warning"
+        elif msg.level >= 20:
+            # Smart Level Detection: Check keywords in msg.msg
+            lowercase_msg = msg.msg.lower()
+            if any(k in lowercase_msg for k in ["timeout", "fail", "abort", "retry", "lost", "disconnect", "skipping", "not opened"]):
+                log_type = "warning"
+            if any(k in lowercase_msg for k in ["error", "critical", "fatal", "failed", "died", "exception"]):
+                log_type = "error"
+        elif msg.level >= 10:
+            log_type = "debug"
+
+        # Use full node name as source
+        source_name = msg.name
+        
+        # self.get_logger().debug(f"Relaying log [{source_name}]")
+        
+        self.aiohttp_server.send_topic("system_log", {
+            "msg": msg.msg, 
+            "type": log_type,
+            "source": source_name
+        })
 
     def _camera_callback(self, msg):
         try:

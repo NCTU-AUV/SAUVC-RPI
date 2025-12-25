@@ -158,7 +158,7 @@ const Dashboard = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [demoMode]);
-  
+
   if (!demoMode) {
     return (
       <div className="min-h-screen p-6 space-y-6 flex items-center justify-center">
@@ -255,10 +255,10 @@ const Dashboard = () => {
           <Card className="glass lg:col-span-1 p-6 space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Navigation className="w-5 h-5 text-accent" />
-              3D 姿態指示器
+              姿態指示器
             </h3>
             <div className="aspect-square rounded-lg bg-muted/20 flex items-center justify-center border border-border/50">
-                <div className="space-y-2">
+              <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">3D 可視化</p>
                 <div className="space-y-1 text-sm">
                   <p>Pitch: {data!.attitude.pitch}°</p>

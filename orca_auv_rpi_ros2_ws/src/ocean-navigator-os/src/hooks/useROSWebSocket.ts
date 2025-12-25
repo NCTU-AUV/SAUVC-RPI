@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 type WebSocketConfig = {
     url: string;
     reconnectInterval?: number;
+    onMessage?: (data: any) => void;
 };
 
 type ROSMessage = {
@@ -15,11 +16,17 @@ type ROSMessage = {
     };
 };
 
-export const useROSWebSocket = ({ url, reconnectInterval = 3000 }: WebSocketConfig) => {
+export const useROSWebSocket = ({ url, reconnectInterval = 3000, onMessage }: WebSocketConfig) => {
     const [isConnected, setIsConnected] = useState(false);
     const [lastMessage, setLastMessage] = useState<any>(null);
     const ws = useRef<WebSocket | null>(null);
     const reconnectTimeout = useRef<NodeJS.Timeout>();
+    const onMessageRef = useRef(onMessage);
+
+    // Update the ref whenever onMessage changes so the socket handler always sees the latest one
+    useEffect(() => {
+        onMessageRef.current = onMessage;
+    }, [onMessage]);
 
     const connect = useCallback(() => {
         try {
@@ -48,6 +55,9 @@ export const useROSWebSocket = ({ url, reconnectInterval = 3000 }: WebSocketConf
                 try {
                     const data = JSON.parse(event.data);
                     setLastMessage(data);
+                    if (onMessageRef.current) {
+                        onMessageRef.current(data);
+                    }
                 } catch (e) {
                     console.warn('Received non-JSON message:', event.data);
                 }
