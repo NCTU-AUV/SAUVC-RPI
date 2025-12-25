@@ -18,4 +18,16 @@ services:
       - ./SAUVC-STM32/build:/root/orca_auv_rpi_ros2_ws/stm32_binary
       - ${XAUTH_FILE:-/tmp/.Xauthority}:${XAUTHORITY:-/tmp/.Xauthority}:ro
     working_dir: /root
-    command: ["/bin/bash", "-lc", "tail -f /dev/null"]
+    command: [ "/bin/bash", "-lc", "tail -f /dev/null" ]
+
+  ocean-navigator-os:
+    container_name: ocean-navigator-os-container
+    build:
+      context: ./orca_auv_rpi_ros2_ws/src/ocean-navigator-os
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./orca_auv_rpi_ros2_ws/src/ocean-navigator-os:/app
+      - /app/node_modules
+    restart: always

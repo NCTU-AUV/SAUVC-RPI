@@ -1,0 +1,909 @@
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Upload, X, Save, Plus, GripVertical, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { useDemoMode } from "@/context/DemoModeContext";
+import { demoMissionSetupData, demoMissionManagerData } from "@/data/demoData";
+import { useSearchParams } from "react-router-dom";
+
+const MissionSetup: React.FC = () => {
+  const { demoMode } = useDemoMode();
+  const [searchParams] = useSearchParams();
+
+  const [images, setImages] = useState<(string | null)[]>([null, null, null, null, null]);
+  const [bboxes, setBboxes] = useState<Array<{ x: number; y: number; width: number; height: number } | null>>([
+    null,
+    null,
+    null,
+    null,
+    null,
+  ]);
+
+  const [confidence, setConfidence] = useState([75]);
+  const [targetType, setTargetType] = useState("");
+  const [customTarget, setCustomTarget] = useState("");
+  const [triggerType, setTriggerType] = useState("");
+  const [triggerValue, setTriggerValue] = useState("");
+
+  const [actions, setActions] = useState<Array<{ id: string; name: string }>>([]);
+  const [draggedAction, setDraggedAction] = useState<string | null>(null);
+
+  const [canvasOpen, setCanvasOpen] = useState(false);
+  const [canvasImageIndex, setCanvasImageIndex] = useState<number | null>(null);
+
+  const [blocks, setBlocks] = useState<Block[]>([]);
+
+  // 拖曳排序狀態
+  const [dragBlockId, setDragBlockId] = useState<string | null>(null);
+  const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [undoStack, setUndoStack] = useState<Block[][]>([]);
+  const [redoStack, setRedoStack] = useState<Block[][]>([]);
+  const applyingHistoryRef = React.useRef(false);
+  const prevBlocksRef = React.useRef<Block[] | null>(null);
+
+  // push initial
+  useEffect(() => {
+    prevBlocksRef.current = blocks;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // record history on blocks change
+  useEffect(() => {
+    if (applyingHistoryRef.current) return;
+    const prev = prevBlocksRef.current;
+    if (prev) {
+      setUndoStack((s) => [...s, prev]);
+      setRedoStack([]);
+    }
+    prevBlocksRef.current = blocks;
+  }, [blocks]);
+
+  const undo = () => {
+    setUndoStack((u) => {
+      if (u.length === 0) return u;
+      const last = u[u.length - 1];
+      applyingHistoryRef.current = true;
+      setRedoStack((r) => [blocks, ...r]);
+      setBlocks(last);
+      applyingHistoryRef.current = false;
+      return u.slice(0, -1);
+    });
+  };
+
+  const redo = () => {
+    setRedoStack((r) => {
+      if (r.length === 0) return r;
+      const [first, ...rest] = r;
+      applyingHistoryRef.current = true;
+      setUndoStack((u) => [...u, blocks]);
+      setBlocks(first);
+      applyingHistoryRef.current = false;
+      return rest;
+    });
+  };
+
+  // keyboard handlers: Delete, Ctrl+Z, Ctrl+Y
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' && selectedBlockId) {
+        deleteBlock(selectedBlockId);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBlockId, blocks]);
+
+  const actionLibrary = demoMode ? demoMissionSetupData.actionLibrary.map((a) => a.name) : [];
+
+  useEffect(() => {
+    if (!demoMode) return;
+    const id = searchParams.get("id");
+    if (!id) return;
+    const seqs = demoMissionSetupData.actionSequences;
+    const seq = seqs[(Number(id) - 1) % Math.max(1, seqs.length)];
+    if (seq) setActions(seq.actions.map((a) => ({ id: a.id, name: a.name })));
+    if (demoMissionSetupData.targetSettings) {
+      setTargetType(demoMissionSetupData.targetSettings.objectType || "");
+      setConfidence([demoMissionSetupData.targetSettings.detectionThreshold || 75]);
+    }
+  }, [demoMode, searchParams]);
+
+  if (!demoMode) {
+    return (
+      <div className="min-h-screen p-6 space-y-6 flex items-center justify-center">
+        <Card className="glass p-12 text-center max-w-md">
+          <h1 className="text-2xl font-bold mb-4">任務設置</h1>
+          <p className="text-muted-foreground mb-6">展示模式已關閉。請在系統設置中啟用展示模式或連接真實設備。</p>
+          <p className="text-sm text-muted-foreground">真實 API 連接功能關閉中...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  const openCanvasEditor = (index: number) => {
+    setCanvasImageIndex(index);
+    setCanvasOpen(true);
+  };
+  const closeCanvasEditor = () => {
+    setCanvasOpen(false);
+    setCanvasImageIndex(null);
+  };
+
+  const handleImageUpload = (index: number, file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (!result || !result.startsWith("data:image")) {
+        toast.error("圖片格式錯誤，請重新上傳");
+        return;
+      }
+      const newImages = [...images];
+      newImages[index] = result;
+      setImages(newImages);
+      setBboxes((prev) => {
+        const updated = [...prev];
+        updated[index] = { x: 20, y: 20, width: 60, height: 60 };
+        return updated;
+      });
+      toast.success(`照片 ${index + 1} 已上傳`);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = (index: number) => {
+    const newImages = [...images];
+    newImages[index] = null;
+    setImages(newImages);
+    setBboxes((prev) => {
+      const updated = [...prev];
+      updated[index] = null;
+      return updated;
+    });
+  };
+
+  const handleDragStart = (e: React.DragEvent, actionName: string) => {
+    e.dataTransfer.effectAllowed = "copy";
+    setDraggedAction(actionName);
+  };
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggedAction) {
+      const newAction = { id: `${draggedAction}-${Date.now()}`, name: draggedAction };
+      setActions((prev) => [...prev, newAction]);
+      toast.success(`已添加動作: ${draggedAction}`);
+      setDraggedAction(null);
+    }
+  };
+
+  const handleAddAction = (actionName: string) => {
+    const newAction = { id: `${actionName}-${Date.now()}`, name: actionName };
+    setActions((prev) => [...prev, newAction]);
+    toast.success(`已添加動作: ${actionName}`);
+  };
+
+  const handleRemoveAction = (id: string) => {
+    const removedAction = actions.find((a) => a.id === id)?.name;
+    setActions((prev) => prev.filter((a) => a.id !== id));
+    toast.success(`已移除動作: ${removedAction}`);
+  };
+
+  // 積木型別定義
+  // BlockAction: 單一動作
+  // BlockIf: 條件分支
+  // BlockRepeat: 重複執行
+
+  type BlockAction = {
+    id: string;
+    type: "action";
+    name: string;
+  };
+
+  type BlockIf = {
+    id: string;
+    type: "if";
+    condition: string;
+    then: Block[];
+    else: Block[];
+  };
+
+  type BlockRepeat = {
+    id: string;
+    type: "repeat";
+    times: number;
+    children: Block[];
+  };
+
+  type Block = BlockAction | BlockIf | BlockRepeat;
+
+  // 新增積木
+  const addBlock = (block: Block) => {
+    setBlocks((prev) => [...prev, block]);
+  };
+
+  // 更新積木（遞迴）
+  function updateBlockById(bs: Block[], id: string, patch: Partial<Block>): Block[] {
+    return bs.map((b) => {
+      if (b.id === id) return { ...b, ...(patch as any) } as Block;
+      if (b.type === "if") return { ...b, then: updateBlockById(b.then, id, patch), else: updateBlockById(b.else, id, patch) };
+      if (b.type === "repeat") return { ...b, children: updateBlockById(b.children, id, patch) };
+      return b;
+    });
+  }
+
+  const deleteBlock = (id: string) => {
+    setBlocks((prev) => removeBlockById(prev, id));
+    if (selectedBlockId === id) setSelectedBlockId(null);
+    toast.success("已刪除積木");
+  };
+
+  // 排序函式
+  function moveBlock(blocks: Block[], fromId: string, toId: string): Block[] {
+    const fromIdx = blocks.findIndex((b) => b.id === fromId);
+    const toIdx = blocks.findIndex((b) => b.id === toId);
+    if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return blocks;
+    const arr = [...blocks];
+    const [moved] = arr.splice(fromIdx, 1);
+    arr.splice(toIdx, 0, moved);
+    return arr;
+  }
+
+  // UI: 積木渲染
+  const renderBlock = (block: Block, depth = 0, parentBlocks = blocks, setParentBlocks = setBlocks) => {
+    const handleDragStart = (e: React.DragEvent) => {
+      setDragBlockId(block.id);
+      e.dataTransfer.effectAllowed = "move";
+    };
+    const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOverBlockId(block.id);
+    };
+    const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      if (dragBlockId && dragBlockId !== block.id) {
+        setParentBlocks(moveBlock(parentBlocks, dragBlockId, block.id));
+      }
+      setDragBlockId(null);
+      setDragOverBlockId(null);
+    };
+    const highlight = dragOverBlockId === block.id ? "ring-2 ring-blue-400" : "";
+
+    // 嵌套 drop 區
+    const handleDropToBranch = (branch: "then" | "else" | "children") => (e: React.DragEvent) => {
+      e.preventDefault();
+      if (!dragBlockId) return;
+      // 找到拖曳積木
+      let dragged: Block | undefined;
+      function findBlock(bs: Block[]): Block | undefined {
+        for (const b of bs) {
+          if (b.id === dragBlockId) return b;
+          if (b.type === "if") {
+            const t = findBlock(b.then);
+            if (t) return t;
+            const e = findBlock(b.else);
+            if (e) return e;
+          }
+          if (b.type === "repeat") {
+            const c = findBlock(b.children);
+            if (c) return c;
+          }
+        }
+        return undefined;
+      }
+      dragged = findBlock(blocks);
+      if (!dragged) return;
+      // 先移除原位置
+      const removed = removeBlockById(blocks, dragBlockId);
+      // 插入到目標分支
+      setBlocks(insertBlock(removed, block.id, dragged, branch));
+      setDragBlockId(null);
+      setDragOverBlockId(null);
+    };
+
+    if (block.type === "action") {
+      return (
+        <div
+          key={block.id}
+          draggable
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          style={{ marginLeft: depth * 24 }}
+          className={`rounded bg-blue-100 border border-blue-400 px-3 py-2 mb-2 flex items-center cursor-move ${highlight}`}
+        >
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-bold text-blue-700 mr-2">動作：</span>
+                {selectedBlockId === block.id ? (
+                  <Input value={block.name} onChange={(e) => setBlocks(updateBlockById(blocks, block.id, { name: e.target.value }))} />
+                ) : (
+                  <span>{block.name}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => setSelectedBlockId(selectedBlockId === block.id ? null : block.id)}>
+                  {selectedBlockId === block.id ? "Done" : "Edit"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => deleteBlock(block.id)}>
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    if (block.type === "if") {
+      return (
+        <div
+          key={block.id}
+          draggable
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          style={{ marginLeft: depth * 24 }}
+          className={`rounded bg-yellow-100 border border-yellow-400 px-3 py-2 mb-2 cursor-move ${highlight}`}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <div className="font-bold text-yellow-700">如果：{selectedBlockId === block.id ? (
+              <Input value={block.condition} onChange={(e) => setParentBlocks(updateBlockById(parentBlocks, block.id, { ...(block as BlockIf), condition: e.target.value }))} />
+            ) : (
+              block.condition
+            )}</div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => setSelectedBlockId(selectedBlockId === block.id ? null : block.id)}>
+                {selectedBlockId === block.id ? "Done" : "Edit"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => deleteBlock(block.id)}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
+          </div>
+            <div className="ml-4">
+            <div className="font-semibold text-yellow-700">Then：</div>
+            <div
+              className="min-h-[32px] border-dashed border-2 border-yellow-300 rounded mb-1"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDropToBranch("then")}
+            >
+              {block.then.map((b, i) =>
+                renderBlock(b, depth + 1, block.then, (newThen) => {
+                  setParentBlocks(parentBlocks.map((bl) => (bl.id === block.id ? { ...block, then: newThen } : bl)));
+                })
+              )}
+                {selectedBlockId === block.id && (
+                  <div className="mt-2 flex gap-2">
+                    <Select value={""} onValueChange={(v) => setBlocks(updateBlockById(blocks, block.id, { then: [...block.then, { id: `a-${Date.now()}`, type: 'action', name: v }] }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="從庫中新增動作到 Then" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {actionLibrary.map((name) => (
+                          <SelectItem key={name} value={name}>{name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+            </div>
+          </div>
+          <div className="ml-4">
+            <div className="font-semibold text-yellow-700">Else：</div>
+            <div
+              className="min-h-[32px] border-dashed border-2 border-yellow-300 rounded mb-1"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDropToBranch("else")}
+            >
+              {block.else.map((b, i) =>
+                renderBlock(b, depth + 1, block.else, (newElse) => {
+                  setParentBlocks(parentBlocks.map((bl) => (bl.id === block.id ? { ...block, else: newElse } : bl)));
+                })
+              )}
+              {selectedBlockId === block.id && (
+                <div className="mt-2 flex gap-2">
+                  <Select value={""} onValueChange={(v) => setBlocks(updateBlockById(blocks, block.id, { else: [...block.else, { id: `a-${Date.now()}`, type: 'action', name: v }] }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="從庫中新增動作到 Else" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {actionLibrary.map((name) => (
+                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    if (block.type === "repeat") {
+      return (
+        <div
+          key={block.id}
+          draggable
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          style={{ marginLeft: depth * 24 }}
+          className={`rounded bg-green-100 border border-green-400 px-3 py-2 mb-2 cursor-move ${highlight}`}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <div className="font-bold text-green-700">重複 {selectedBlockId === block.id ? (
+              <Input type="number" value={String(block.times)} onChange={(e) => setParentBlocks(updateBlockById(parentBlocks, block.id, { ...(block as BlockRepeat), times: Number(e.target.value) }))} />
+            ) : (
+              block.times
+            )} 次</div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => setSelectedBlockId(selectedBlockId === block.id ? null : block.id)}>
+                {selectedBlockId === block.id ? "Done" : "Edit"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => deleteBlock(block.id)}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
+          </div>
+          <div
+            className="min-h-[32px] border-dashed border-2 border-green-300 rounded mb-1"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDropToBranch("children")}
+          >
+            {block.children.map((b, i) =>
+              renderBlock(b, depth + 1, block.children, (newChildren) => {
+                setParentBlocks(parentBlocks.map((bl) => (bl.id === block.id ? { ...block, children: newChildren } : bl)));
+              })
+            )}
+            {selectedBlockId === block.id && (
+              <div className="mt-2">
+                <Select value={""} onValueChange={(v) => setBlocks(updateBlockById(blocks, block.id, { children: [...block.children, { id: `a-${Date.now()}`, type: 'action', name: v }] }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="從庫中新增動作到 Repeat" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {actionLibrary.map((name) => (
+                      <SelectItem key={name} value={name}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="min-h-screen p-6 space-y-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">任務配置</h1>
+            <p className="text-muted-foreground mt-1">配置目標物體識別與動作序列</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {demoMode && <Badge className="bg-accent/20 text-accent border border-accent/50">📺 展示模式</Badge>}
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={undo} disabled={undoStack.length === 0}>Undo</Button>
+              <Button size="sm" variant="outline" onClick={redo} disabled={redoStack.length === 0}>Redo</Button>
+              <Button size="sm" variant="outline" onClick={() => selectedBlockId ? duplicateBlock(selectedBlockId) : toast.error('請先選取一個積木')}>
+                Duplicate
+              </Button>
+            </div>
+            <Button
+              className="bg-accent hover:bg-accent/90 glow-cyan"
+              onClick={() => {
+                if (blocks.length === 0) {
+                  toast.error("請至少添加一個積木動作");
+                  return;
+                }
+                // serialize blocks
+                function serialize(bs: Block[]): any[] {
+                  return bs.map((b) => {
+                    if (b.type === "action") return { type: "action", name: b.name };
+                    if (b.type === "if") return { type: "if", condition: b.condition, then: serialize(b.then), else: serialize(b.else) };
+                    if (b.type === "repeat") return { type: "repeat", times: b.times, children: serialize(b.children) };
+                    return null;
+                  });
+                }
+                const payload = {
+                  targetType,
+                  customTarget,
+                  confidence: confidence[0],
+                  trigger: { triggerType, triggerValue },
+                  blocks: serialize(blocks),
+                };
+                console.log("保存任務 payload:", payload);
+                toast.success(`任務已保存 (${blocks.length} 個積木)`);
+              }}
+            >
+              <Save className="mr-2 h-4 w-4" /> 保存任務
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          <Card className="glass p-6 space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-2">目標物體訓練</h2>
+              <p className="text-sm text-muted-foreground">上傳 5 張不同角度的目標物體照片</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              {images.map((image, index) => (
+                <div
+                  key={index}
+                  className={`relative aspect-square rounded-lg border-2 border-dashed ${
+                    image ? "border-accent" : "border-border"
+                  } hover:border-accent/50 transition-all overflow-hidden group`}
+                >
+                  {image ? (
+                    <>
+                      <img src={image} alt={`Target ${index + 1}`} className="w-full h-full object-cover" />
+                      {bboxes[index] && (
+                        <div className="absolute left-0 top-0 w-full h-full pointer-events-none">
+                          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <rect
+                              x={bboxes[index]!.x}
+                              y={bboxes[index]!.y}
+                              width={bboxes[index]!.width}
+                              height={bboxes[index]!.height}
+                              fill="rgba(6,182,212,0.12)"
+                              stroke="#06b6d4"
+                              strokeWidth={0.6}
+                            />
+                          </svg>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => handleRemoveImage(index)}
+                        className="absolute top-2 right-2 w-6 h-6 rounded-full bg-destructive/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => openCanvasEditor(index)}
+                        className="absolute left-2 bottom-2 bg-white/80 text-sm px-2 py-1 rounded-md"
+                      >
+                        編輯標註
+                      </button>
+                    </>
+                  ) : (
+                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-accent/5">
+                      <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                      <span className="text-xs text-muted-foreground">上傳照片</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => e.target.files?.[0] && handleImageUpload(index, e.target.files[0])}
+                      />
+                    </label>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <Label>目標物體類型</Label>
+              <Select value={targetType} onValueChange={setTargetType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="選擇目標類型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fish">魚類</SelectItem>
+                  <SelectItem value="coral">珊瑚</SelectItem>
+                  <SelectItem value="rock">岩石</SelectItem>
+                  <SelectItem value="pipe">管道</SelectItem>
+                  <SelectItem value="wreck">殘骸</SelectItem>
+                  <SelectItem value="custom">自定義</SelectItem>
+                </SelectContent>
+              </Select>
+              {targetType === "custom" && (
+                <div className="pt-2">
+                  <Label>自定義名稱</Label>
+                  <Input
+                    value={customTarget}
+                    onChange={(e) => setCustomTarget(e.target.value)}
+                    placeholder="請輸入自定義目標名稱"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>AI 識別信心度閾值</Label>
+                <span className="text-sm font-medium text-accent">{confidence[0]}%</span>
+              </div>
+              <Slider
+                value={confidence}
+                onValueChange={setConfidence}
+                min={0}
+                max={100}
+                step={5}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">當識別信心度高於此值時，系統才會觸發追蹤</p>
+            </div>
+          </Card>
+
+          <Card className="glass p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold mb-2">動作序列配置</h2>
+                <p className="text-sm text-muted-foreground">拖放式動作編輯器</p>
+              </div>
+              <Button variant="outline" size="sm" className="border-accent/50" onClick={() => setActions([])}>
+                <Plus className="mr-2 h-4 w-4" /> 清空序列
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              <Label>預設動作庫</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {actionLibrary.map((action) => (
+                  <div key={action} className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 justify-start hover:bg-accent/10 hover:border-accent/50 cursor-move"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, action)}
+                      onDragEnd={() => setDraggedAction(null)}
+                    >
+                      {action}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="hover:bg-accent/10 hover:border-accent/50"
+                      onClick={() => handleAddAction(action)}
+                    >
+                      +
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">💡 提示: 可以直接點擊 + 按鈕或拖曳動作到時間軸</p>
+            </div>
+
+            <div className="space-y-3">
+              <Label>動作時間軸 ({actions.length} 個動作)</Label>
+              <div
+                className="glass rounded-lg p-4 min-h-[250px] border-2 border-dashed border-border hover:border-accent/50 transition-all"
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+              >
+                {actions.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-sm text-muted-foreground">將動作拖放至此處或點擊 + 按鈕建立序列</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {actions.map((action, index) => (
+                      <div
+                        key={action.id}
+                        className="flex items-center gap-2 p-3 rounded-lg bg-accent/10 border border-accent/50 hover:bg-accent/20 transition-all"
+                      >
+                        <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-sm font-medium flex-1">
+                          {index + 1}. {action.name}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveAction(action.id)}
+                          className="h-6 w-6 p-0 hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-3 h-3 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>觸發條件</Label>
+              <Select value={triggerType} onValueChange={setTriggerType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="選擇觸發條件" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="target-found">發現目標時</SelectItem>
+                  <SelectItem value="distance">距離目標 X 米時</SelectItem>
+                  <SelectItem value="depth">深度達到 X 米時</SelectItem>
+                  <SelectItem value="battery">電量低於 X% 時</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {triggerType === "distance" && (
+                <div className="pt-2">
+                  <Label>距離 (米)</Label>
+                  <Input
+                    type="number"
+                    value={triggerValue}
+                    onChange={(e) => setTriggerValue(e.target.value)}
+                    placeholder="請輸入距離"
+                  />
+                </div>
+              )}
+
+              {triggerType === "depth" && (
+                <div className="pt-2">
+                  <Label>深度 (米)</Label>
+                  <Input
+                    type="number"
+                    value={triggerValue}
+                    onChange={(e) => setTriggerValue(e.target.value)}
+                    placeholder="請輸入深度"
+                  />
+                </div>
+              )}
+
+              {triggerType === "battery" && (
+                <div className="pt-2">
+                  <Label>電量 (%)</Label>
+                  <Input
+                    type="number"
+                    value={triggerValue}
+                    onChange={(e) => setTriggerValue(e.target.value)}
+                    placeholder="請輸入電量百分比"
+                  />
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {canvasOpen && canvasImageIndex !== null && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-lg p-6 relative w-[800px] h-[600px] flex flex-col">
+            <button className="absolute top-2 right-2 bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center" onClick={closeCanvasEditor}>
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex-1 flex items-stretch gap-4">
+              <div className="flex-1 flex items-center justify-center bg-gray-50 p-4">
+                <img src={images[canvasImageIndex] || undefined} alt="編輯" className="max-w-full max-h-full object-contain" />
+              </div>
+              <div className="w-64 p-4 border-l">
+                <h3 className="font-semibold mb-2">標註設定</h3>
+                <p className="text-sm text-muted-foreground">此為編輯器側欄範例，後續可加入新增/刪除/細部調整控件。</p>
+                <div className="mt-4">
+                  <Button onClick={() => { closeCanvasEditor(); toast.success('標註已保存'); }}>保存標註</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MissionSetup;
+
+// 移除積木（遞迴）
+function removeBlockById(blocks: Block[], id: string): Block[] {
+  return blocks
+    .filter((b) => b.id !== id)
+    .map((b) => {
+      if (b.type === "if") {
+        return { ...b, then: removeBlockById(b.then, id), else: removeBlockById(b.else, id) };
+      }
+      if (b.type === "repeat") {
+        return { ...b, children: removeBlockById(b.children, id) };
+      }
+      return b;
+    });
+}
+
+// 插入積木到嵌套區
+function insertBlock(blocks: Block[], targetId: string, block: Block, branch: "then" | "else" | "children"): Block[] {
+  return blocks.map((b) => {
+    if (b.id === targetId) {
+      if (b.type === "if" && (branch === "then" || branch === "else")) {
+        return {
+          ...b,
+          [branch]: [...b[branch], block],
+        };
+      }
+      if (b.type === "repeat" && branch === "children") {
+        return {
+          ...b,
+          children: [...b.children, block],
+        };
+      }
+    }
+    if (b.type === "if") {
+      return { ...b, then: insertBlock(b.then, targetId, block, branch), else: insertBlock(b.else, targetId, block, branch) };
+    }
+    if (b.type === "repeat") {
+      return { ...b, children: insertBlock(b.children, targetId, block, branch) };
+    }
+    return b;
+  });
+}
+
+// 找到父陣列與索引位置，用於複製/插入
+function findParentAndIndex(bs: Block[], id: string, parent: Block[] | null = null): { parentArr: Block[] | null; index: number } | null {
+  for (let i = 0; i < bs.length; i++) {
+    const b = bs[i];
+    if (b.id === id) return { parentArr: parent, index: i };
+    if (b.type === 'if') {
+      const r = findParentAndIndex(b.then, id, b.then);
+      if (r) return r;
+      const r2 = findParentAndIndex(b.else, id, b.else);
+      if (r2) return r2;
+    }
+    if (b.type === 'repeat') {
+      const r = findParentAndIndex(b.children, id, b.children);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
+function duplicateBlock(id: string) {
+  const info = findParentAndIndex(blocks, id);
+  if (!info) return;
+  const parentArr = info.parentArr || blocks;
+  const original = parentArr[info.index];
+  const copy = structuredClone(original);
+  // assign new ids recursively
+  function reid(b: Block) {
+    const newId = `${b.type}-${Date.now()}-${Math.random().toString(16).slice(2,6)}`;
+    if (b.type === 'action') return { ...b, id: newId } as BlockAction;
+    if (b.type === 'if') return { ...b, id: newId, then: b.then.map(reid), else: b.else.map(reid) } as BlockIf;
+    if (b.type === 'repeat') return { ...b, id: newId, children: b.children.map(reid) } as BlockRepeat;
+    return b;
+  }
+  const newBlock = reid(copy as Block);
+  // insert after
+  const newBlocks = (function insertAt(bs: Block[]): Block[] {
+    if (info.parentArr === null) {
+      const arr = [...bs];
+      arr.splice(info.index + 1, 0, newBlock);
+      return arr;
+    }
+    // recursive insertion into nested structure
+    return bs.map((b) => {
+      if (b.type === 'if') {
+        return { ...b, then: insertAt(b.then), else: insertAt(b.else) };
+      }
+      if (b.type === 'repeat') {
+        return { ...b, children: insertAt(b.children) };
+      }
+      return b;
+    });
+  })(blocks);
+  setBlocks(newBlocks);
+  toast.success('已複製積木');
+}

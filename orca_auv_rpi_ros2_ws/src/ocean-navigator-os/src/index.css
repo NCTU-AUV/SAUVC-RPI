@@ -1,0 +1,174 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Ocean-themed dark mode for AUV operations */
+    --background: 220 25% 8%;
+    --foreground: 200 20% 95%;
+
+    --card: 220 25% 10%;
+    --card-foreground: 200 20% 95%;
+
+    --popover: 220 25% 10%;
+    --popover-foreground: 200 20% 95%;
+
+    /* Deep ocean blue primary */
+    --primary: 215 100% 20%;
+    --primary-foreground: 200 20% 98%;
+
+    /* Cyan accent for highlights */
+    --secondary: 190 100% 50%;
+    --secondary-foreground: 220 25% 10%;
+
+    --muted: 220 20% 15%;
+    --muted-foreground: 200 15% 60%;
+
+    /* Bright cyan accent */
+    --accent: 190 100% 50%;
+    --accent-foreground: 220 25% 10%;
+
+    /* Warning orange */
+    --destructive: 15 100% 60%;
+    --destructive-foreground: 200 20% 98%;
+
+    /* Success green */
+    --success: 145 80% 50%;
+    --success-foreground: 220 25% 10%;
+
+    /* Glass effect borders */
+    --border: 200 20% 25%;
+    --input: 200 20% 20%;
+    --ring: 190 100% 50%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar ocean theme */
+    --sidebar-background: 220 25% 8%;
+    --sidebar-foreground: 200 20% 95%;
+    --sidebar-primary: 215 100% 20%;
+    --sidebar-primary-foreground: 200 20% 98%;
+    --sidebar-accent: 220 20% 15%;
+    --sidebar-accent-foreground: 200 20% 95%;
+    --sidebar-border: 200 20% 20%;
+    --sidebar-ring: 190 100% 50%;
+
+    /* Custom glow effects */
+    --glow-cyan: 190 100% 50%;
+    --glow-blue: 215 100% 50%;
+    --glow-orange: 15 100% 60%;
+  }
+
+  /* Light mode */
+  .light {
+    /* Light, clean background */
+    --background: 0 0% 98%;
+    --foreground: 220 25% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 8%;
+
+    /* Softer primary blue */
+    --primary: 215 100% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Cyan accent */
+    --secondary: 190 100% 45%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 15% 85%;
+    --muted-foreground: 220 10% 35%;
+
+    /* Bright cyan accent */
+    --accent: 190 100% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Warning orange */
+    --destructive: 15 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Success green */
+    --success: 145 80% 40%;
+    --success-foreground: 0 0% 100%;
+
+    /* Lighter borders */
+    --border: 220 20% 85%;
+    --input: 220 15% 92%;
+    --ring: 190 100% 50%;
+
+    /* Light sidebar */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 220 25% 8%;
+    --sidebar-primary: 215 100% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 85%;
+    --sidebar-accent-foreground: 220 25% 8%;
+    --sidebar-border: 220 15% 85%;
+    --sidebar-ring: 190 100% 50%;
+
+    /* Custom glow effects */
+    --glow-cyan: 190 100% 45%;
+    --glow-blue: 215 100% 45%;
+    --glow-orange: 15 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Glass morphism effect */
+  .glass {
+    @apply bg-card/40 backdrop-blur-xl border border-border/50;
+  }
+
+  /* Glow effects for active elements */
+  .glow-cyan {
+    box-shadow: 0 0 20px hsl(var(--glow-cyan) / 0.3);
+  }
+
+  .glow-blue {
+    box-shadow: 0 0 20px hsl(var(--glow-blue) / 0.3);
+  }
+
+  .glow-orange {
+    box-shadow: 0 0 20px hsl(var(--glow-orange) / 0.3);
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-accent/50 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-accent/70;
+  }
+
+  /* Smooth transitions */
+  * {
+    @apply transition-colors duration-200;
+  }
+}
