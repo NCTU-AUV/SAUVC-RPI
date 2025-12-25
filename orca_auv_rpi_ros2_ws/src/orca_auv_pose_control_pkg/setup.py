@@ -28,6 +28,8 @@ setup(
             "float32_float64_converter_node = orca_auv_pose_control_pkg.float32_float64_converter_node:main",
             "output_sink_force_to_output_wrench_node = orca_auv_pose_control_pkg.output_sink_force_to_output_wrench_node:main",
             "imu_to_orientation_node = orca_auv_pose_control_pkg.imu_to_orientation_node:main",
+            "on_off_controller = orca_auv_pose_control_pkg.on_off_controller:main",
+            "waypoint_target_publisher = orca_auv_pose_control_pkg.waypoint_target_publisher:main"
         ],
     },
 )
