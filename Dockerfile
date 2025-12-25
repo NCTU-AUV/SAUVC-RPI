@@ -35,6 +35,7 @@ RUN source /opt/ros/humble/setup.bash && \
     ros2 run micro_ros_setup build_agent.sh && \
     rm -rf build log
 
+RUN echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc
 RUN echo "source ~/uros_ws/install/local_setup.bash" >> /etc/bash.bashrc
 RUN source /opt/ros/humble/setup.bash && ros2 run mavros install_geographiclib_datasets.sh
 

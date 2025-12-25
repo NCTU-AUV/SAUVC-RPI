@@ -186,7 +186,7 @@ const ManualControl = () => {
 
   // WebSocket Connection
   const { isConnected: isWsConnected, sendJsonMessage } = useROSWebSocket({
-    url: "ws://" + window.location.hostname + ":80/websocket",
+    url: "ws://" + window.location.hostname + ":8000/websocket",
     onMessage: handleMessage
   });
 
@@ -339,18 +339,26 @@ const ManualControl = () => {
         {/* Status Line */}
         <Card className="glass p-6 mb-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <Sonar className={`w-5 h-5 ${isConnected ? "text-success" : "text-destructive"}`} />
-                <span className="font-semibold">系統連接狀態</span>
+                <span className="font-semibold">系統狀態</span>
               </div>
-              <Badge variant="outline" className={isConnected ? "border-success/50 text-success" : "border-destructive/50 text-destructive"}>
-                {isConnected ? "已連接" : "未連接"}
-              </Badge>
-              {isConnected && (
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>WebSocket: Active</span>
-                  <span>PWM Signal: Ready</span>
+              <div className="flex gap-2">
+                <Badge variant="outline" className={demoMode ? "border-accent/50 text-accent" : "border-muted text-muted"}>
+                  {demoMode ? "展示模式" : "標準模式"}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className={isWsConnected ? "border-success/50 text-success" : "border-destructive/50 text-destructive shadow-[0_0_10px_rgba(239,68,68,0.2)]"}
+                >
+                  {isWsConnected ? "連線正常" : "實時連線中斷"}
+                </Badge>
+              </div>
+              {isWsConnected && (
+                <div className="flex items-center gap-4 text-[10px] text-muted-foreground uppercase font-mono">
+                  <span>WS: ACTIVE</span>
+                  <span>PWM: READY</span>
                 </div>
               )}
             </div>

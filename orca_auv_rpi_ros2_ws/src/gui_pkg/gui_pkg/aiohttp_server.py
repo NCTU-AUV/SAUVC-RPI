@@ -41,6 +41,7 @@ class AIOHTTPServer:
                 if msg.data == 'close':
                     await websocket_response.close()
                 else:
+                    print(f"DEBUG: WS Received: {msg.data}")
                     self._msg_callback(msg.data)
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 print('websocket connection closed with exception %s' %
@@ -75,7 +76,7 @@ class AIOHTTPServer:
 
     async def start(self):
         await self.runner.setup()
-        self.site = web.TCPSite(self.runner, '0.0.0.0', 80)
+        self.site = web.TCPSite(self.runner, '0.0.0.0', 8000)
 
         await self.site.start()
 

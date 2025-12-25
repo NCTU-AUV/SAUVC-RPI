@@ -141,9 +141,11 @@ class GUINode(Node):
 
     def _handle_topic_message(self, msg_data, msg_json_object):
         topic_name = msg_data.get("topic_name")
+        self.get_logger().info(f"DEBUG: Handling topic message: {topic_name}")
         if topic_name == "set_pwm_output_signal_value_us":
             self._handle_pwm_topic(msg_data, msg_json_object)
         elif topic_name == "set_output_wrench_at_center_N_Nm":
+            self.get_logger().info(f"DEBUG: Processing wrench command")
             self._handle_wrench_topic(msg_data, msg_json_object)
         else:
             self.get_logger().warning(f"Unknown topic: {topic_name}")
