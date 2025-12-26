@@ -87,7 +87,7 @@ class LkTotalTransformNode(Node):
         # ---- Params (robust estimation) ----
         self.declare_parameter('ransac_reproj_threshold_px', 3.0)
         self.declare_parameter('min_inliers', 10)
-        self.declare_parameter('min_tracked_points', 30)
+        self.declare_parameter('min_tracked_points', 100)
         self.declare_parameter('reinit_if_fail', True)
 
         # ---- Load params ----

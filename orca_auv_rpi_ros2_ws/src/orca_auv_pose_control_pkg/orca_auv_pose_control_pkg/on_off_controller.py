@@ -55,10 +55,10 @@ class OnOffController(Node):
         self.declare_parameter("tol_y", 5.0)
 
         # Fixed on/off thrust magnitude
-        self.declare_parameter("thrust", 10.0)
+        self.declare_parameter("thrust", 1.0)
 
         # Control mode
-        self.declare_parameter("single_axis_only", True)
+        self.declare_parameter("single_axis_only", False)
 
         self.current_topic = self.get_parameter("current_topic").value
         self.target_topic = self.get_parameter("target_topic").value

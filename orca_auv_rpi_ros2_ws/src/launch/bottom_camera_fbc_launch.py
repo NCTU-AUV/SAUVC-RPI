@@ -46,7 +46,7 @@ def generate_launch_description():
             {"output_topic": "/orca_auv/set_output_wrench_at_center_N_Nm"},
             {"tol_x": 5.0},
             {"tol_y": 5.0},
-            {"thrust": 5.0},
+            {"thrust": 1.0},
             {"single_axis_only": False},
         ],
     )
@@ -56,6 +56,6 @@ def generate_launch_description():
             thruster_control,
             bottom_camera_launch,
             gui_node,
-            on_off_controller_node,
+            # on_off_controller_node,
         ]
     )
