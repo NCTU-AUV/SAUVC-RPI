@@ -1,3 +1,4 @@
+import math
 import cv2
 import numpy as np
 import rclpy
@@ -18,6 +19,9 @@ class FrameTransformNode(Node):
         self.declare_parameter('ransac_reproj_threshold_px', 3.0)
         self.declare_parameter('min_inliers', 15)
         self.declare_parameter('publish_debug_image', False)
+        self.declare_parameter('image_to_body_yaw_deg', 90.0)
+        self.declare_parameter('flip_image_x', False)
+        self.declare_parameter('flip_image_y', False)
 
         image_topic = self.get_parameter('image_topic').value
         resize_width = int(self.get_parameter('resize_width_px').value)
@@ -25,6 +29,12 @@ class FrameTransformNode(Node):
         self._ransac_reproj_threshold = float(self.get_parameter('ransac_reproj_threshold_px').value)
         self._min_inliers = int(self.get_parameter('min_inliers').value)
         self._publish_debug_image = bool(self.get_parameter('publish_debug_image').value)
+        yaw_deg = float(self.get_parameter('image_to_body_yaw_deg').value)
+        flip_x = bool(self.get_parameter('flip_image_x').value)
+        flip_y = bool(self.get_parameter('flip_image_y').value)
+
+        self._image_to_body = self._build_mapping_matrix(yaw_deg, flip_x, flip_y)
+        self._body_to_image = np.linalg.inv(self._image_to_body)
 
         self._bridge = CvBridge()
         self._prev_gray = None
@@ -160,10 +170,17 @@ class FrameTransformNode(Node):
             translation_x /= scale_factor
             translation_y /= scale_factor
 
+        # Change of basis to express transform in the AUV/body frame as configured.
+        transform_body = self._change_of_basis(np.array([
+            [m00, m01, translation_x],
+            [m10, m11, translation_y],
+            [0.0, 0.0, 1.0],
+        ], dtype=np.float64))
+
         transform_msg = Float64MultiArray()
         transform_msg.data = [
-            float(m00), float(m01), float(translation_x),
-            float(m10), float(m11), float(translation_y),
+            float(transform_body[0, 0]), float(transform_body[0, 1]), float(transform_body[0, 2]),
+            float(transform_body[1, 0]), float(transform_body[1, 1]), float(transform_body[1, 2]),
         ]
         self._transform_pub.publish(transform_msg)
 
@@ -191,6 +208,29 @@ class FrameTransformNode(Node):
             self.get_logger().warn(f'Failed to convert debug image: {exc}', throttle_duration_sec=5.0)
             return
         self._debug_image_pub.publish(debug_msg)
+
+    @staticmethod
+    def _build_mapping_matrix(yaw_deg, flip_x, flip_y):
+        yaw_rad = math.radians(yaw_deg)
+        cos_yaw = math.cos(yaw_rad)
+        sin_yaw = math.sin(yaw_rad)
+        rotation = np.array([
+            [cos_yaw, -sin_yaw],
+            [sin_yaw, cos_yaw],
+        ], dtype=np.float64)
+        flips = np.array([
+            [-1.0 if flip_x else 1.0, 0.0],
+            [0.0, -1.0 if flip_y else 1.0],
+        ], dtype=np.float64)
+        return rotation @ flips
+
+    def _change_of_basis(self, transform_image: np.ndarray) -> np.ndarray:
+        # Express image-frame transform in the configured body frame:
+        # T_body = M * T_image * M^{-1}, where M maps image axes to body axes.
+        composed = np.eye(3, dtype=np.float64)
+        composed[:2, :2] = self._image_to_body @ transform_image[:2, :2] @ self._body_to_image
+        composed[:2, 2] = (self._image_to_body @ transform_image[:2, 2].reshape(2, 1)).flatten()
+        return composed
 
 
 def main(args=None):
