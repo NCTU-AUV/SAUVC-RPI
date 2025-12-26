@@ -34,6 +34,9 @@ class LkTotalTransformNode(Node):
         self.declare_parameter('output_topic', 'bottom_camera/total_transform_px')
         self.declare_parameter('publish_debug_image', False)
         self.declare_parameter('debug_image_topic', 'bottom_camera/debug/lk_tracks')
+        self.declare_parameter('image_to_body_yaw_deg', 90.0)
+        self.declare_parameter('flip_image_x', False)
+        self.declare_parameter('flip_image_y', False)
 
         # ---- Params (image scale) ----
         self.declare_parameter('resize_width_px', 320)
@@ -83,6 +86,12 @@ class LkTotalTransformNode(Node):
         self._min_inliers = int(self.get_parameter('min_inliers').value)
         self._min_tracked_points = int(self.get_parameter('min_tracked_points').value)
         self._reinit_if_fail = bool(self.get_parameter('reinit_if_fail').value)
+
+        yaw_deg = float(self.get_parameter('image_to_body_yaw_deg').value)
+        flip_x = bool(self.get_parameter('flip_image_x').value)
+        flip_y = bool(self.get_parameter('flip_image_y').value)
+        self._image_to_body = self._build_mapping_matrix(yaw_deg, flip_x, flip_y)
+        self._body_to_image = np.linalg.inv(self._image_to_body)
 
         # ---- State ----
         self._prev_gray: Optional[np.ndarray] = None
@@ -268,13 +277,15 @@ class LkTotalTransformNode(Node):
             tx /= scale_factor
             ty /= scale_factor
 
-        increment = np.array([
+        increment_image = np.array([
             [m00, m01, tx],
             [m10, m11, ty],
             [0.0, 0.0, 1.0],
         ], dtype=np.float64)
 
-        self._total_matrix = self._total_matrix @ increment
+        increment_body = self._change_of_basis(increment_image)
+
+        self._total_matrix = self._total_matrix @ increment_body
         self._publish_total()
 
         # update prev
@@ -284,6 +295,30 @@ class LkTotalTransformNode(Node):
 
         if self._publish_debug_image:
             self._publish_debug(frame_bgr, self._prev_pts, scale_factor)
+
+
+    @staticmethod
+    def _build_mapping_matrix(yaw_deg: float, flip_x: bool, flip_y: bool) -> np.ndarray:
+        yaw_rad = math.radians(yaw_deg)
+        cos_yaw = math.cos(yaw_rad)
+        sin_yaw = math.sin(yaw_rad)
+        rotation = np.array([
+            [cos_yaw, -sin_yaw],
+            [sin_yaw, cos_yaw],
+        ], dtype=np.float64)
+        flips = np.array([
+            [-1.0 if flip_x else 1.0, 0.0],
+            [0.0, -1.0 if flip_y else 1.0],
+        ], dtype=np.float64)
+        return rotation @ flips
+
+    def _change_of_basis(self, transform_image: np.ndarray) -> np.ndarray:
+        # Express image-frame transform in the configured body frame:
+        # T_body = M * T_image * M^{-1}, where M maps image axes to body axes.
+        composed = np.eye(3, dtype=np.float64)
+        composed[:2, :2] = self._image_to_body @ transform_image[:2, :2] @ self._body_to_image
+        composed[:2, 2] = (self._image_to_body @ transform_image[:2, 2].reshape(2, 1)).flatten()
+        return composed
 
 
 def main(args=None):
