@@ -19,7 +19,7 @@ class WaypointTargetPublisher(Node):
         super().__init__("waypoint_target_publisher")
 
         # --- Parameters (keep topics/tolerance configurable) ---
-        self.declare_parameter("current_topic", "/orca_auv/bottom_camera/total_transform_px")
+        self.declare_parameter("current_topic", "/orca_auv/bottom_camera/total_transform_world")
         self.declare_parameter("target_topic", "/orca_auv/target_point_px")
         self.declare_parameter("done_topic", "/orca_auv/target_done")
 

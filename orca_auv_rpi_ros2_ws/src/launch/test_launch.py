@@ -46,7 +46,7 @@ def generate_launch_description():
         package='orca_auv_pose_control_pkg',
         executable='waypoint_target_publisher',
         parameters=[
-            {'current_topic': '/orca_auv/bottom_camera/total_transform_px'},
+            {'current_topic': '/orca_auv/bottom_camera/total_transform_world'},
             {'target_topic': '/orca_auv/target_point_px'},
             {'done_topic': '/orca_auv/target_done'},
             {'tol_x': 5.0},
@@ -60,7 +60,7 @@ def generate_launch_description():
         package='orca_auv_pose_control_pkg',
         executable='on_off_controller',
         parameters=[
-            {'current_topic': '/orca_auv/bottom_camera/total_transform_px'},
+            {'current_topic': '/orca_auv/bottom_camera/total_transform_world'},
             {'target_topic': '/orca_auv/target_point_px'},
             {'output_topic': '/orca_auv/set_output_wrench_at_center_N_Nm'},
             {'tol_x': 5.0},
