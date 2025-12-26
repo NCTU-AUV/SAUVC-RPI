@@ -7,23 +7,37 @@ import numpy as np
 import rclpy
 from cv_bridge import CvBridge
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import CameraInfo, Image
 from std_msgs.msg import Float64MultiArray
+
+
+def _T(tx: float, ty: float) -> np.ndarray:
+    """3x3 translation matrix."""
+    return np.array([
+        [1.0, 0.0, tx],
+        [0.0, 1.0, ty],
+        [0.0, 0.0, 1.0],
+    ], dtype=np.float64)
 
 
 class LkTotalTransformNode(Node):
     """
     Subscribe:
-      - bottom_camera/image_raw (sensor_msgs/Image)
+      - image_topic (sensor_msgs/Image)
+      - (optional) camera_info_topic (sensor_msgs/CameraInfo)
 
     Publish:
-      - bottom_camera/total_transform_px (std_msgs/Float64MultiArray)
-        data = [total_tx, total_ty, total_rotation_rad, total_scale]
+      - output_topic (std_msgs/Float64MultiArray): center-compensated total [tx, ty, rot, scale]
+      - (optional) output_topic_raw              : raw total [tx, ty, rot, scale]
 
     Notes:
-      - 內部用 KLT (Lucas–Kanade / PyrLK) 追蹤特徵點
-      - 每幀用 estimateAffinePartial2D(RANSAC) 估 2x3，累積成 total 3x3
-      - 輸出格式對齊既有 total_transform_px (tx, ty, rotation, scale)
+      - Tracks corners with PyrLK, estimates a partial affine each frame (RANSAC).
+      - Translations are rescaled back to the original image size.
+      - Two running totals:
+          raw: accumulated directly
+          compensated: H_c = T(-c) * H_raw * T(c) (c = image center or principal point)
+        so pure rotations about the chosen center do not introduce spurious translation.
+      - Outputs are expressed in the configured body frame (image_to_body mapping + flips).
     """
 
     def __init__(self):
@@ -32,8 +46,21 @@ class LkTotalTransformNode(Node):
         # ---- Params (topics) ----
         self.declare_parameter('image_topic', 'bottom_camera/image_raw')
         self.declare_parameter('output_topic', 'bottom_camera/total_transform_px')
+
+        # raw output (debug / diagnostics)
+        self.declare_parameter('publish_raw_output', True)
+        self.declare_parameter('output_topic_raw', 'bottom_camera/total_transform_px_raw')
+
+        # debug image overlay
         self.declare_parameter('publish_debug_image', False)
         self.declare_parameter('debug_image_topic', 'bottom_camera/debug/lk_tracks')
+
+        # ---- Params (rotation center) ----
+        # 'image_center' or 'principal_point'
+        self.declare_parameter('rotation_center_mode', 'image_center')
+        self.declare_parameter('camera_info_topic', 'bottom_camera/camera_info')
+
+        # ---- Params (image -> body mapping) ----
         self.declare_parameter('image_to_body_yaw_deg', 90.0)
         self.declare_parameter('flip_image_x', False)
         self.declare_parameter('flip_image_y', False)
@@ -48,26 +75,37 @@ class LkTotalTransformNode(Node):
         self.declare_parameter('block_size', 7)
 
         # ---- Params (LK / PyrLK) ----
-        self.declare_parameter('win_size', 21)          # LK 視窗大小 (win_size x win_size)
-        self.declare_parameter('max_level', 2)          # 金字塔層數
+        self.declare_parameter('win_size', 21)
+        self.declare_parameter('max_level', 2)
         self.declare_parameter('criteria_count', 20)
         self.declare_parameter('criteria_eps', 0.03)
-        self.declare_parameter('max_track_error', 50.0) # err 太大就丟掉（可設 0 代表不濾）
+        self.declare_parameter('max_track_error', 50.0)  # <=0 to disable
 
         # ---- Params (robust estimation) ----
         self.declare_parameter('ransac_reproj_threshold_px', 3.0)
         self.declare_parameter('min_inliers', 10)
-        self.declare_parameter('min_tracked_points', 30)  # 少於這個就重抓點
+        self.declare_parameter('min_tracked_points', 30)
         self.declare_parameter('reinit_if_fail', True)
 
         # ---- Load params ----
         self._bridge = CvBridge()
-
         self._image_topic = self.get_parameter('image_topic').value
         self._output_topic = self.get_parameter('output_topic').value
 
+        self._publish_raw_output = bool(self.get_parameter('publish_raw_output').value)
+        self._output_topic_raw = self.get_parameter('output_topic_raw').value
+
         self._publish_debug_image = bool(self.get_parameter('publish_debug_image').value)
         self._debug_image_topic = self.get_parameter('debug_image_topic').value
+
+        self._rotation_center_mode = str(self.get_parameter('rotation_center_mode').value)
+        self._camera_info_topic = str(self.get_parameter('camera_info_topic').value)
+
+        yaw_deg = float(self.get_parameter('image_to_body_yaw_deg').value)
+        flip_x = bool(self.get_parameter('flip_image_x').value)
+        flip_y = bool(self.get_parameter('flip_image_y').value)
+        self._image_to_body = self._build_mapping_matrix(yaw_deg, flip_x, flip_y)
+        self._body_to_image = np.linalg.inv(self._image_to_body)
 
         self._resize_width_px = int(self.get_parameter('resize_width_px').value)
 
@@ -87,31 +125,48 @@ class LkTotalTransformNode(Node):
         self._min_tracked_points = int(self.get_parameter('min_tracked_points').value)
         self._reinit_if_fail = bool(self.get_parameter('reinit_if_fail').value)
 
-        yaw_deg = float(self.get_parameter('image_to_body_yaw_deg').value)
-        flip_x = bool(self.get_parameter('flip_image_x').value)
-        flip_y = bool(self.get_parameter('flip_image_y').value)
-        self._image_to_body = self._build_mapping_matrix(yaw_deg, flip_x, flip_y)
-        self._body_to_image = np.linalg.inv(self._image_to_body)
+        # ---- CameraInfo principal point (optional) ----
+        self._have_pp = False
+        self._pp_cx = 0.0
+        self._pp_cy = 0.0
 
         # ---- State ----
         self._prev_gray: Optional[np.ndarray] = None
         self._prev_pts: Optional[np.ndarray] = None  # (N,1,2) float32 on downscaled image
-        self._prev_scale_factor: float = 1.0
 
-        self._total_matrix = np.eye(3, dtype=np.float64)
+        # running totals (in body frame)
+        self._total_raw = np.eye(3, dtype=np.float64)
+        self._total_comp = np.eye(3, dtype=np.float64)
 
         # ---- Pub/Sub ----
-        self._total_pub = self.create_publisher(Float64MultiArray, self._output_topic, 10)
+        self._pub_comp = self.create_publisher(Float64MultiArray, self._output_topic, 10)
+        self._pub_raw = None
+        if self._publish_raw_output:
+            self._pub_raw = self.create_publisher(Float64MultiArray, self._output_topic_raw, 10)
+
+        self._debug_pub = None
         if self._publish_debug_image:
             self._debug_pub = self.create_publisher(Image, self._debug_image_topic, 10)
-        else:
-            self._debug_pub = None
 
-        self._sub = self.create_subscription(Image, self._image_topic, self._on_image, 10)
+        self._sub_img = self.create_subscription(Image, self._image_topic, self._on_image, 10)
+        self._sub_info = None
+        if self._rotation_center_mode == 'principal_point':
+            self._sub_info = self.create_subscription(CameraInfo, self._camera_info_topic, self._on_camerainfo, 10)
 
         self.get_logger().info(
-            f'LK total transform node started. image_topic={self._image_topic}, output_topic={self._output_topic}'
+            f'LK total transform node started. image_topic={self._image_topic}, output_topic={self._output_topic}, '
+            f'rotation_center_mode={self._rotation_center_mode}, publish_raw={self._publish_raw_output}'
         )
+
+    def _on_camerainfo(self, msg: CameraInfo):
+        # CameraInfo.K = [fx,0,cx, 0,fy,cy, 0,0,1]
+        if len(msg.k) >= 6:
+            cx = float(msg.k[2])
+            cy = float(msg.k[5])
+            if math.isfinite(cx) and math.isfinite(cy):
+                self._pp_cx = cx
+                self._pp_cy = cy
+                self._have_pp = True
 
     def _to_bgr(self, msg: Image) -> Optional[np.ndarray]:
         try:
@@ -122,7 +177,7 @@ class LkTotalTransformNode(Node):
 
     def _downscale_gray(self, gray: np.ndarray) -> Tuple[np.ndarray, float]:
         h, w = gray.shape[:2]
-        if self._resize_width_px is None or self._resize_width_px <= 0 or w <= self._resize_width_px:
+        if self._resize_width_px <= 0 or w <= self._resize_width_px:
             return gray, 1.0
         scale = float(self._resize_width_px) / float(w)
         new_w = self._resize_width_px
@@ -144,27 +199,33 @@ class LkTotalTransformNode(Node):
         return pts.astype(np.float32)
 
     @staticmethod
-    def _extract_similarity(matrix: np.ndarray) -> Tuple[float, float, float, float]:
-        tx = float(matrix[0, 2])
-        ty = float(matrix[1, 2])
-        a = float(matrix[0, 0])
-        c = float(matrix[1, 0])
+    def _extract_similarity(H: np.ndarray) -> Tuple[float, float, float, float]:
+        tx = float(H[0, 2])
+        ty = float(H[1, 2])
+        a = float(H[0, 0])
+        c = float(H[1, 0])
         scale = math.sqrt(a * a + c * c)
-        rotation = math.atan2(c, a)
-        return tx, ty, rotation, scale
+        rot = math.atan2(c, a)
+        return tx, ty, rot, scale
 
-    def _publish_total(self):
-        tx, ty, rot, scale = self._extract_similarity(self._total_matrix)
+    def _publish(self):
+        # compensated output (main topic)
+        tx, ty, rot, scale = self._extract_similarity(self._total_comp)
         msg = Float64MultiArray()
         msg.data = [float(tx), float(ty), float(rot), float(scale)]
-        self._total_pub.publish(msg)
+        self._pub_comp.publish(msg)
+
+        # raw output (optional diagnostics)
+        if self._pub_raw is not None:
+            tx2, ty2, rot2, scale2 = self._extract_similarity(self._total_raw)
+            msg2 = Float64MultiArray()
+            msg2.data = [float(tx2), float(ty2), float(rot2), float(scale2)]
+            self._pub_raw.publish(msg2)
 
     def _publish_debug(self, frame_bgr: np.ndarray, pts_small: np.ndarray, scale_factor: float):
-        if self._debug_pub is None:
+        if self._debug_pub is None or frame_bgr is None or pts_small is None:
             return
-        if frame_bgr is None or pts_small is None:
-            return
-        # pts_small: (N,1,2) in downscaled coords, scale back to original
+
         pts = pts_small.reshape(-1, 2)
         if scale_factor > 0 and scale_factor != 1.0:
             pts = pts / scale_factor
@@ -180,18 +241,25 @@ class LkTotalTransformNode(Node):
             return
         self._debug_pub.publish(out)
 
+    def _get_rotation_center(self, w: int, h: int) -> Tuple[float, float]:
+        # Use principal point if requested & available; else image center
+        if self._rotation_center_mode == 'principal_point' and self._have_pp:
+            return self._pp_cx, self._pp_cy
+        return 0.5 * float(w), 0.5 * float(h)
+
     def _on_image(self, msg: Image):
         frame_bgr = self._to_bgr(msg)
         if frame_bgr is None:
             return
 
         gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+        h_img, w_img = gray.shape[:2]
+
         gray_small, scale_factor = self._downscale_gray(gray)
 
-        # init
+        # init / re-init
         if self._prev_gray is None or self._prev_pts is None or len(self._prev_pts) < self._min_tracked_points:
             self._prev_gray = gray_small
-            self._prev_scale_factor = scale_factor
             self._prev_pts = self._detect_features(gray_small)
             if self._publish_debug_image and self._prev_pts is not None:
                 self._publish_debug(frame_bgr, self._prev_pts, scale_factor)
@@ -212,36 +280,31 @@ class LkTotalTransformNode(Node):
         if p1 is None or st is None:
             if self._reinit_if_fail:
                 self._prev_gray = gray_small
-                self._prev_scale_factor = scale_factor
                 self._prev_pts = self._detect_features(gray_small)
             return
 
         st = st.reshape(-1)
         good_new = p1[st == 1].reshape(-1, 2)
         good_old = self._prev_pts[st == 1].reshape(-1, 2)
+
+        # optional error filter
         if err is not None:
             err = err.reshape(-1)
             good_err = err[st == 1]
-        else:
-            good_err = None
-
-        # optional error filter
-        if good_err is not None and self._max_track_error > 0:
-            mask = good_err <= self._max_track_error
-            good_new = good_new[mask]
-            good_old = good_old[mask]
+            if self._max_track_error > 0:
+                mask = good_err <= self._max_track_error
+                good_new = good_new[mask]
+                good_old = good_old[mask]
 
         if good_new.shape[0] < self._min_tracked_points:
-            # reinit points on current frame
             self._prev_gray = gray_small
-            self._prev_scale_factor = scale_factor
             self._prev_pts = self._detect_features(gray_small)
             if self._publish_debug_image and self._prev_pts is not None:
                 self._publish_debug(frame_bgr, self._prev_pts, scale_factor)
             return
 
-        # Estimate affine (partial => similarity-ish: rotation+scale+translation, no full shear)
-        matrix_2x3, inliers = cv2.estimateAffinePartial2D(
+        # Estimate affine (partial: rotation + scale + translation)
+        M2, inliers = cv2.estimateAffinePartial2D(
             good_old,
             good_new,
             method=cv2.RANSAC,
@@ -251,10 +314,9 @@ class LkTotalTransformNode(Node):
             refineIters=10,
         )
 
-        if matrix_2x3 is None or inliers is None:
+        if M2 is None or inliers is None:
             if self._reinit_if_fail:
                 self._prev_gray = gray_small
-                self._prev_scale_factor = scale_factor
                 self._prev_pts = self._detect_features(gray_small)
             return
 
@@ -266,36 +328,43 @@ class LkTotalTransformNode(Node):
             )
             if self._reinit_if_fail:
                 self._prev_gray = gray_small
-                self._prev_scale_factor = scale_factor
                 self._prev_pts = self._detect_features(gray_small)
             return
 
-        # Convert translation back to original pixel scale (like your ORB node)
-        m00, m01, tx = matrix_2x3[0]
-        m10, m11, ty = matrix_2x3[1]
+        # Build raw 3x3 increment in ORIGINAL pixel scale
+        m00, m01, tx = M2[0]
+        m10, m11, ty = M2[1]
         if scale_factor > 0:
             tx /= scale_factor
             ty /= scale_factor
 
-        increment_image = np.array([
+        H_raw_img = np.array([
             [m00, m01, tx],
             [m10, m11, ty],
             [0.0, 0.0, 1.0],
         ], dtype=np.float64)
 
-        increment_body = self._change_of_basis(increment_image)
+        # Center-compensated increment: H_c = T(-c) * H_raw * T(c)
+        cx, cy = self._get_rotation_center(w_img, h_img)
+        H_comp_img = _T(-cx, -cy) @ H_raw_img @ _T(cx, cy)
 
-        self._total_matrix = self._total_matrix @ increment_body
-        self._publish_total()
+        # Map to body frame
+        H_raw_body = self._change_of_basis(H_raw_img)
+        H_comp_body = self._change_of_basis(H_comp_img)
 
-        # update prev
+        # Accumulate
+        self._total_raw = self._total_raw @ H_raw_body
+        self._total_comp = self._total_comp @ H_comp_body
+
+        # Publish totals
+        self._publish()
+
+        # Update prev state (keep tracking points)
         self._prev_gray = gray_small
-        self._prev_scale_factor = scale_factor
         self._prev_pts = good_new.reshape(-1, 1, 2).astype(np.float32)
 
         if self._publish_debug_image:
             self._publish_debug(frame_bgr, self._prev_pts, scale_factor)
-
 
     @staticmethod
     def _build_mapping_matrix(yaw_deg: float, flip_x: bool, flip_y: bool) -> np.ndarray:
