@@ -22,7 +22,7 @@ def _sign(v: float) -> float:
 class OnOffController(Node):
     """
     Subscribes:
-      - current_topic: Float64MultiArray [cx, cy]
+      - current_topic: Float64MultiArray [cx, cy, yaw] (yaw optional; used if present)
       - target_topic : Float64MultiArray [tx, ty]
 
     Publishes:
@@ -43,6 +43,8 @@ class OnOffController(Node):
         self.declare_parameter("current_topic", "/orca_auv/bottom_camera/total_transform_px")
         self.declare_parameter("target_topic", "/orca_auv/target_point_px")
         self.declare_parameter("output_topic", "/orca_auv/set_output_wrench_at_center_N_Nm")
+        # Index of yaw (rad) within current_topic; set negative to ignore orientation
+        self.declare_parameter("yaw_index", 2)
 
         # Optional initial target (will be overwritten when target_topic is received)
         self.declare_parameter("target_x", 0.0)
@@ -61,6 +63,7 @@ class OnOffController(Node):
         self.current_topic = self.get_parameter("current_topic").value
         self.target_topic = self.get_parameter("target_topic").value
         self.output_topic = self.get_parameter("output_topic").value
+        self.yaw_index = int(self.get_parameter("yaw_index").value)
 
         self.target_x = float(self.get_parameter("target_x").value)
         self.target_y = float(self.get_parameter("target_y").value)
@@ -75,6 +78,8 @@ class OnOffController(Node):
         self.current_x = 0.0
         self.current_y = 0.0
         self._have_current = False
+        self._have_orientation = False
+        self._yaw = 0.0
 
         # --- Pub/Sub ---
         self.pub_wrench = self.create_publisher(Wrench, self.output_topic, 10)
@@ -101,7 +106,7 @@ class OnOffController(Node):
             f"target : {self.target_topic}\n"
             f"output : {self.output_topic}\n"
             f"init target=({self.target_x},{self.target_y}) tol=({self.tol_x},{self.tol_y}) "
-            f"thrust={self.thrust} single_axis_only={self.single_axis_only}"
+            f"thrust={self.thrust} single_axis_only={self.single_axis_only} yaw_index={self.yaw_index}"
         )
 
     def _on_params(self, params):
@@ -155,6 +160,12 @@ class OnOffController(Node):
         self.current_y = cy
         self._have_current = True
 
+        if self.yaw_index >= 0 and len(data) > self.yaw_index:
+            yaw = float(data[self.yaw_index])
+            if math.isfinite(yaw):
+                self._yaw = yaw
+                self._have_orientation = True
+
         self._compute_and_publish()
 
     def _compute_and_publish(self):
@@ -165,21 +176,31 @@ class OnOffController(Node):
         need_x = abs(dx) >= self.tol_x
         need_y = abs(dy) >= self.tol_y
 
-        fx = 0.0
-        fy = 0.0
+        fx_world = 0.0
+        fy_world = 0.0
 
         if self.single_axis_only:
             # Move Y axis first; only move X when Y is within tolerance
             if need_y:
-                fy = self.thrust * _sign(dy)
+                fy_world = self.thrust * _sign(dy)
             elif need_x:
-                fx = self.thrust * _sign(dx)
+                fx_world = self.thrust * _sign(dx)
         else:
             # Move both axes if needed
             if need_x:
-                fx = self.thrust * _sign(dx)
+                fx_world = self.thrust * _sign(dx)
             if need_y:
-                fy = self.thrust * _sign(dy)
+                fy_world = self.thrust * _sign(dy)
+
+        if self._have_orientation:
+            # Rotate desired world-frame thrust into the vehicle/body frame using yaw
+            cos_yaw = math.cos(-self._yaw)
+            sin_yaw = math.sin(-self._yaw)
+            fx = fx_world * cos_yaw - fy_world * sin_yaw
+            fy = fx_world * sin_yaw + fy_world * cos_yaw
+        else:
+            fx = fx_world
+            fy = fy_world
 
         w = Wrench()
         w.force.x = float(fx)
