@@ -27,12 +27,15 @@ class LkTotalTransformNode(Node):
       - (optional) camera_info_topic (sensor_msgs/CameraInfo)
 
     Publish:
-      - output_topic (std_msgs/Float64MultiArray): center-compensated total [tx, ty, rot, scale]
-      - (optional) output_topic_raw              : raw total [tx, ty, rot, scale]
+      - output_topic (std_msgs/Float64MultiArray): vehicle pose in world frame [x, y, yaw, scale]
+      - (optional) output_topic_raw              : raw pose (no center compensation) [x, y, yaw, scale]
 
     Notes:
       - Tracks corners with PyrLK, estimates a partial affine each frame (RANSAC).
       - Translations are rescaled back to the original image size.
+      - The incoming image transform describes how the world moves in the image; the
+        vehicle motion is the inverse of that transform. We accumulate that inverse
+        to get pose in the world frame (world origin = first frame).
       - Two running totals:
           raw: accumulated directly
           compensated: H_c = T(-c) * H_raw * T(c) (c = image center or principal point)
@@ -45,11 +48,11 @@ class LkTotalTransformNode(Node):
 
         # ---- Params (topics) ----
         self.declare_parameter('image_topic', 'bottom_camera/image_raw')
-        self.declare_parameter('output_topic', 'bottom_camera/total_transform_px')
+        self.declare_parameter('output_topic', 'bottom_camera/total_transform_world')
 
         # raw output (debug / diagnostics)
         self.declare_parameter('publish_raw_output', True)
-        self.declare_parameter('output_topic_raw', 'bottom_camera/total_transform_px_raw')
+        self.declare_parameter('output_topic_raw', 'bottom_camera/total_transform_world_raw')
 
         # debug image overlay
         self.declare_parameter('publish_debug_image', False)
@@ -134,7 +137,7 @@ class LkTotalTransformNode(Node):
         self._prev_gray: Optional[np.ndarray] = None
         self._prev_pts: Optional[np.ndarray] = None  # (N,1,2) float32 on downscaled image
 
-        # running totals (in body frame)
+        # running totals (vehicle pose in world frame)
         self._total_raw = np.eye(3, dtype=np.float64)
         self._total_comp = np.eye(3, dtype=np.float64)
 
@@ -348,13 +351,23 @@ class LkTotalTransformNode(Node):
         cx, cy = self._get_rotation_center(w_img, h_img)
         H_comp_img = _T(-cx, -cy) @ H_raw_img @ _T(cx, cy)
 
-        # Map to body frame
-        H_raw_body = self._change_of_basis(H_raw_img)
-        H_comp_body = self._change_of_basis(H_comp_img)
+        # Map to body frame (scene transform) then invert to recover vehicle motion
+        H_scene_raw_body = self._change_of_basis(H_raw_img)
+        H_scene_comp_body = self._change_of_basis(H_comp_img)
 
-        # Accumulate
-        self._total_raw = self._total_raw @ H_raw_body
-        self._total_comp = self._total_comp @ H_comp_body
+        try:
+            H_motion_raw_body = np.linalg.inv(H_scene_raw_body)
+            H_motion_comp_body = np.linalg.inv(H_scene_comp_body)
+        except np.linalg.LinAlgError:
+            self.get_logger().warn('Failed to invert LK transform; reinitializing tracks.', throttle_duration_sec=5.0)
+            if self._reinit_if_fail:
+                self._prev_gray = gray_small
+                self._prev_pts = self._detect_features(gray_small)
+            return
+
+        # Accumulate vehicle pose in world frame (world origin is the first frame)
+        self._total_raw = self._total_raw @ H_motion_raw_body
+        self._total_comp = self._total_comp @ H_motion_comp_body
 
         # Publish totals
         self._publish()

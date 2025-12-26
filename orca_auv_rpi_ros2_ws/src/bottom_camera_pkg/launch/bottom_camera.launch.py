@@ -29,9 +29,4 @@ def generate_launch_description():
             executable='total_transform_node',
             name='total_transform_node',
         ),
-        Node(
-            package='bottom_camera_pkg',
-            executable='world_relative_transform_node',
-            name='world_relative_transform_node',
-        ),
     ])

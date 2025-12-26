@@ -40,7 +40,7 @@ class OnOffController(Node):
         super().__init__("on_off_controller")
 
         # --- Parameters ---
-        self.declare_parameter("current_topic", "/orca_auv/bottom_camera/total_transform_px")
+        self.declare_parameter("current_topic", "/orca_auv/bottom_camera/total_transform_world")
         self.declare_parameter("target_topic", "/orca_auv/target_point_px")
         self.declare_parameter("output_topic", "/orca_auv/set_output_wrench_at_center_N_Nm")
         # Index of yaw (rad) within current_topic; set negative to ignore orientation

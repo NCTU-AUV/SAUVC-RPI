@@ -25,7 +25,6 @@ setup(
             'bottom_camera_node = bottom_camera_pkg.bottom_camera_node:main',
             'frame_transform_node = bottom_camera_pkg.frame_transform_node:main',
             'total_transform_node = bottom_camera_pkg.total_transform_node:main',
-            'world_relative_transform_node = bottom_camera_pkg.world_relative_transform_node:main',
             'lk_total_transform_node = bottom_camera_pkg.lk_total_transform_node:main',
         ],
     },

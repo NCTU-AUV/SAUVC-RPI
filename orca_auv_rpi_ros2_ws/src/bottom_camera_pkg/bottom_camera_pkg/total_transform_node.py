@@ -6,11 +6,16 @@ from std_msgs.msg import Float64MultiArray
 
 
 class TotalTransformNode(Node):
+    """
+    Accumulates frame-to-frame transforms into vehicle pose in the world frame.
+    The incoming transform describes how the scene moves in the body frame; we
+    invert it to recover vehicle motion and integrate from the first frame.
+    """
     def __init__(self):
         super().__init__('bottom_camera_total_transform_node', namespace='orca_auv')
 
         self.declare_parameter('input_topic', 'bottom_camera/frame_transform_px')
-        self.declare_parameter('output_topic', 'bottom_camera/total_transform_px')
+        self.declare_parameter('output_topic', 'bottom_camera/total_transform_world')
 
         input_topic = self.get_parameter('input_topic').value
         output_topic = self.get_parameter('output_topic').value
@@ -31,12 +36,19 @@ class TotalTransformNode(Node):
             return
 
         m00, m01, tx, m10, m11, ty = msg.data[:6]
-        increment = np.array([
+        increment_scene = np.array([
             [m00, m01, tx],
             [m10, m11, ty],
             [0.0, 0.0, 1.0],
         ], dtype=np.float64)
-        self._total_matrix = self._total_matrix @ increment
+        try:
+            increment_motion = np.linalg.inv(increment_scene)
+        except np.linalg.LinAlgError:
+            self.get_logger().warn('Failed to invert frame transform increment; skipping.', throttle_duration_sec=5.0)
+            return
+
+        # Accumulate vehicle pose in the world frame (world origin = first frame).
+        self._total_matrix = self._total_matrix @ increment_motion
 
         total_tx, total_ty, total_rotation, total_scale = self._extract_similarity(self._total_matrix)
         out_msg = Float64MultiArray()

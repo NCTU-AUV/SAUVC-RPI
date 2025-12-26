@@ -46,8 +46,8 @@ def generate_launch_description():
             {"output_topic": "/orca_auv/set_output_wrench_at_center_N_Nm"},
             {"tol_x": 5.0},
             {"tol_y": 5.0},
-            {"thrust": 0.5},
-            {"single_axis_only": True},
+            {"thrust": 5.0},
+            {"single_axis_only": False},
         ],
     )
 

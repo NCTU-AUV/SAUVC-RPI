@@ -24,9 +24,4 @@ def generate_launch_description():
             name='lk_total_transform_node',
             parameters=[{'publish_debug_image': publish_debug_image}],
         ),
-        Node(
-            package='bottom_camera_pkg',
-            executable='world_relative_transform_node',
-            name='world_relative_transform_node',
-        ),
     ])
