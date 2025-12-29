@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import WrenchStamped
+from geometry_msgs.msg import Wrench
 import numpy as np
 
 class WrenchSum(Node):
@@ -31,7 +31,7 @@ class WrenchSum(Node):
             # Use lambda to capture the current topic name
             self.subs.append(
                 self.create_subscription(
-                    WrenchStamped,
+                    Wrench,
                     topic,
                     lambda msg, t=topic: self.listener_callback(msg, t),
                     10
@@ -40,7 +40,7 @@ class WrenchSum(Node):
             self.get_logger().info(f'Subscribed to: {topic}')
 
         # --- 4. Create Publisher ---
-        self.publisher_ = self.create_publisher(WrenchStamped, output_topic, 10)
+        self.publisher_ = self.create_publisher(Wrench, output_topic, 10)
 
         # --- 5. Create Timer ---
         self.timer = self.create_timer(1.0 / pub_rate, self.timer_callback)
@@ -51,12 +51,12 @@ class WrenchSum(Node):
         """
         # Apply NumPy format
         wrench_arr = np.array([
-            msg.wrench.force.x,
-            msg.wrench.force.y,
-            msg.wrench.force.z,
-            msg.wrench.torque.x,
-            msg.wrench.torque.y,
-            msg.wrench.torque.z
+            msg.force.x,
+            msg.force.y,
+            msg.force.z,
+            msg.torque.x,
+            msg.torque.y,
+            msg.torque.z
         ])
         
         # Update the latest value for this topic
@@ -71,16 +71,13 @@ class WrenchSum(Node):
         net_wrench_arr = sum(self.wrench_buffer.values())
 
         # 2. Build output message
-        msg = WrenchStamped()
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = "base_link"  # Note: Assumes all forces are already transformed to base_link frame
-        
-        msg.wrench.force.x = net_wrench_arr[0]
-        msg.wrench.force.y = net_wrench_arr[1]
-        msg.wrench.force.z = net_wrench_arr[2]
-        msg.wrench.torque.x = net_wrench_arr[3]
-        msg.wrench.torque.y = net_wrench_arr[4]
-        msg.wrench.torque.z = net_wrench_arr[5]
+        msg = Wrench()
+        msg.force.x = net_wrench_arr[0]
+        msg.force.y = net_wrench_arr[1]
+        msg.force.z = net_wrench_arr[2]
+        msg.torque.x = net_wrench_arr[3]
+        msg.torque.y = net_wrench_arr[4]
+        msg.torque.z = net_wrench_arr[5]
 
         # 3. Publish
         self.publisher_.publish(msg)
