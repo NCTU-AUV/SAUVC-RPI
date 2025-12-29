@@ -27,50 +27,6 @@ def generate_launch_description():
         executable='gui_node',
     )
 
-    bottom_camera_node = Node(
-        package='bottom_camera_pkg',
-        executable='bottom_camera_node',
-        parameters=[
-            {'camera_device': '/dev/video0'}
-        ]
-    )
-
-    frame_transform_node = Node(
-        package='bottom_camera_pkg',
-        executable='frame_transform_node',
-        parameters=[
-            {'image_topic': 'bottom_camera/image_raw'}
-        ]
-    )
-    waypoint_target_publisher = Node(
-        package='orca_auv_pose_control_pkg',
-        executable='waypoint_target_publisher',
-        parameters=[
-            {'current_topic': '/orca_auv/bottom_camera/total_transform_world'},
-            {'target_topic': '/orca_auv/target_point_px'},
-            {'done_topic': '/orca_auv/target_done'},
-            {'tol_x': 5.0},
-            {'tol_y': 5.0},
-            {'stable_count': 5},
-            {'publish_first_immediately': True},
-        ]
-    )
-
-    on_off_controller = Node(
-        package='orca_auv_pose_control_pkg',
-        executable='on_off_controller',
-        parameters=[
-            {'current_topic': '/orca_auv/bottom_camera/total_transform_world'},
-            {'target_topic': '/orca_auv/target_point_px'},
-            {'output_topic': '/orca_auv/set_output_wrench_at_center_N_Nm'},
-            {'tol_x': 5.0},
-            {'tol_y': 5.0},
-            {'thrust': 10.0},
-            {'single_axis_only': True},
-        ]
-    )
-
-
     micro_ros_agent = Node(
         package='micro_ros_agent',
         executable='micro_ros_agent',
@@ -93,10 +49,6 @@ def generate_launch_description():
         thruster_pkg_launch,
         mavros,
         gui_node,
-        # bottom_camera_node,
-        # frame_transform_node,
-        # waypoint_target_publisher,
-        # on_off_controller,
         micro_ros_agent,
         event,
     ])
