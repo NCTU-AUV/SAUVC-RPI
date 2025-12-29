@@ -29,6 +29,7 @@ setup(
             "output_sink_force_to_output_wrench_node = orca_auv_pose_control_pkg.output_sink_force_to_output_wrench_node:main",
             "imu_to_orientation_node = orca_auv_pose_control_pkg.imu_to_orientation_node:main",
             "on_off_controller = orca_auv_pose_control_pkg.on_off_controller:main",
+            "bottom_camera_pid_bridge_node = orca_auv_pose_control_pkg.bottom_camera_pid_bridge_node:main",
             "waypoint_target_publisher = orca_auv_pose_control_pkg.waypoint_target_publisher:main"
         ],
     },
