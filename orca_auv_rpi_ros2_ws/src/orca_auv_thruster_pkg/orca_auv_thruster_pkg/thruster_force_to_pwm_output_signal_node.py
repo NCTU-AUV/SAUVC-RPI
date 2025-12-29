@@ -8,10 +8,16 @@ from orca_auv_thruster_pkg.thruster_lookup_table import ThrusterLookupTable
 
 class ThrusterForceToPWMOutputSignalNode(Node):
 
+    DEFAULT_MAX_OUTPUT_FORCE_N = 5.25 * 9.80665  # match thruster_lookup_table_16V.csv max
+
     def __init__(self):
         super().__init__("thruster_force_to_pwm_output_signal_node", namespace="orca_auv")
 
         self._thruster_lookup_table = ThrusterLookupTable()
+        self._max_output_force_N = float(self.declare_parameter(
+            "max_output_force_N",
+            self.DEFAULT_MAX_OUTPUT_FORCE_N
+        ).value)
 
         self.__set_output_force_subscribers = [
             self.create_subscription(
@@ -35,9 +41,16 @@ class ThrusterForceToPWMOutputSignalNode(Node):
     def __get_pwm_output_signal_value_us(self, output_force_N):
         return self._thruster_lookup_table.get_pwm_signal_us(output_force_N)
 
+    def __clamp_output_force(self, output_force_N):
+        if self._max_output_force_N <= 0:
+            return output_force_N
+
+        return min(self._max_output_force_N, max(-self._max_output_force_N, output_force_N))
+
     def __set_output_force_subscribers_callback(self, msg, thruster_number):
         output_force_N = msg.data
-        pwm_output_signal_value_us = self.__get_pwm_output_signal_value_us(output_force_N)
+        clamped_output_force_N = self.__clamp_output_force(output_force_N)
+        pwm_output_signal_value_us = self.__get_pwm_output_signal_value_us(clamped_output_force_N)
 
         set_pwm_output_signal_value = Int32()
         set_pwm_output_signal_value.data = int(pwm_output_signal_value_us)
