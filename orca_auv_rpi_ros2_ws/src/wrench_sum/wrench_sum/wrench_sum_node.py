@@ -12,13 +12,10 @@ class WrenchSum(Node):
         self.declare_parameter('input_topics', ['/thruster_front/wrench', '/thruster_back/wrench'])
         # Output topic name
         self.declare_parameter('output_topic', '/auv/net_wrench')
-        # Publish rate (Hz)
-        self.declare_parameter('publish_rate', 20.0)
 
         # Get parameter values
         self.input_topics = self.get_parameter('input_topics').get_parameter_value().string_array_value
         output_topic = self.get_parameter('output_topic').get_parameter_value().string_value
-        pub_rate = self.get_parameter('publish_rate').get_parameter_value().double_value
 
         # --- 2. Initialize storage ---
         # Use Dictionary to store the latest data for each topic
@@ -42,12 +39,9 @@ class WrenchSum(Node):
         # --- 4. Create Publisher ---
         self.publisher_ = self.create_publisher(Wrench, output_topic, 10)
 
-        # --- 5. Create Timer ---
-        self.timer = self.create_timer(1.0 / pub_rate, self.timer_callback)
-
     def listener_callback(self, msg, topic_name):
         """
-        Update Buffer value when receiving Wrench from any source
+        Update Buffer value when receiving Wrench from any source, then publish the summed result.
         """
         # Apply NumPy format
         wrench_arr = np.array([
@@ -62,25 +56,18 @@ class WrenchSum(Node):
         # Update the latest value for this topic
         self.wrench_buffer[topic_name] = wrench_arr
 
-    def timer_callback(self):
-        """
-        Periodically sum all Wrench in Buffer and publish
-        """
-        # 1. Calculate net force (Element-wise sum)
-        # Sum all values
+        # Sum all values currently in the buffer and publish immediately
         net_wrench_arr = sum(self.wrench_buffer.values())
 
-        # 2. Build output message
-        msg = Wrench()
-        msg.force.x = net_wrench_arr[0]
-        msg.force.y = net_wrench_arr[1]
-        msg.force.z = net_wrench_arr[2]
-        msg.torque.x = net_wrench_arr[3]
-        msg.torque.y = net_wrench_arr[4]
-        msg.torque.z = net_wrench_arr[5]
+        msg_out = Wrench()
+        msg_out.force.x = net_wrench_arr[0]
+        msg_out.force.y = net_wrench_arr[1]
+        msg_out.force.z = net_wrench_arr[2]
+        msg_out.torque.x = net_wrench_arr[3]
+        msg_out.torque.y = net_wrench_arr[4]
+        msg_out.torque.z = net_wrench_arr[5]
 
-        # 3. Publish
-        self.publisher_.publish(msg)
+        self.publisher_.publish(msg_out)
 
 def main(args=None):
     rclpy.init(args=args)
