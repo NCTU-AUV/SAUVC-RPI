@@ -7,7 +7,11 @@ def generate_launch_description():
         Node(
             package='orca_auv_thruster_pkg',
             namespace='orca_auv',
-            executable='thruster_initialization_node'
+            executable='thruster_initialization_node',
+            remappings=[
+                (f"thruster_{thruster_number}/set_pwm_output_on", "thrusters/set_pwm_output_on")
+                for thruster_number in range(8)
+            ],
         ),
         Node(
             package='orca_auv_thruster_pkg',
