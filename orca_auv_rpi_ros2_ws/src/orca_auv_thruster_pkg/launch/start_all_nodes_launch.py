@@ -20,6 +20,11 @@ def generate_launch_description():
         Node(
             package='orca_auv_thruster_pkg',
             namespace='orca_auv',
+            executable='thruster_pwm_output_signal_array_node',
+        ),
+        Node(
+            package='orca_auv_thruster_pkg',
+            namespace='orca_auv',
             executable='wrench_to_individual_thrusters_output_forces_node'
         ),
     ])
