@@ -24,7 +24,10 @@ def generate_launch_description():
         Node(
             package='orca_auv_pose_control_pkg',
             namespace='orca_auv',
-            executable='output_sink_force_to_output_wrench_node'
+            executable='output_sink_force_to_output_wrench_node',
+            remappings=[
+                ('/orca_auv/set_output_wrench_at_center_N_Nm', '/depth_ctr_wrench'),
+            ],
         ),
         Node(
             package='orca_auv_pose_control_pkg',
