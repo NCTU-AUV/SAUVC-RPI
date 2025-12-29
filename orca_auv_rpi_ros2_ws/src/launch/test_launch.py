@@ -16,6 +16,20 @@ def generate_launch_description():
         ])),
     )
 
+    wrench_sum_node = Node(
+        package='wrench_sum',
+        executable='wrench_sum_node',
+        name='wrench_sum',
+        parameters=[{
+            'input_topics': [
+                '/gui_wrench',
+                '/camera_ctr_wrench',
+                '/depth_ctr_wrench',
+            ],
+            'output_topic': '/orca_auv/set_output_wrench_at_center_N_Nm',
+        }]
+    )
+
     mavros = Node(
         package='mavros',
         executable='mavros_node',
@@ -25,6 +39,9 @@ def generate_launch_description():
     gui_node = Node(
         package='gui_pkg',
         executable='gui_node',
+        remappings=[
+            ('/orca_auv/set_output_wrench_at_center_N_Nm', '/gui_wrench')
+        ]
     )
 
     micro_ros_agent = Node(
@@ -47,6 +64,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         thruster_pkg_launch,
+        wrench_sum_node,
         mavros,
         gui_node,
         micro_ros_agent,
