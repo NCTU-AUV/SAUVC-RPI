@@ -29,7 +29,7 @@ def generate_launch_description():
         Node(
             package='orca_auv_pose_control_pkg',
             namespace='orca_auv',
-            executable='float32_float64_converter_node',
+            executable='float32_to_float64_converter_node',
             remappings=[
                 ('/orca_auv/float32_topic', '/orca_auv/pressure_sensor_depth_m'),
                 ('/orca_auv/float64_topic', '/orca_auv/pressure_sensor_depth_float64_m'),

@@ -25,7 +25,7 @@ setup(
         'console_scripts': [
             "depth_controller_node = orca_auv_pose_control_pkg.depth_controller_node:main",
             "generic_pid_controller_node = orca_auv_pose_control_pkg.generic_pid_controller_node:main",
-            "float32_float64_converter_node = orca_auv_pose_control_pkg.float32_float64_converter_node:main",
+            "float32_to_float64_converter_node = orca_auv_pose_control_pkg.float32_to_float64_converter_node:main",
             "output_sink_force_to_output_wrench_node = orca_auv_pose_control_pkg.output_sink_force_to_output_wrench_node:main",
             "imu_to_orientation_node = orca_auv_pose_control_pkg.imu_to_orientation_node:main",
             "on_off_controller = orca_auv_pose_control_pkg.on_off_controller:main",
