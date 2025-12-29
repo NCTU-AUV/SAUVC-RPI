@@ -14,7 +14,7 @@ def generate_launch_description():
             namespace='orca_auv',
             executable='thruster_force_to_pwm_output_signal_node',
             parameters=[{
-                'max_output_force_N': 51.4864,  # clamp thruster output before PWM conversion
+                'max_output_force_N': 15,  # clamp thruster output before PWM conversion
             }]
         ),
         Node(
