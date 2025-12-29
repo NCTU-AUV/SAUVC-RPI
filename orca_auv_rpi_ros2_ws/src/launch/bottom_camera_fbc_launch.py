@@ -7,18 +7,6 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    thruster_control = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution(
-                [
-                    FindPackageShare("orca_auv_thruster_pkg"),
-                    "launch",
-                    "start_all_nodes_launch.py",
-                ]
-            )
-        )
-    )
-
     bottom_camera_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
@@ -30,11 +18,6 @@ def generate_launch_description():
                 ]
             )
         )
-    )
-
-    gui_node = Node(
-        package="gui_pkg",
-        executable="gui_node",
     )
 
     on_off_controller_node = Node(
@@ -53,9 +36,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            thruster_control,
             bottom_camera_launch,
-            gui_node,
-            # on_off_controller_node,
+            on_off_controller_node,
         ]
     )
