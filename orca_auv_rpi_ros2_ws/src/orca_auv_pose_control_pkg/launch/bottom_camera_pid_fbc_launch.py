@@ -16,7 +16,10 @@ def generate_launch_description():
                     # "bottom_camera.launch.py",
                     "bottom_camera_optical_flow.launch.py",
                 ]
-            )
+            ),
+            launch_arguments={
+                "publish_debug_image": "false",
+            }.items(),
         )
     )
 
