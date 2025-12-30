@@ -65,7 +65,7 @@ def generate_launch_description():
     return LaunchDescription([
         thruster_pkg_launch,
         wrench_sum_node,
-        mavros,
+        # mavros,
         gui_node,
         micro_ros_agent,
         event,
