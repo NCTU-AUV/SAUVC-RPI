@@ -19,10 +19,17 @@ class ThrusterInitializationNode(Node):
         self._thruster_count = 8
         self._initial_pwm_output_signal_value_us = int(self.declare_parameter("initial_pwm_output_signal_value_us", 1500).value)
         self._pwm_output_signal_value_us = [self._initial_pwm_output_signal_value_us for _ in range(self._thruster_count)]
+        self._hold_after_enable_duration_s = float(self.declare_parameter("hold_after_enable_duration_s", 0.5).value)
 
         self.__set_pwm_output_on_publisher = self.create_publisher(
             msg_type=Bool,
             topic="thrusters/set_pwm_output_on",
+            qos_profile=10
+        )
+
+        self.__set_force_to_pwm_output_enabled_publisher = self.create_publisher(
+            msg_type=Bool,
+            topic="thrusters/set_force_to_pwm_output_enabled",
             qos_profile=10
         )
 
@@ -65,6 +72,7 @@ class ThrusterInitializationNode(Node):
     def __initialize_thruster_action_callback_with_thruster_number(self, goal_handle, thruster_number):
         self.get_logger().info(f"Execute thruster_{thruster_number}/initialize_thruster action")
 
+        self.__publish_force_to_pwm_output_enabled(False)
         self.__publish_set_pwm_output_on(False)
 
         time.sleep(0.0)
@@ -79,7 +87,9 @@ class ThrusterInitializationNode(Node):
 
         self.__publish_set_pwm_output_on(True)
 
-        time.sleep(0.5)
+        time.sleep(self._hold_after_enable_duration_s)
+
+        self.__publish_force_to_pwm_output_enabled(True)
 
         goal_handle.succeed()
         return InitializeThrusterAction.Result()
@@ -87,6 +97,7 @@ class ThrusterInitializationNode(Node):
     def __initialize_all_thrusters_action_callback(self, goal_handle):
         self.get_logger().info(f"Execute initialize_all_thrusters action")
 
+        self.__publish_force_to_pwm_output_enabled(False)
         self.__publish_set_pwm_output_on(False)
 
         time.sleep(0.0)
@@ -98,7 +109,9 @@ class ThrusterInitializationNode(Node):
 
         self.__publish_set_pwm_output_on(True)
 
-        time.sleep(0.5)
+        time.sleep(self._hold_after_enable_duration_s)
+
+        self.__publish_force_to_pwm_output_enabled(True)
 
         goal_handle.succeed()
         return InitializeThrusterAction.Result()
@@ -113,6 +126,11 @@ class ThrusterInitializationNode(Node):
         msg = Bool()
         msg.data = is_on
         self.__set_pwm_output_on_publisher.publish(msg)
+
+    def __publish_force_to_pwm_output_enabled(self, is_enabled: bool):
+        msg = Bool()
+        msg.data = is_enabled
+        self.__set_force_to_pwm_output_enabled_publisher.publish(msg)
 
 
 def main(args=None):

@@ -5,7 +5,7 @@ import numpy as np
 import rclpy
 
 from rclpy.node import Node
-from std_msgs.msg import Float64, Int32MultiArray
+from std_msgs.msg import Bool, Float64, Int32MultiArray
 
 import orca_auv_thruster_pkg
 
@@ -21,6 +21,7 @@ class ThrusterForceToPWMOutputSignalNode(Node):
         self._thruster_count = 8
         initial_pwm_us = int(self.declare_parameter("initial_pwm_output_signal_value_us", 1500).value)
         self._pwm_output_signal_value_us = [initial_pwm_us for _ in range(self._thruster_count)]
+        self._is_output_enabled = bool(self.declare_parameter("force_to_pwm_output_enabled", True).value)
 
         self._max_output_force_N = float(self.declare_parameter(
             "max_output_force_N",
@@ -45,6 +46,19 @@ class ThrusterForceToPWMOutputSignalNode(Node):
             )
             for thruster_number in range(self._thruster_count)
         ]
+
+        self._set_output_enabled_subscription = self.create_subscription(
+            msg_type=Bool,
+            topic="thrusters/set_force_to_pwm_output_enabled",
+            callback=self._set_output_enabled_callback,
+            qos_profile=10
+        )
+
+    def _set_output_enabled_callback(self, msg: Bool):
+        self._is_output_enabled = bool(msg.data)
+        if self._is_output_enabled:
+            # Publish the most recent PWM array when re-enabled so downstream stays in sync.
+            self._publish_pwm_output_signal_value_array()
 
     def __get_pwm_output_signal_value_us(self, output_force_N):
         if abs(output_force_N) <= self._deadband_force_threshold_N:
@@ -74,6 +88,9 @@ class ThrusterForceToPWMOutputSignalNode(Node):
         self._publish_pwm_output_signal_value_array()
 
     def _publish_pwm_output_signal_value_array(self):
+        if not self._is_output_enabled:
+            return
+
         pwm_array_msg = Int32MultiArray()
         pwm_array_msg.data = list(self._pwm_output_signal_value_us)
         self._pwm_output_signal_value_array_publisher.publish(pwm_array_msg)
