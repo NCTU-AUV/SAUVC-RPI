@@ -19,7 +19,7 @@ class ThrusterInitializationNode(Node):
         self._thruster_count = 8
         self._initial_pwm_output_signal_value_us = int(self.declare_parameter("initial_pwm_output_signal_value_us", 1500).value)
         self._pwm_output_signal_value_us = [self._initial_pwm_output_signal_value_us for _ in range(self._thruster_count)]
-        self._hold_after_enable_duration_s = float(self.declare_parameter("hold_after_enable_duration_s", 0.5).value)
+        self._hold_after_enable_duration_s = float(self.declare_parameter("hold_after_enable_duration_s", 0.8).value)
 
         self.__set_pwm_output_on_publisher = self.create_publisher(
             msg_type=Bool,
