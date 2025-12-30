@@ -32,7 +32,7 @@ endif
 XAUTHORITY ?= /tmp/.Xauthority
 XAUTH_FLAGS := $(if $(and $(XAUTH_FILE),$(wildcard $(XAUTH_FILE))),-v $(XAUTH_FILE):/tmp/.Xauthority:ro -e XAUTHORITY=/tmp/.Xauthority,)
 
-.PHONY: compose_up compose_down compose_build compose_shell compose_init compose_launch compose_launch_detached compose_clean update_image flash_stm32 reset_stm32
+.PHONY: compose_up compose_down compose_build compose_shell compose_init compose_launch compose_launch_detached compose_clean clean update_image flash_stm32 reset_stm32
 
 update_image:
 	docker buildx build --pull --platform=linux/arm64,linux/amd64 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
@@ -88,6 +88,11 @@ compose_launch_detached: compose_up
 
 compose_clean:
 	$(COMPOSE) down -v
+
+
+clean: compose_clean
+       -@docker rmi $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest
+       rm -rf $(WORKSPACE)/build $(WORKSPACE)/install $(WORKSPACE)/log
 
 flash_stm32:
 	git submodule sync SAUVC-STM32
