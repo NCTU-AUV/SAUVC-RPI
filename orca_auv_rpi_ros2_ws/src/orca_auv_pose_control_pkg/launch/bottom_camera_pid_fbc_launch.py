@@ -17,10 +17,10 @@ def generate_launch_description():
                     "bottom_camera_optical_flow.launch.py",
                 ]
             ),
-            launch_arguments={
-                "publish_debug_image": "false",
-            }.items(),
-        )
+        ),
+        launch_arguments={
+            "publish_debug_image": "false",
+        }.items(),
     )
 
     x_coordinate_pid_controller_node = Node(
