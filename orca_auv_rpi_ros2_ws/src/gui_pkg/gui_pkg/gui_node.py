@@ -1,4 +1,7 @@
 import json
+import os
+import signal
+import subprocess
 
 import rclpy
 from rclpy.node import Node
@@ -46,6 +49,12 @@ class GUINode(Node):
         )
 
         self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'set_output_wrench_at_center_N_Nm', 10)
+        self._process_commands = {
+            "bottom_camera_pid_fbc_launch": ["ros2", "launch", "orca_auv_pose_control_pkg", "bottom_camera_pid_fbc_launch.py"],
+            "depth_control_launch": ["ros2", "launch", "orca_auv_pose_control_pkg", "depth_control_launch.py"],
+            "waypoint_target_publisher": ["ros2", "run", "orca_auv_pose_control_pkg", "waypoint_target_publisher"],
+        }
+        self._processes = {}
 
     def _is_kill_switch_closed_callback(self, msg):
         self.aiohttp_server.send_topic("is_kill_switch_closed", msg.data)
@@ -107,8 +116,77 @@ class GUINode(Node):
                 else:
                     self._set_output_wrench_at_center_publisher.publish(msg)
 
-        if msg_type not in ("action", "topic"):
+        if msg_type == "process":
+            target = msg_data.get("target")
+            action = msg_data.get("action")
+            if not target or target not in self._process_commands:
+                self.get_logger().warning(f"Unknown process target: {msg_data}")
+            elif action == "start":
+                self._start_process(target)
+            elif action in ("stop", "kill"):
+                self._stop_process(target)
+            else:
+                self.get_logger().warning(f"Unknown process action: {msg_data}")
+
+        if msg_type not in ("action", "topic", "process"):
             self.get_logger().warning(f"Unknown message type: {msg_json_object}")
+
+    def destroy_node(self):
+        self._stop_all_processes()
+        return super().destroy_node()
+
+    def _start_process(self, name: str):
+        process = self._processes.get(name)
+        if process and process.poll() is None:
+            self.get_logger().info(f"{name} already running with pid {process.pid}")
+            return
+
+        cmd = self._process_commands.get(name)
+        if not cmd:
+            self.get_logger().warning(f"No command configured for {name}")
+            return
+
+        try:
+            preexec_fn = os.setsid if hasattr(os, "setsid") else None
+            process = subprocess.Popen(cmd, preexec_fn=preexec_fn)
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().error(f"Failed to start {name}: {exc}")
+            return
+
+        self._processes[name] = process
+        self.get_logger().info(f"Started {name} (pid {process.pid})")
+
+    def _stop_process(self, name: str):
+        process = self._processes.get(name)
+        if not process:
+            self.get_logger().info(f"No running process tracked for {name}")
+            return
+
+        if process.poll() is not None:
+            self.get_logger().info(f"{name} already exited with code {process.returncode}")
+            self._processes.pop(name, None)
+            return
+
+        try:
+            if hasattr(os, "killpg"):
+                os.killpg(os.getpgid(process.pid), signal.SIGINT)
+            else:
+                process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                if hasattr(os, "killpg"):
+                    os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                else:
+                    process.kill()
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().error(f"Failed to stop {name}: {exc}")
+        finally:
+            self._processes.pop(name, None)
+
+    def _stop_all_processes(self):
+        for name in list(self._processes.keys()):
+            self._stop_process(name)
 
 def main(args=None):
     rclpy.init(args=args)
