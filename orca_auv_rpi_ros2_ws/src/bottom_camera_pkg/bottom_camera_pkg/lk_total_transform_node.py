@@ -122,6 +122,11 @@ class LkTotalTransformNode(Node):
         self._criteria_count = int(self.get_parameter('criteria_count').value)
         self._criteria_eps = float(self.get_parameter('criteria_eps').value)
         self._max_track_error = float(self.get_parameter('max_track_error').value)
+        self._lk_criteria = (
+            cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
+            self._criteria_count,
+            self._criteria_eps,
+        )
 
         self._ransac_thresh = float(self.get_parameter('ransac_reproj_threshold_px').value)
         self._min_inliers = int(self.get_parameter('min_inliers').value)
@@ -269,7 +274,6 @@ class LkTotalTransformNode(Node):
             return
 
         # LK track
-        lk_criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, self._criteria_count, self._criteria_eps)
         p1, st, err = cv2.calcOpticalFlowPyrLK(
             self._prev_gray,
             gray_small,
@@ -277,7 +281,7 @@ class LkTotalTransformNode(Node):
             None,
             winSize=(self._win_size, self._win_size),
             maxLevel=self._max_level,
-            criteria=lk_criteria,
+            criteria=self._lk_criteria,
         )
 
         if p1 is None or st is None:
