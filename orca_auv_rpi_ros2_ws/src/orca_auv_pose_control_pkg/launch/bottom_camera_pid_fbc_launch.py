@@ -34,10 +34,10 @@ def generate_launch_description():
             ('/orca_auv/manipulated_variable', '/orca_auv/bottom_camera/x_force_world_N'),
         ],
         parameters=[{
-            'proportional_gain': 0.2,
-            'integral_gain': 0.05,
-            'derivative_gain': 0.0,
-            'derivative_smoothing_factor': 0.5,
+            'proportional_gain': 0.03,
+            'integral_gain': 0.00001,
+            'derivative_gain': 0.001,
+            'derivative_smoothing_factor': 0.2,
         }],
     )
 
@@ -52,10 +52,10 @@ def generate_launch_description():
             ('/orca_auv/manipulated_variable', '/orca_auv/bottom_camera/y_force_world_N'),
         ],
         parameters=[{
-            'proportional_gain': 0.2,
-            'integral_gain': 0.05,
-            'derivative_gain': 0.0,
-            'derivative_smoothing_factor': 0.5,
+            'proportional_gain': 0.03,
+            'integral_gain': 0.00001,
+            'derivative_gain': 0.001,
+            'derivative_smoothing_factor': 0.2,
         }],
     )
 
