@@ -26,7 +26,6 @@ setup(
             "thruster_initialization_node = orca_auv_thruster_pkg.thruster_initialization_node:main",
             "thruster_force_to_pwm_output_signal_node = orca_auv_thruster_pkg.thruster_force_to_pwm_output_signal_node:main",
             "wrench_to_individual_thrusters_output_forces_node = orca_auv_thruster_pkg.wrench_to_individual_thrusters_output_forces_node:main",
-            "thruster_pwm_output_signal_array_node = orca_auv_thruster_pkg.thruster_pwm_output_signal_array_node:main",
         ],
     },
 )

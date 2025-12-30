@@ -3,7 +3,7 @@ import json
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32MultiArray
 from geometry_msgs.msg import Wrench
 from rclpy.action import ActionClient
 
@@ -15,6 +15,10 @@ class GUINode(Node):
 
     def __init__(self):
         super().__init__('gui_node', namespace="orca_auv")
+
+        self._thruster_count = 8
+        self._initial_pwm_output_signal_value_us = 1500
+        self._pwm_output_signal_value_us = [self._initial_pwm_output_signal_value_us for _ in range(self._thruster_count)]
 
         self.aiohttp_server = AIOHTTPServer(self._msg_callback)
         self.aiohttp_server.start_threading()
@@ -28,19 +32,29 @@ class GUINode(Node):
 
         self._initialize_all_thrusters_action_client = ActionClient(self, InitializeThrusterAction, '/orca_auv/initialize_all_thrusters')
 
-        self.__set_pwm_output_signal_value_publishers = [
-            self.create_publisher(
-                msg_type=Int32,
-                topic=f"thruster_{thruster_number}/set_pwm_output_signal_value_us",
-                qos_profile=10
-            )
-            for thruster_number in range(8)
-        ]
+        self._pwm_output_signal_value_subscription = self.create_subscription(
+            msg_type=Int32MultiArray,
+            topic="thrusters/set_pwm_output_signal_value_us",
+            callback=self._pwm_output_signal_value_subscription_callback,
+            qos_profile=10
+        )
+
+        self._set_pwm_output_signal_value_publisher = self.create_publisher(
+            msg_type=Int32MultiArray,
+            topic="thrusters/set_pwm_output_signal_value_us",
+            qos_profile=10
+        )
 
         self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'set_output_wrench_at_center_N_Nm', 10)
 
     def _is_kill_switch_closed_callback(self, msg):
         self.aiohttp_server.send_topic("is_kill_switch_closed", msg.data)
+
+    def _pwm_output_signal_value_subscription_callback(self, msg: Int32MultiArray):
+        values = list(msg.data)
+        if len(values) < self._thruster_count:
+            values += [self._initial_pwm_output_signal_value_us] * (self._thruster_count - len(values))
+        self._pwm_output_signal_value_us = values[:self._thruster_count]
 
     def _msg_callback(self, msg):
         try:
@@ -64,14 +78,18 @@ class GUINode(Node):
             if topic_name == "set_pwm_output_signal_value_us":
                 try:
                     thruster_number = int(msg_data["thruster_number"])
-                    if thruster_number < 0 or thruster_number >= len(self.__set_pwm_output_signal_value_publishers):
+                    if thruster_number < 0 or thruster_number >= self._thruster_count:
                         raise IndexError
-                    set_pwm_output_signal_value = Int32()
-                    set_pwm_output_signal_value.data = int(msg_data["msg"]["data"])
+                    pwm_value = int(msg_data["msg"]["data"])
                 except (KeyError, TypeError, ValueError, IndexError):
                     self.get_logger().warning(f"Invalid PWM set message: {msg_json_object}")
                 else:
-                    self.__set_pwm_output_signal_value_publishers[thruster_number].publish(set_pwm_output_signal_value)
+                    pwm_values = list(self._pwm_output_signal_value_us)
+                    pwm_values[thruster_number] = pwm_value
+                    pwm_array_msg = Int32MultiArray()
+                    pwm_array_msg.data = pwm_values
+                    self._set_pwm_output_signal_value_publisher.publish(pwm_array_msg)
+                    self._pwm_output_signal_value_us = pwm_values
 
             if topic_name == "set_output_wrench_at_center_N_Nm":
                 try:

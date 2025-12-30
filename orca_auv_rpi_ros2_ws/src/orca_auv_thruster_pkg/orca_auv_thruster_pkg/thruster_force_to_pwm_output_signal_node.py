@@ -5,7 +5,7 @@ import numpy as np
 import rclpy
 
 from rclpy.node import Node
-from std_msgs.msg import Float64, Int32
+from std_msgs.msg import Float64, Int32MultiArray
 
 import orca_auv_thruster_pkg
 
@@ -18,6 +18,10 @@ class ThrusterForceToPWMOutputSignalNode(Node):
     def __init__(self):
         super().__init__("thruster_force_to_pwm_output_signal_node", namespace="orca_auv")
 
+        self._thruster_count = 8
+        initial_pwm_us = int(self.declare_parameter("initial_pwm_output_signal_value_us", 1500).value)
+        self._pwm_output_signal_value_us = [initial_pwm_us for _ in range(self._thruster_count)]
+
         self._max_output_force_N = float(self.declare_parameter(
             "max_output_force_N",
             self.DEFAULT_MAX_OUTPUT_FORCE_N
@@ -26,6 +30,12 @@ class ThrusterForceToPWMOutputSignalNode(Node):
             self._deadband_force_threshold_N = \
             self._fit_force_to_pwm_polynomials()
 
+        self._pwm_output_signal_value_array_publisher = self.create_publisher(
+            msg_type=Int32MultiArray,
+            topic="thrusters/set_pwm_output_signal_value_us",
+            qos_profile=10
+        )
+
         self.__set_output_force_subscribers = [
             self.create_subscription(
                 msg_type=Float64,
@@ -33,16 +43,7 @@ class ThrusterForceToPWMOutputSignalNode(Node):
                 callback=lambda msg, thruster_number=thruster_number: self.__set_output_force_subscribers_callback(msg, thruster_number),
                 qos_profile=10
             )
-            for thruster_number in range(8)
-        ]
-
-        self.__set_pwm_output_signal_value_publishers = [
-            self.create_publisher(
-                msg_type=Int32,
-                topic=f"thruster_{thruster_number}/set_pwm_output_signal_value_us",
-                qos_profile=10
-            )
-            for thruster_number in range(8)
+            for thruster_number in range(self._thruster_count)
         ]
 
     def __get_pwm_output_signal_value_us(self, output_force_N):
@@ -69,9 +70,13 @@ class ThrusterForceToPWMOutputSignalNode(Node):
         clamped_output_force_N = self.__clamp_output_force(output_force_N)
         pwm_output_signal_value_us = self.__get_pwm_output_signal_value_us(clamped_output_force_N)
 
-        set_pwm_output_signal_value = Int32()
-        set_pwm_output_signal_value.data = int(pwm_output_signal_value_us)
-        self.__set_pwm_output_signal_value_publishers[thruster_number].publish(set_pwm_output_signal_value)
+        self._pwm_output_signal_value_us[thruster_number] = int(pwm_output_signal_value_us)
+        self._publish_pwm_output_signal_value_array()
+
+    def _publish_pwm_output_signal_value_array(self):
+        pwm_array_msg = Int32MultiArray()
+        pwm_array_msg.data = list(self._pwm_output_signal_value_us)
+        self._pwm_output_signal_value_array_publisher.publish(pwm_array_msg)
 
     def _fit_force_to_pwm_polynomials(self):
         lookup_table_path = Path(orca_auv_thruster_pkg.__file__).parent / "thruster_lookup_table_16V.csv"
