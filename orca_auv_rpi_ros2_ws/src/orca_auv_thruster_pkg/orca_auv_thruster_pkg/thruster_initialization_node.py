@@ -20,14 +20,11 @@ class ThrusterInitializationNode(Node):
         self._initial_pwm_output_signal_value_us = int(self.declare_parameter("initial_pwm_output_signal_value_us", 1500).value)
         self._pwm_output_signal_value_us = [self._initial_pwm_output_signal_value_us for _ in range(self._thruster_count)]
 
-        self.__set_pwm_output_on_publishers = [
-            self.create_publisher(
-                msg_type=Bool,
-                topic=f"thruster_{thruster_number}/set_pwm_output_on",
-                qos_profile=10
-            )
-            for thruster_number in range(self._thruster_count)
-        ]
+        self.__set_pwm_output_on_publisher = self.create_publisher(
+            msg_type=Bool,
+            topic="thrusters/set_pwm_output_on",
+            qos_profile=10
+        )
 
         self.__set_pwm_output_signal_value_publisher = self.create_publisher(
             msg_type=Int32MultiArray,
@@ -68,9 +65,7 @@ class ThrusterInitializationNode(Node):
     def __initialize_thruster_action_callback_with_thruster_number(self, goal_handle, thruster_number):
         self.get_logger().info(f"Execute thruster_{thruster_number}/initialize_thruster action")
 
-        set_pwm_output_on_msg = Bool()
-        set_pwm_output_on_msg.data = False
-        self.__set_pwm_output_on_publishers[thruster_number].publish(set_pwm_output_on_msg)
+        self.__publish_set_pwm_output_on(False)
 
         time.sleep(0.0)
 
@@ -82,9 +77,7 @@ class ThrusterInitializationNode(Node):
 
         time.sleep(0.2)
 
-        set_pwm_output_on_msg = Bool()
-        set_pwm_output_on_msg.data = True
-        self.__set_pwm_output_on_publishers[thruster_number].publish(set_pwm_output_on_msg)
+        self.__publish_set_pwm_output_on(True)
 
         time.sleep(0.5)
 
@@ -94,10 +87,7 @@ class ThrusterInitializationNode(Node):
     def __initialize_all_thrusters_action_callback(self, goal_handle):
         self.get_logger().info(f"Execute initialize_all_thrusters action")
 
-        for thruster_number in range(self._thruster_count):
-            set_pwm_output_on_msg = Bool()
-            set_pwm_output_on_msg.data = False
-            self.__set_pwm_output_on_publishers[thruster_number].publish(set_pwm_output_on_msg)
+        self.__publish_set_pwm_output_on(False)
 
         time.sleep(0.0)
 
@@ -106,10 +96,7 @@ class ThrusterInitializationNode(Node):
 
         time.sleep(0.2)
 
-        for thruster_number in range(self._thruster_count):
-            set_pwm_output_on_msg = Bool()
-            set_pwm_output_on_msg.data = True
-            self.__set_pwm_output_on_publishers[thruster_number].publish(set_pwm_output_on_msg)
+        self.__publish_set_pwm_output_on(True)
 
         time.sleep(0.5)
 
@@ -121,6 +108,11 @@ class ThrusterInitializationNode(Node):
         msg.data = list(pwm_values[:self._thruster_count])
         self.__set_pwm_output_signal_value_publisher.publish(msg)
         self._pwm_output_signal_value_us = list(msg.data)
+
+    def __publish_set_pwm_output_on(self, is_on: bool):
+        msg = Bool()
+        msg.data = is_on
+        self.__set_pwm_output_on_publisher.publish(msg)
 
 
 def main(args=None):
