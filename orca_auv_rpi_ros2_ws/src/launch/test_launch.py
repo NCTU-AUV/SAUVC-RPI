@@ -25,6 +25,7 @@ def generate_launch_description():
                 '/gui_wrench',
                 '/camera_ctr_wrench',
                 '/depth_ctr_wrench',
+                '/direction_ctr_wrench',
             ],
             'output_topic': '/orca_auv/set_output_wrench_at_center_N_Nm',
         }]
