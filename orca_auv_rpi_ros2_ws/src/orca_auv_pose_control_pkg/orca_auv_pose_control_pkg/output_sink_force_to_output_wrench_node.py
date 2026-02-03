@@ -28,6 +28,7 @@ class OutputSinkForceToOutputWrenchNode(Node):
             10)
 
         self._orientation_quaternion = Quaternion(1, 0, 0, 0)
+        self.declare_parameter('use_sink_force_direction', False)
 
     def _orientation_subscription_callback(self, msg):
         self._orientation_quaternion = Quaternion(msg.w, msg.x, msg.y, msg.z)
@@ -40,13 +41,19 @@ class OutputSinkForceToOutputWrenchNode(Node):
     def _output_sink_force_subscription_callback(self, msg):
         output_sink_force_N = msg.data
 
-        sink_force_direction_unit_vector = self._get_sink_force_direction_unit_vector()
+        use_sink_force_direction = self.get_parameter('use_sink_force_direction').get_parameter_value().bool_value
 
         msg = Wrench()
 
-        msg.force.x = output_sink_force_N * sink_force_direction_unit_vector.x
-        msg.force.y = output_sink_force_N * sink_force_direction_unit_vector.y
-        msg.force.z = output_sink_force_N * sink_force_direction_unit_vector.z
+        if use_sink_force_direction:
+            sink_force_direction_unit_vector = self._get_sink_force_direction_unit_vector()
+            msg.force.x = output_sink_force_N * sink_force_direction_unit_vector.x
+            msg.force.y = output_sink_force_N * sink_force_direction_unit_vector.y
+            msg.force.z = output_sink_force_N * sink_force_direction_unit_vector.z
+        else:
+            msg.force.x = 0.0
+            msg.force.y = 0.0
+            msg.force.z = output_sink_force_N
         msg.torque.x = 0.0
         msg.torque.y = 0.0
         msg.torque.z = 0.0

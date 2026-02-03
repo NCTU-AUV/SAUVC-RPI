@@ -1,9 +1,12 @@
 import json
+import os
+import signal
+import subprocess
 
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32MultiArray
 from geometry_msgs.msg import Wrench
 from rclpy.action import ActionClient
 
@@ -15,6 +18,10 @@ class GUINode(Node):
 
     def __init__(self):
         super().__init__('gui_node', namespace="orca_auv")
+
+        self._thruster_count = 8
+        self._initial_pwm_output_signal_value_us = 1500
+        self._pwm_output_signal_value_us = [self._initial_pwm_output_signal_value_us for _ in range(self._thruster_count)]
 
         self.aiohttp_server = AIOHTTPServer(self._msg_callback)
         self.aiohttp_server.start_threading()
@@ -28,19 +35,35 @@ class GUINode(Node):
 
         self._initialize_all_thrusters_action_client = ActionClient(self, InitializeThrusterAction, '/orca_auv/initialize_all_thrusters')
 
-        self.__set_pwm_output_signal_value_publishers = [
-            self.create_publisher(
-                msg_type=Int32,
-                topic=f"thruster_{thruster_number}/set_pwm_output_signal_value_us",
-                qos_profile=10
-            )
-            for thruster_number in range(8)
-        ]
+        self._pwm_output_signal_value_subscription = self.create_subscription(
+            msg_type=Int32MultiArray,
+            topic="thrusters/set_pwm_output_signal_value_us",
+            callback=self._pwm_output_signal_value_subscription_callback,
+            qos_profile=10
+        )
+
+        self._set_pwm_output_signal_value_publisher = self.create_publisher(
+            msg_type=Int32MultiArray,
+            topic="thrusters/set_pwm_output_signal_value_us",
+            qos_profile=10
+        )
 
         self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'set_output_wrench_at_center_N_Nm', 10)
+        self._process_commands = {
+            "bottom_camera_pid_fbc_launch": ["ros2", "launch", "orca_auv_pose_control_pkg", "bottom_camera_pid_fbc_launch.py"],
+            "depth_control_launch": ["ros2", "launch", "orca_auv_pose_control_pkg", "depth_control_launch.py"],
+            "waypoint_target_publisher": ["ros2", "run", "orca_auv_pose_control_pkg", "waypoint_target_publisher"],
+        }
+        self._processes = {}
 
     def _is_kill_switch_closed_callback(self, msg):
         self.aiohttp_server.send_topic("is_kill_switch_closed", msg.data)
+
+    def _pwm_output_signal_value_subscription_callback(self, msg: Int32MultiArray):
+        values = list(msg.data)
+        if len(values) < self._thruster_count:
+            values += [self._initial_pwm_output_signal_value_us] * (self._thruster_count - len(values))
+        self._pwm_output_signal_value_us = values[:self._thruster_count]
 
     def _msg_callback(self, msg):
         try:
@@ -64,14 +87,18 @@ class GUINode(Node):
             if topic_name == "set_pwm_output_signal_value_us":
                 try:
                     thruster_number = int(msg_data["thruster_number"])
-                    if thruster_number < 0 or thruster_number >= len(self.__set_pwm_output_signal_value_publishers):
+                    if thruster_number < 0 or thruster_number >= self._thruster_count:
                         raise IndexError
-                    set_pwm_output_signal_value = Int32()
-                    set_pwm_output_signal_value.data = int(msg_data["msg"]["data"])
+                    pwm_value = int(msg_data["msg"]["data"])
                 except (KeyError, TypeError, ValueError, IndexError):
                     self.get_logger().warning(f"Invalid PWM set message: {msg_json_object}")
                 else:
-                    self.__set_pwm_output_signal_value_publishers[thruster_number].publish(set_pwm_output_signal_value)
+                    pwm_values = list(self._pwm_output_signal_value_us)
+                    pwm_values[thruster_number] = pwm_value
+                    pwm_array_msg = Int32MultiArray()
+                    pwm_array_msg.data = pwm_values
+                    self._set_pwm_output_signal_value_publisher.publish(pwm_array_msg)
+                    self._pwm_output_signal_value_us = pwm_values
 
             if topic_name == "set_output_wrench_at_center_N_Nm":
                 try:
@@ -89,8 +116,77 @@ class GUINode(Node):
                 else:
                     self._set_output_wrench_at_center_publisher.publish(msg)
 
-        if msg_type not in ("action", "topic"):
+        if msg_type == "process":
+            target = msg_data.get("target")
+            action = msg_data.get("action")
+            if not target or target not in self._process_commands:
+                self.get_logger().warning(f"Unknown process target: {msg_data}")
+            elif action == "start":
+                self._start_process(target)
+            elif action in ("stop", "kill"):
+                self._stop_process(target)
+            else:
+                self.get_logger().warning(f"Unknown process action: {msg_data}")
+
+        if msg_type not in ("action", "topic", "process"):
             self.get_logger().warning(f"Unknown message type: {msg_json_object}")
+
+    def destroy_node(self):
+        self._stop_all_processes()
+        return super().destroy_node()
+
+    def _start_process(self, name: str):
+        process = self._processes.get(name)
+        if process and process.poll() is None:
+            self.get_logger().info(f"{name} already running with pid {process.pid}")
+            return
+
+        cmd = self._process_commands.get(name)
+        if not cmd:
+            self.get_logger().warning(f"No command configured for {name}")
+            return
+
+        try:
+            preexec_fn = os.setsid if hasattr(os, "setsid") else None
+            process = subprocess.Popen(cmd, preexec_fn=preexec_fn)
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().error(f"Failed to start {name}: {exc}")
+            return
+
+        self._processes[name] = process
+        self.get_logger().info(f"Started {name} (pid {process.pid})")
+
+    def _stop_process(self, name: str):
+        process = self._processes.get(name)
+        if not process:
+            self.get_logger().info(f"No running process tracked for {name}")
+            return
+
+        if process.poll() is not None:
+            self.get_logger().info(f"{name} already exited with code {process.returncode}")
+            self._processes.pop(name, None)
+            return
+
+        try:
+            if hasattr(os, "killpg"):
+                os.killpg(os.getpgid(process.pid), signal.SIGINT)
+            else:
+                process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                if hasattr(os, "killpg"):
+                    os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                else:
+                    process.kill()
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().error(f"Failed to stop {name}: {exc}")
+        finally:
+            self._processes.pop(name, None)
+
+    def _stop_all_processes(self):
+        for name in list(self._processes.keys()):
+            self._stop_process(name)
 
 def main(args=None):
     rclpy.init(args=args)

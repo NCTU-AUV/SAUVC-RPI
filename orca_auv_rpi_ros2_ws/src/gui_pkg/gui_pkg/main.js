@@ -16,6 +16,34 @@ websocket.onopen = (event) => {
     console.log("websocket.onopen");
 };
 
+function send_process_action(target, action) {
+    websocket.send(JSON.stringify({type: "process", data: {target: target, action: action}}));
+}
+
+function start_bottom_camera_pid_fbc_launch() {
+    send_process_action("bottom_camera_pid_fbc_launch", "start");
+}
+
+function stop_bottom_camera_pid_fbc_launch() {
+    send_process_action("bottom_camera_pid_fbc_launch", "stop");
+}
+
+function start_depth_control_launch() {
+    send_process_action("depth_control_launch", "start");
+}
+
+function stop_depth_control_launch() {
+    send_process_action("depth_control_launch", "stop");
+}
+
+function start_waypoint_target_publisher() {
+    send_process_action("waypoint_target_publisher", "start");
+}
+
+function stop_waypoint_target_publisher() {
+    send_process_action("waypoint_target_publisher", "stop");
+}
+
 function initialize_all_thrusters_button_onclick(){
       console.log("initialize_all_thrusters_button_onclick");
 

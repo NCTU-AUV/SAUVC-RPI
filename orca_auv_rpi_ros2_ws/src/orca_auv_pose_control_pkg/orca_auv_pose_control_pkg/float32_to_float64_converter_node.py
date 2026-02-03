@@ -5,10 +5,10 @@ from std_msgs.msg import Float32
 from std_msgs.msg import Float64
 
 
-class Float32Float64ConverterNode(Node):
+class Float32ToFloat64ConverterNode(Node):
 
     def __init__(self):
-        super().__init__('generic_pid_controller_node', namespace="orca_auv")
+        super().__init__('float32_to_float64_converter_node', namespace="orca_auv")
 
         self._float32_topic_subscriber = self.create_subscription(
             Float32,
@@ -16,40 +16,25 @@ class Float32Float64ConverterNode(Node):
             self._float32_topic_subscription_callback,
             10)
 
-        self._float32_topic_publisher = self.create_publisher(Float32, 'float32_topic', 10)
-
-        self._float64_topic_subscriber = self.create_subscription(
-            Float64,
-            'float64_topic',
-            self._float64_topic_subscription_callback,
-            10)
-
         self._float64_topic_publisher = self.create_publisher(Float64, 'float64_topic', 10)
 
     def _float32_topic_subscription_callback(self, msg):
         output_msg = Float64()
         output_msg.data = msg.data
-
         self._float64_topic_publisher.publish(output_msg)
-
-    def _float64_topic_subscription_callback(self, msg):
-        output_msg = Float32()
-        output_msg.data = msg.data
-
-        self._float32_topic_publisher.publish(output_msg)
 
 
 def main(args=None):
     rclpy.init(args=args)
 
-    float32_float64_converter_node = Float32Float64ConverterNode()
+    float32_to_float64_converter_node = Float32ToFloat64ConverterNode()
 
-    rclpy.spin(float32_float64_converter_node)
+    rclpy.spin(float32_to_float64_converter_node)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    float32_float64_converter_node.destroy_node()
+    float32_to_float64_converter_node.destroy_node()
     rclpy.shutdown()
 
 

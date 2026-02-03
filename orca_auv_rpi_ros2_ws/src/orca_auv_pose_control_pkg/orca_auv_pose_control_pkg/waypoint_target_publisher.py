@@ -9,10 +9,8 @@ from std_msgs.msg import Float64MultiArray, Bool
 
 class WaypointTargetPublisher(Node):
     """
-    Subscribes to current position (Float64MultiArray: [x, y]).
-    Publishes the current target point (Float64MultiArray: [tx, ty]) from a hard-coded list.
-    When the AUV reaches the current target, it advances to the next one.
-    After all waypoints are reached, it publishes done=True (Bool).
+    Publishes a feed-forward target path (Float64MultiArray: [tx, ty]) along a hard-coded list.
+    Does not use feedback; it simply walks the path at a constant speed and raises done=True (Bool) at the end.
     """
 
     def __init__(self):
@@ -23,12 +21,10 @@ class WaypointTargetPublisher(Node):
         self.declare_parameter("target_topic", "/orca_auv/target_point_px")
         self.declare_parameter("done_topic", "/orca_auv/target_done")
 
-        # Arrival tolerance in X/Y
-        self.declare_parameter("tol_x", 5.0)
-        self.declare_parameter("tol_y", 5.0)
-
-        # Debounce: require N consecutive hits within tolerance to consider "reached"
-        self.declare_parameter("stable_count", 5)
+        # Desired speed for interpolated setpoints (units/sec, same units as waypoints)
+        self.declare_parameter("setpoint_speed", 20.0)
+        # Timer period for publishing interpolated setpoints
+        self.declare_parameter("publish_period", 0.1)
 
         # Publish the first target immediately on startup
         self.declare_parameter("publish_first_immediately", True)
@@ -37,9 +33,8 @@ class WaypointTargetPublisher(Node):
         self.target_topic = self.get_parameter("target_topic").value
         self.done_topic = self.get_parameter("done_topic").value
 
-        self.tol_x = float(self.get_parameter("tol_x").value)
-        self.tol_y = float(self.get_parameter("tol_y").value)
-        self.stable_count_need = int(self.get_parameter("stable_count").value)
+        self.setpoint_speed = float(self.get_parameter("setpoint_speed").value)
+        self.publish_period = float(self.get_parameter("publish_period").value)
         self.publish_first_immediately = bool(self.get_parameter("publish_first_immediately").value)
 
         # =========================================================
@@ -48,28 +43,29 @@ class WaypointTargetPublisher(Node):
         # =========================================================
         self.targets: List[Tuple[float, float]] = [
             (0.0,   0.0),
-            (120.0, 0.0),
-            (120.0, 80.0),
-            (0.0,   80.0),
+            (1000.0, 0.0),
+            # (1000.0, -300.0),
+            # (500.0, -300.0),
+            # (500.0,   0.0),
+            (0.0,   0.0),
         ]
         # =========================================================
 
         # --- Internal state ---
         self.idx = 0                 # Current waypoint index
-        self._stable_hit = 0         # Consecutive in-tolerance counter (debounce)
-        self.current_x = 0.0
-        self.current_y = 0.0
+        self._next_idx = 1 if len(self.targets) > 1 else None
+        self._current_point = self.targets[0] if self.targets else (0.0, 0.0)
+        self._last_time = None       # Time of last timer tick
+        self._done_published = False
 
         # --- Publishers/Subscribers ---
         self.pub_target = self.create_publisher(Float64MultiArray, self.target_topic, 10)
         self.pub_done = self.create_publisher(Bool, self.done_topic, 10)
 
-        self.sub_current = self.create_subscription(
-            Float64MultiArray,
-            self.current_topic,
-            self._on_current,
-            10
-        )
+        if self.publish_period > 0.0:
+            self.timer = self.create_timer(self.publish_period, self._on_timer)
+        else:
+            self.get_logger().warn("publish_period <= 0; no timer created, targets will not be published.")
 
         # Startup behavior
         if not self.targets:
@@ -98,6 +94,10 @@ class WaypointTargetPublisher(Node):
         if self.idx >= len(self.targets):
             return
         tx, ty = self.targets[self.idx]
+        self._publish_target_point(tx, ty, log=log)
+
+    def _publish_target_point(self, tx: float, ty: float, log: bool = False):
+        """Publish an arbitrary target point."""
         msg = Float64MultiArray()
         msg.data = [float(tx), float(ty)]
         self.pub_target.publish(msg)
@@ -107,56 +107,62 @@ class WaypointTargetPublisher(Node):
     def _advance_target(self):
         """Advance to the next waypoint, or mark done if finished."""
         self.idx += 1
-        self._stable_hit = 0
-
-        if self.idx >= len(self.targets):
-            self.get_logger().info("All targets reached. done=True")
-            self._publish_done(True)
+        self._next_idx = self.idx + 1 if self.idx + 1 < len(self.targets) else None
+        if self.idx >= len(self.targets) - 1:
+            if not self._done_published:
+                self.get_logger().info("All targets published. done=True")
+                self._publish_done(True)
+                self._done_published = True
             return
 
         self.get_logger().info(f"Advance to next target: idx={self.idx}")
         self._publish_current_target(log=True)
 
-    def _on_current(self, msg: Float64MultiArray):
-        """
-        Callback on current position updates.
-        Checks whether the AUV is within tolerance of the current target.
-        Uses debounce (stable_count) to avoid switching due to jitter.
-        """
-        data = msg.data
-        if data is None or len(data) < 2:
+    def _on_timer(self):
+        """Timer callback: walk the path at constant speed, no feedback."""
+        if not self.targets:
             return
 
-        cx = float(data[0])
-        cy = float(data[1])
-        if not (math.isfinite(cx) and math.isfinite(cy)):
+        now = self.get_clock().now()
+        if self._last_time is None:
+            self._last_time = now
             return
 
-        self.current_x = cx
-        self.current_y = cy
+        dt = (now - self._last_time).nanoseconds / 1e9
+        self._last_time = now
 
-        # Already finished
-        if self.idx >= len(self.targets):
+        if dt <= 0.0 or self.setpoint_speed <= 0.0:
+            self._publish_target_point(*self._current_point)
             return
 
-        tx, ty = self.targets[self.idx]
-        dx = tx - self.current_x
-        dy = ty - self.current_y
+        remaining_step = self.setpoint_speed * dt
 
-        in_tol = (abs(dx) < self.tol_x) and (abs(dy) < self.tol_y)
+        while remaining_step > 0.0 and self._next_idx is not None:
+            tx, ty = self.targets[self._next_idx]
+            cx, cy = self._current_point
+            dx = tx - cx
+            dy = ty - cy
+            distance = math.hypot(dx, dy)
 
-        if in_tol:
-            self._stable_hit += 1
-            if self._stable_hit >= self.stable_count_need:
-                self.get_logger().info(
-                    f"Reached idx={self.idx} current=({cx:.3f},{cy:.3f}) "
-                    f"target=({tx:.3f},{ty:.3f})"
-                )
+            if distance < 1e-9:
+                # Already at the next waypoint, advance.
+                self._current_point = (tx, ty)
                 self._advance_target()
-        else:
-            # Reset debounce counter as soon as we leave the tolerance region
-            if self._stable_hit != 0:
-                self._stable_hit = 0
+                continue
+
+            if distance <= remaining_step:
+                # Reach the waypoint in this cycle.
+                self._current_point = (tx, ty)
+                remaining_step -= distance
+                self._advance_target()
+            else:
+                # Move along the segment by the remaining step.
+                scale = remaining_step / distance
+                self._current_point = (cx + dx * scale, cy + dy * scale)
+                remaining_step = 0.0
+
+        # Publish current interpolated point (or last waypoint if done)
+        self._publish_target_point(*self._current_point)
 
 
 def main():

@@ -32,7 +32,7 @@ endif
 XAUTHORITY ?= /tmp/.Xauthority
 XAUTH_FLAGS := $(if $(and $(XAUTH_FILE),$(wildcard $(XAUTH_FILE))),-v $(XAUTH_FILE):/tmp/.Xauthority:ro -e XAUTHORITY=/tmp/.Xauthority,)
 
-.PHONY: compose_up compose_down compose_build compose_shell compose_init compose_launch compose_clean update_image flash_stm32 reset_stm32
+.PHONY: compose_up compose_down compose_build compose_shell compose_init compose_launch compose_launch_detached compose_clean clean update_image flash_stm32 reset_stm32
 
 update_image:
 	docker buildx build --pull --platform=linux/arm64,linux/amd64 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
@@ -77,8 +77,22 @@ compose_launch: compose_up
 		source install/setup.bash && \
 		ros2 launch src/launch/test_launch.py"
 
+compose_launch_detached: compose_up
+	@echo "Launching ROS stack in detached mode"
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec -d orca /bin/bash -lc "\
+		cd $(WORKSPACE) && \
+		source /opt/ros/humble/setup.bash && \
+		source /root/uros_ws/install/local_setup.bash && \
+		source install/setup.bash && \
+		ros2 launch src/launch/test_launch.py"
+
 compose_clean:
 	$(COMPOSE) down -v
+
+
+clean: compose_clean
+	-@docker rmi $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest
+	rm -rf $(WORKSPACE)/build $(WORKSPACE)/install $(WORKSPACE)/log
 
 flash_stm32:
 	git submodule sync SAUVC-STM32

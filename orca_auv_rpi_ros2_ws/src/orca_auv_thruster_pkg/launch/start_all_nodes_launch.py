@@ -9,10 +9,13 @@ def generate_launch_description():
             namespace='orca_auv',
             executable='thruster_initialization_node'
         ),
-       Node(
+        Node(
             package='orca_auv_thruster_pkg',
             namespace='orca_auv',
-            executable='thruster_force_to_pwm_output_signal_node'
+            executable='thruster_force_to_pwm_output_signal_node',
+            parameters=[{
+                'max_output_force_N': 15.0,  # clamp thruster output before PWM conversion (expects double)
+            }]
         ),
         Node(
             package='orca_auv_thruster_pkg',

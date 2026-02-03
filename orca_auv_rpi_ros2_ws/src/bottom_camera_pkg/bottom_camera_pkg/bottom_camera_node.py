@@ -12,8 +12,8 @@ class BottomCameraNode(Node):
 
         self.declare_parameter('camera_device', '/dev/video0')
         self.declare_parameter('frame_rate', 15.0)
-        self.declare_parameter('image_width', 640)
-        self.declare_parameter('image_height', 480)
+        self.declare_parameter('image_width', 160)
+        self.declare_parameter('image_height', 120)
         self.declare_parameter('frame_id', 'bottom_camera_optical_frame')
 
         self._bridge = CvBridge()

@@ -11,6 +11,25 @@
     <button onclick="initialize_all_thrusters_button_onclick()">initialize_all_thrusters</button>
 
     <div>
+        <p>Process control:</p>
+        <div>
+            bottom_camera_pid_fbc_launch.py
+            <button onclick="start_bottom_camera_pid_fbc_launch()">launch</button>
+            <button onclick="stop_bottom_camera_pid_fbc_launch()">kill</button>
+        </div>
+        <div>
+            depth_control_launch.py
+            <button onclick="start_depth_control_launch()">launch</button>
+            <button onclick="stop_depth_control_launch()">kill</button>
+        </div>
+        <div>
+            waypoint_target_publisher
+            <button onclick="start_waypoint_target_publisher()">start</button>
+            <button onclick="stop_waypoint_target_publisher()">kill</button>
+        </div>
+    </div>
+
+    <div>
         <div>
             thruster number: <input type="number" id="thruster_number_input">
         </div>
