@@ -35,14 +35,14 @@ class WrenchToIndividualThrusterOutputForcesNode(Node):
         # Referencing https://hackmd.io/@NCTU-auv/HkBgyB4a3
 
         thrusters_profile = [
-            {"position_m": np.array([ 0.150, -0.237, 0.045]), "direction": np.array([0, 0, 1])}, # NO. 0
-            {"position_m": np.array([ 0.150,  0.237, 0.045]), "direction": np.array([0, 0, 1])}, # NO. 1
-            {"position_m": np.array([-0.150, -0.237, 0.045]), "direction": np.array([0, 0, 1])}, # NO. 2
-            {"position_m": np.array([-0.150,  0.237, 0.045]), "direction": np.array([0, 0, 1])}, # NO. 3
-            {"position_m": np.array([ 0.296_51, -0.213, 0.045]), "direction": np.array([np.sin(np.pi / 4),  np.cos(np.pi / 4), 0])}, # NO. 4
-            {"position_m": np.array([ 0.296_51,  0.213, 0.045]), "direction": np.array([np.sin(np.pi / 4), -np.cos(np.pi / 4), 0])}, # NO. 5
-            {"position_m": np.array([-0.296_51, -0.213, 0.045]), "direction": np.array([np.sin(np.pi / 4), -np.cos(np.pi / 4), 0])}, # NO. 6
-            {"position_m": np.array([-0.296_51,  0.213, 0.045]), "direction": np.array([np.sin(np.pi / 4),  np.cos(np.pi / 4), 0])}, # NO. 7
+            {"position_m": np.array([ 0.127_11, -0.251_44, 0.000]), "direction": np.array([0, 0, 1])}, # NO. 0
+            {"position_m": np.array([ 0.127_11,  0.251_44, 0.000]), "direction": np.array([0, 0, 1])}, # NO. 1
+            {"position_m": np.array([-0.127_11, -0.251_44, 0.000]), "direction": np.array([0, 0, 1])}, # NO. 2
+            {"position_m": np.array([-0.127_11,  0.251_44, 0.000]), "direction": np.array([0, 0, 1])}, # NO. 3
+            {"position_m": np.array([ 0.320_49, -0.238_3, 0.000]), "direction": np.array([np.sin(np.pi / 4),  np.cos(np.pi / 4), 0])}, # NO. 4
+            {"position_m": np.array([ 0.320_49,  0.238_3, 0.000]), "direction": np.array([np.sin(np.pi / 4), -np.cos(np.pi / 4), 0])}, # NO. 5
+            {"position_m": np.array([-0.320_49, -0.238_3, 0.000]), "direction": np.array([np.sin(np.pi / 4), -np.cos(np.pi / 4), 0])}, # NO. 6
+            {"position_m": np.array([-0.320_49,  0.238_3, 0.000]), "direction": np.array([np.sin(np.pi / 4),  np.cos(np.pi / 4), 0])}, # NO. 7
         ]
 
         inverse_allocation_matrix = np.vstack((
