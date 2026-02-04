@@ -5,6 +5,7 @@ import time
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionServer
+from rclpy.executors import MultiThreadedExecutor
 from std_msgs.msg import Bool
 from std_msgs.msg import Int32MultiArray
 
@@ -20,6 +21,10 @@ class ThrusterInitializationNode(Node):
         self._initial_pwm_output_signal_value_us = int(self.declare_parameter("initial_pwm_output_signal_value_us", 1500).value)
         self._pwm_output_signal_value_us = [self._initial_pwm_output_signal_value_us for _ in range(self._thruster_count)]
         self._hold_after_enable_duration_s = float(self.declare_parameter("hold_after_enable_duration_s", 1.0).value)
+        self._pwm_output_signal_value_feedback_topic = self.declare_parameter(
+            "pwm_output_signal_value_feedback_topic",
+            ""
+        ).value
 
         self.__set_pwm_output_on_publisher = self.create_publisher(
             msg_type=Bool,
@@ -39,12 +44,14 @@ class ThrusterInitializationNode(Node):
             qos_profile=10
         )
 
-        self.__pwm_output_signal_value_subscriber = self.create_subscription(
-            msg_type=Int32MultiArray,
-            topic="thrusters/set_pwm_output_signal_value_us",
-            callback=self.__pwm_output_signal_value_subscription_callback,
-            qos_profile=10
-        )
+        self.__pwm_output_signal_value_subscriber = None
+        if self._pwm_output_signal_value_feedback_topic:
+            self.__pwm_output_signal_value_subscriber = self.create_subscription(
+                msg_type=Int32MultiArray,
+                topic=self._pwm_output_signal_value_feedback_topic,
+                callback=self.__pwm_output_signal_value_subscription_callback,
+                qos_profile=10
+            )
 
         self.__initialize_thruster_action_servers = [
             ActionServer(
@@ -75,7 +82,8 @@ class ThrusterInitializationNode(Node):
         self.__publish_force_to_pwm_output_enabled(False)
         self.__publish_set_pwm_output_on(False)
 
-        time.sleep(0.0)
+        if not self.__sleep_with_cancel_check(goal_handle, 0.0):
+            return InitializeThrusterAction.Result()
 
         pwm_values = list(self._pwm_output_signal_value_us)
         if len(pwm_values) < self._thruster_count:
@@ -83,11 +91,13 @@ class ThrusterInitializationNode(Node):
         pwm_values[thruster_number] = self._initial_pwm_output_signal_value_us
         self.__publish_pwm_output_signal_values(pwm_values)
 
-        time.sleep(0.2)
+        if not self.__sleep_with_cancel_check(goal_handle, 0.2):
+            return InitializeThrusterAction.Result()
 
         self.__publish_set_pwm_output_on(True)
 
-        time.sleep(self._hold_after_enable_duration_s)
+        if not self.__sleep_with_cancel_check(goal_handle, self._hold_after_enable_duration_s):
+            return InitializeThrusterAction.Result()
 
         self.__publish_force_to_pwm_output_enabled(True)
 
@@ -100,16 +110,19 @@ class ThrusterInitializationNode(Node):
         self.__publish_force_to_pwm_output_enabled(False)
         self.__publish_set_pwm_output_on(False)
 
-        time.sleep(0.0)
+        if not self.__sleep_with_cancel_check(goal_handle, 0.0):
+            return InitializeThrusterAction.Result()
 
         pwm_values = [self._initial_pwm_output_signal_value_us for _ in range(self._thruster_count)]
         self.__publish_pwm_output_signal_values(pwm_values)
 
-        time.sleep(0.2)
+        if not self.__sleep_with_cancel_check(goal_handle, 0.2):
+            return InitializeThrusterAction.Result()
 
         self.__publish_set_pwm_output_on(True)
 
-        time.sleep(self._hold_after_enable_duration_s)
+        if not self.__sleep_with_cancel_check(goal_handle, self._hold_after_enable_duration_s):
+            return InitializeThrusterAction.Result()
 
         self.__publish_force_to_pwm_output_enabled(True)
 
@@ -131,13 +144,30 @@ class ThrusterInitializationNode(Node):
         msg = Bool()
         msg.data = is_enabled
         self.__set_force_to_pwm_output_enabled_publisher.publish(msg)
+    
+    def __sleep_with_cancel_check(self, goal_handle, duration_s: float) -> bool:
+        if goal_handle.is_cancel_requested:
+            goal_handle.canceled()
+            return False
+        remaining_s = max(0.0, float(duration_s))
+        step_s = 0.05
+        while remaining_s > 0.0:
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                return False
+            sleep_s = min(step_s, remaining_s)
+            time.sleep(sleep_s)
+            remaining_s -= sleep_s
+        return True
 
 
 def main(args=None):
     rclpy.init(args=args)
 
     thruster_initialization_node = ThrusterInitializationNode()
-    rclpy.spin(thruster_initialization_node)
+    executor = MultiThreadedExecutor(num_threads=2)
+    executor.add_node(thruster_initialization_node)
+    executor.spin()
 
     rclpy.shutdown()
 
