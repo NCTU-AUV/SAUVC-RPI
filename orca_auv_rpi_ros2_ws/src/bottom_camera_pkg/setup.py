@@ -27,6 +27,7 @@ setup(
             'total_transform_node = bottom_camera_pkg.total_transform_node:main',
             'lk_total_transform_node = bottom_camera_pkg.lk_total_transform_node:main',
             'pixel_to_meter_node = bottom_camera_pkg.pixel_to_meter_node:main',
+            'delta_to_velocity_node = bottom_camera_pkg.delta_to_velocity_node:main',
         ],
     },
 )
