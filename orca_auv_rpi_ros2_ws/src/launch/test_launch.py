@@ -25,6 +25,7 @@ def generate_launch_description():
                 '/gui_wrench',
                 '/camera_ctr_wrench',
                 '/depth_ctr_wrench',
+                "/velocity_ctr_wrench",
             ],
             'output_topic': '/orca_auv/set_output_wrench_at_center_N_Nm',
         }]
@@ -42,6 +43,42 @@ def generate_launch_description():
         remappings=[
             ('/orca_auv/set_output_wrench_at_center_N_Nm', '/gui_wrench')
         ]
+    )
+    velocity_node = Node(
+        package='orca_auv_pose_control_pkg',
+        executable='velocity_controller_node',
+        name='velocity_controller_node',
+        parameters=[{
+            'measured_topic': '/orca_auv/bottom_camera/velocity_mps',
+            'measured_index': 1,
+            'target_topic': '/orca_auv/target_speed_mps',
+            'output_topic': '/velocity_ctr_wrench',
+
+            'kp': 8.0,
+            'ki': 0.0,
+            'kd': 0.0,
+            'd_cutoff_hz': 5.0,
+
+            'max_force_N': 25.0,
+            'min_force_N': -25.0,
+            'i_limit': 10.0,
+            'deadband_mps': 0.01,
+            'control_rate_hz': 30.0,
+            'measurement_timeout_s': 0.5,
+        }]
+    )
+
+    bottom_camera_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare('bottom_camera_pkg'),
+                'launch',
+                'bottom_camera_optical_flow.launch.py'
+            ])
+        ),
+        launch_arguments={
+            'publish_debug_image': 'true'
+        }.items()
     )
 
     micro_ros_agent = Node(
@@ -63,8 +100,10 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        bottom_camera_launch,
         thruster_pkg_launch,
         wrench_sum_node,
+        velocity_node,
         # mavros,
         gui_node,
         micro_ros_agent,
