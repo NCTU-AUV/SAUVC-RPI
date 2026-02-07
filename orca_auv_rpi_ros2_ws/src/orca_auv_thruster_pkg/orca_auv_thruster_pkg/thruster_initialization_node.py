@@ -75,7 +75,7 @@ class ThrusterInitializationNode(Node):
         self.__publish_force_to_pwm_output_enabled(False)
         self.__publish_set_pwm_output_on(False)
 
-        time.sleep(0.0)
+        time.sleep(0.8)
 
         pwm_values = list(self._pwm_output_signal_value_us)
         if len(pwm_values) < self._thruster_count:
@@ -83,7 +83,7 @@ class ThrusterInitializationNode(Node):
         pwm_values[thruster_number] = self._initial_pwm_output_signal_value_us
         self.__publish_pwm_output_signal_values(pwm_values)
 
-        time.sleep(0.2)
+        time.sleep(0.5)
 
         self.__publish_set_pwm_output_on(True)
 
@@ -100,12 +100,12 @@ class ThrusterInitializationNode(Node):
         self.__publish_force_to_pwm_output_enabled(False)
         self.__publish_set_pwm_output_on(False)
 
-        time.sleep(0.0)
+        time.sleep(0.8)
 
         pwm_values = [self._initial_pwm_output_signal_value_us for _ in range(self._thruster_count)]
         self.__publish_pwm_output_signal_values(pwm_values)
 
-        time.sleep(0.2)
+        time.sleep(0.5)
 
         self.__publish_set_pwm_output_on(True)
 
