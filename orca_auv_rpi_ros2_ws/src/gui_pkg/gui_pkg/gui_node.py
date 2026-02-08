@@ -9,6 +9,7 @@ from rclpy.parameter import Parameter
 from rcl_interfaces.srv import SetParameters
 from rcl_interfaces.msg import SetParametersResult
 from std_msgs.msg import Bool
+from std_msgs.msg import Float32
 from std_msgs.msg import Int32MultiArray
 from geometry_msgs.msg import Wrench
 from rclpy.action import ActionClient
@@ -51,6 +52,12 @@ class GUINode(Node):
                 callback=self._is_kill_switch_closed_callback,
                 qos_profile=10
             )
+        self._pressure_sensor_depth_subscriber = self.create_subscription(
+                msg_type=Float32,
+                topic="pressure_sensor_depth_m",
+                callback=self._pressure_sensor_depth_callback,
+                qos_profile=10
+            )
 
         self._initialize_all_thrusters_action_client = ActionClient(self, InitializeThrusterAction, '/orca_auv/initialize_all_thrusters')
 
@@ -89,6 +96,9 @@ class GUINode(Node):
 
     def _is_kill_switch_closed_callback(self, msg):
         self.aiohttp_server.send_topic("is_kill_switch_closed", msg.data)
+
+    def _pressure_sensor_depth_callback(self, msg: Float32):
+        self.aiohttp_server.send_topic("pressure_sensor_depth_m", msg.data)
 
     def _pwm_output_signal_value_subscription_callback(self, msg: Int32MultiArray):
         values = list(msg.data)

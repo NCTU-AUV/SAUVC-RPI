@@ -9,6 +9,9 @@ websocket.onmessage = (event) => {
         if (msg_json_object.data.topic_name == "is_kill_switch_closed") {
             document.getElementById("is_kill_switch_closed").innerHTML = msg_json_object.data.msg;
         }
+        if (msg_json_object.data.topic_name == "pressure_sensor_depth_m") {
+            document.getElementById("pressure_sensor_depth_m").innerHTML = msg_json_object.data.msg;
+        }
     }
 };
 
