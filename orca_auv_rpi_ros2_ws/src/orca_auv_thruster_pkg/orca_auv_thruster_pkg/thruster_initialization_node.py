@@ -27,9 +27,9 @@ class ThrusterInitializationNode(Node):
             qos_profile=10
         )
 
-        self.__set_force_to_pwm_output_enabled_publisher = self.create_publisher(
+        self.__is_initializing_publisher = self.create_publisher(
             msg_type=Bool,
-            topic="thrusters/set_force_to_pwm_output_enabled",
+            topic="thrusters/is_initializing",
             qos_profile=10
         )
 
@@ -72,7 +72,7 @@ class ThrusterInitializationNode(Node):
     def __initialize_thruster_action_callback_with_thruster_number(self, goal_handle, thruster_number):
         self.get_logger().info(f"Execute thruster_{thruster_number}/initialize_thruster action")
 
-        self.__publish_force_to_pwm_output_enabled(False)
+        self.__publish_is_initializing(True)
         self.__publish_set_pwm_output_on(False)
 
         time.sleep(0.8)
@@ -89,7 +89,7 @@ class ThrusterInitializationNode(Node):
 
         time.sleep(self._hold_after_enable_duration_s)
 
-        self.__publish_force_to_pwm_output_enabled(True)
+        self.__publish_is_initializing(False)
 
         goal_handle.succeed()
         return InitializeThrusterAction.Result()
@@ -97,7 +97,7 @@ class ThrusterInitializationNode(Node):
     def __initialize_all_thrusters_action_callback(self, goal_handle):
         self.get_logger().info(f"Execute initialize_all_thrusters action")
 
-        self.__publish_force_to_pwm_output_enabled(False)
+        self.__publish_is_initializing(True)
         self.__publish_set_pwm_output_on(False)
 
         time.sleep(0.8)
@@ -111,7 +111,7 @@ class ThrusterInitializationNode(Node):
 
         time.sleep(self._hold_after_enable_duration_s)
 
-        self.__publish_force_to_pwm_output_enabled(True)
+        self.__publish_is_initializing(False)
 
         goal_handle.succeed()
         return InitializeThrusterAction.Result()
@@ -127,10 +127,10 @@ class ThrusterInitializationNode(Node):
         msg.data = is_on
         self.__set_pwm_output_on_publisher.publish(msg)
 
-    def __publish_force_to_pwm_output_enabled(self, is_enabled: bool):
+    def __publish_is_initializing(self, is_initializing: bool):
         msg = Bool()
-        msg.data = is_enabled
-        self.__set_force_to_pwm_output_enabled_publisher.publish(msg)
+        msg.data = is_initializing
+        self.__is_initializing_publisher.publish(msg)
 
 
 def main(args=None):
