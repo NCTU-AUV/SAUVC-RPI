@@ -19,8 +19,12 @@ class ThrusterForceToPWMOutputSignalNode(Node):
         super().__init__("thruster_force_to_pwm_output_signal_node", namespace="orca_auv")
 
         self._thruster_count = 8
-        initial_pwm_us = int(self.declare_parameter("initial_pwm_output_signal_value_us", 1500).value)
-        self._pwm_output_signal_value_us = [initial_pwm_us for _ in range(self._thruster_count)]
+        self._initial_pwm_output_signal_value_us = int(
+            self.declare_parameter("initial_pwm_output_signal_value_us", 1500).value
+        )
+        self._pwm_output_signal_value_us = [
+            self._initial_pwm_output_signal_value_us for _ in range(self._thruster_count)
+        ]
         self._is_output_enabled = bool(self.declare_parameter("force_to_pwm_output_enabled", True).value)
         self._is_initializing = False
 
@@ -57,6 +61,10 @@ class ThrusterForceToPWMOutputSignalNode(Node):
 
     def _set_is_initializing_callback(self, msg: Bool):
         self._is_initializing = bool(msg.data)
+        if self._is_initializing:
+            self._pwm_output_signal_value_us = [
+                self._initial_pwm_output_signal_value_us for _ in range(self._thruster_count)
+            ]
         if not self._is_initializing and self._is_output_enabled:
             # Publish the most recent PWM array when re-enabled so downstream stays in sync.
             self._publish_pwm_output_signal_value_array()
