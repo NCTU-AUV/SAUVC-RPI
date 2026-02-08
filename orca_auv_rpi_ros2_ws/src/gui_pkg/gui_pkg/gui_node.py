@@ -6,7 +6,7 @@ import subprocess
 import rclpy
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-from rclpy.parameter_client import AsyncParameterClient
+from rcl_interfaces.srv import SetParameters
 from rcl_interfaces.msg import SetParametersResult
 from std_msgs.msg import Bool
 from std_msgs.msg import Int32MultiArray
@@ -16,6 +16,21 @@ from std_srvs.srv import Trigger
 
 from .aiohttp_server import AIOHTTPServer
 from orca_auv_thruster_interfaces_pkg.action import InitializeThrusterAction
+
+
+class _AsyncParameterClient:
+    """Minimal async parameter client for ROS 2 Humble."""
+
+    def __init__(self, node: Node, node_name: str):
+        self._client = node.create_client(SetParameters, f"{node_name}/set_parameters")
+
+    def service_is_ready(self) -> bool:
+        return self._client.service_is_ready()
+
+    def set_parameters(self, params):
+        request = SetParameters.Request()
+        request.parameters = [p.to_parameter_msg() for p in params]
+        return self._client.call_async(request)
 
 
 class GUINode(Node):
@@ -219,7 +234,7 @@ class GUINode(Node):
     def _get_param_client(self, node_name: str):
         client = self._param_clients.get(node_name)
         if client is None:
-            client = AsyncParameterClient(self, node_name)
+            client = _AsyncParameterClient(self, node_name)
             self._param_clients[node_name] = client
         return client
 
