@@ -20,20 +20,32 @@ function send_process_action(target, action) {
     websocket.send(JSON.stringify({type: "process", data: {target: target, action: action}}));
 }
 
-function start_bottom_camera_pid_fbc_launch() {
-    send_process_action("bottom_camera_pid_fbc_launch", "start");
+function send_controller_action(group, action) {
+    websocket.send(JSON.stringify({type: "controller", data: {group: group, action: action}}));
 }
 
-function stop_bottom_camera_pid_fbc_launch() {
-    send_process_action("bottom_camera_pid_fbc_launch", "stop");
+function enable_bottom_camera_pid_fbc() {
+    send_controller_action("bottom_camera_pid_fbc", "enable");
 }
 
-function start_depth_control_launch() {
-    send_process_action("depth_control_launch", "start");
+function disable_bottom_camera_pid_fbc() {
+    send_controller_action("bottom_camera_pid_fbc", "disable");
 }
 
-function stop_depth_control_launch() {
-    send_process_action("depth_control_launch", "stop");
+function reset_bottom_camera_pid_fbc() {
+    send_controller_action("bottom_camera_pid_fbc", "reset");
+}
+
+function enable_depth_control() {
+    send_controller_action("depth_control", "enable");
+}
+
+function disable_depth_control() {
+    send_controller_action("depth_control", "disable");
+}
+
+function reset_depth_control() {
+    send_controller_action("depth_control", "reset");
 }
 
 function start_waypoint_target_publisher() {

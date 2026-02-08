@@ -5,13 +5,32 @@ import subprocess
 
 import rclpy
 from rclpy.node import Node
+from rclpy.parameter import Parameter
+from rcl_interfaces.srv import SetParameters
+from rcl_interfaces.msg import SetParametersResult
 from std_msgs.msg import Bool
 from std_msgs.msg import Int32MultiArray
 from geometry_msgs.msg import Wrench
 from rclpy.action import ActionClient
+from std_srvs.srv import Trigger
 
 from .aiohttp_server import AIOHTTPServer
 from orca_auv_thruster_interfaces_pkg.action import InitializeThrusterAction
+
+
+class _AsyncParameterClient:
+    """Minimal async parameter client for ROS 2 Humble."""
+
+    def __init__(self, node: Node, node_name: str):
+        self._client = node.create_client(SetParameters, f"{node_name}/set_parameters")
+
+    def service_is_ready(self) -> bool:
+        return self._client.service_is_ready()
+
+    def set_parameters(self, params):
+        request = SetParameters.Request()
+        request.parameters = [p.to_parameter_msg() for p in params]
+        return self._client.call_async(request)
 
 
 class GUINode(Node):
@@ -55,6 +74,18 @@ class GUINode(Node):
             "waypoint_target_publisher": ["ros2", "run", "orca_auv_pose_control_pkg", "waypoint_target_publisher"],
         }
         self._processes = {}
+
+        self._controller_groups = {
+            "bottom_camera_pid_fbc": [
+                "/orca_auv/x_coordinate_pid_controller_node",
+                "/orca_auv/y_coordinate_pid_controller_node",
+            ],
+            "depth_control": [
+                "/orca_auv/depth_pid_controller_node",
+            ],
+        }
+        self._param_clients = {}
+        self._reset_clients = {}
 
     def _is_kill_switch_closed_callback(self, msg):
         self.aiohttp_server.send_topic("is_kill_switch_closed", msg.data)
@@ -128,7 +159,19 @@ class GUINode(Node):
             else:
                 self.get_logger().warning(f"Unknown process action: {msg_data}")
 
-        if msg_type not in ("action", "topic", "process"):
+        if msg_type == "controller":
+            group = msg_data.get("group")
+            action = msg_data.get("action")
+            if not group or group not in self._controller_groups:
+                self.get_logger().warning(f"Unknown controller group: {msg_data}")
+            elif action in ("enable", "disable"):
+                self._set_group_enabled(group, action == "enable")
+            elif action == "reset":
+                self._reset_group(group)
+            else:
+                self.get_logger().warning(f"Unknown controller action: {msg_data}")
+
+        if msg_type not in ("action", "topic", "process", "controller"):
             self.get_logger().warning(f"Unknown message type: {msg_json_object}")
 
     def destroy_node(self):
@@ -187,6 +230,60 @@ class GUINode(Node):
     def _stop_all_processes(self):
         for name in list(self._processes.keys()):
             self._stop_process(name)
+
+    def _get_param_client(self, node_name: str):
+        client = self._param_clients.get(node_name)
+        if client is None:
+            client = _AsyncParameterClient(self, node_name)
+            self._param_clients[node_name] = client
+        return client
+
+    def _get_reset_client(self, node_name: str):
+        client = self._reset_clients.get(node_name)
+        if client is None:
+            client = self.create_client(Trigger, f"{node_name}/reset")
+            self._reset_clients[node_name] = client
+        return client
+
+    def _set_group_enabled(self, group: str, enabled: bool):
+        nodes = self._controller_groups.get(group, [])
+        for node_name in nodes:
+            client = self._get_param_client(node_name)
+            if not client.service_is_ready():
+                self.get_logger().warning(f"Parameter service not ready for {node_name}")
+                continue
+            param = Parameter("enabled", Parameter.Type.BOOL, enabled)
+            future = client.set_parameters([param])
+            future.add_done_callback(lambda f, n=node_name: self._log_param_result(n, f))
+
+    def _log_param_result(self, node_name: str, future):
+        try:
+            results = future.result()
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().warning(f"Failed to set params on {node_name}: {exc}")
+            return
+        for res in results:
+            if not res.successful:
+                self.get_logger().warning(f"Param set failed on {node_name}: {res.reason}")
+
+    def _reset_group(self, group: str):
+        nodes = self._controller_groups.get(group, [])
+        for node_name in nodes:
+            client = self._get_reset_client(node_name)
+            if not client.service_is_ready():
+                self.get_logger().warning(f"Reset service not ready for {node_name}")
+                continue
+            future = client.call_async(Trigger.Request())
+            future.add_done_callback(lambda f, n=node_name: self._log_reset_result(n, f))
+
+    def _log_reset_result(self, node_name: str, future):
+        try:
+            response = future.result()
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().warning(f"Reset call failed on {node_name}: {exc}")
+            return
+        if not response.success:
+            self.get_logger().warning(f"Reset failed on {node_name}: {response.message}")
 
 def main(args=None):
     rclpy.init(args=args)
