@@ -81,6 +81,26 @@ def generate_launch_description():
         }.items()
     )
 
+    bottom_camera_pid_fbc_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare('orca_auv_pose_control_pkg'),
+                'launch',
+                'bottom_camera_pid_fbc_launch.py'
+            ])
+        )
+    )
+
+    depth_control_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare('orca_auv_pose_control_pkg'),
+                'launch',
+                'depth_control_launch.py'
+            ])
+        )
+    )
+
     micro_ros_agent = Node(
         package='micro_ros_agent',
         executable='micro_ros_agent',
@@ -101,6 +121,8 @@ def generate_launch_description():
 
     return LaunchDescription([
         bottom_camera_launch,
+        bottom_camera_pid_fbc_launch,
+        depth_control_launch,
         thruster_pkg_launch,
         wrench_sum_node,
         velocity_node,
