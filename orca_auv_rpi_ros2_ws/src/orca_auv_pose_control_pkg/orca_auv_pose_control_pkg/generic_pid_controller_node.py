@@ -1,5 +1,7 @@
 import rclpy
 from rclpy.node import Node
+from rcl_interfaces.msg import SetParametersResult
+from std_srvs.srv import Trigger
 
 from std_msgs.msg import Float64
 
@@ -27,6 +29,9 @@ class GenericPIDControllerNode(Node):
         self._controller_loop_timer_period_s = self.get_parameter('controller_loop_timer_period_s').get_parameter_value().double_value
         self._controller_loop_timer = self.create_timer(self._controller_loop_timer_period_s, self._controller_loop_timer_callback)
 
+        self.declare_parameter('enabled', True)
+        self._enabled = bool(self.get_parameter('enabled').value)
+
         self.declare_parameter('proportional_gain', 0.0)
         self.declare_parameter('integral_gain', 0.0)
         self.declare_parameter('derivative_gain', 0.0)
@@ -39,13 +44,50 @@ class GenericPIDControllerNode(Node):
         self._integral_controller_integrated_value = 0.0
         self._derivative_controller_previous_stored_value = 0.0
 
+        self._reset_service = self.create_service(
+            Trigger,
+            f"{self.get_name()}/reset",
+            self._on_reset,
+        )
+
+        self.add_on_set_parameters_callback(self._on_params)
+
     def _reference_input_subscription_callback(self, msg):
         self._reference_input = msg.data
 
     def _output_feedback_subscription_callback(self, msg):
         self._output_feedback = msg.data
 
+    def _on_params(self, params):
+        for p in params:
+            if p.name == "enabled":
+                self._enabled = bool(p.value)
+                if not self._enabled:
+                    self._reset_state()
+                    self._publish_output(0.0)
+        return SetParametersResult(successful=True)
+
+    def _on_reset(self, request, response):
+        self._reset_state()
+        response.success = True
+        response.message = "PID controller state reset"
+        return response
+
+    def _reset_state(self):
+        self._integral_controller_integrated_value = 0.0
+        self._derivative_controller_previous_stored_value = 0.0
+        self._derivative_controller_new_stored_value = 0.0
+
+    def _publish_output(self, value: float):
+        output_msg = Float64()
+        output_msg.data = float(value)
+        self._manipulated_variable_publisher.publish(output_msg)
+
     def _controller_loop_timer_callback(self):
+        if not self._enabled:
+            self._publish_output(0.0)
+            return
+
         error = self._reference_input - self._output_feedback
 
         proportional_gain = self.get_parameter('proportional_gain').get_parameter_value().double_value
@@ -74,10 +116,7 @@ class GenericPIDControllerNode(Node):
 
         total_output = proportional_output + integral_output + derivative_output
 
-        output_msg = Float64()
-        output_msg.data = total_output
-
-        self._manipulated_variable_publisher.publish(output_msg)
+        self._publish_output(total_output)
 
 
 def main(args=None):
