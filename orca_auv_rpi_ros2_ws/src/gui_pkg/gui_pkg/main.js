@@ -9,6 +9,9 @@ websocket.onmessage = (event) => {
         if (msg_json_object.data.topic_name == "is_kill_switch_closed") {
             document.getElementById("is_kill_switch_closed").innerHTML = msg_json_object.data.msg;
         }
+        if (msg_json_object.data.topic_name == "pressure_sensor_depth_m") {
+            document.getElementById("pressure_sensor_depth_m").innerHTML = msg_json_object.data.msg;
+        }
     }
 };
 
@@ -46,6 +49,32 @@ function disable_depth_control() {
 
 function reset_depth_control() {
     send_controller_action("depth_control", "reset");
+}
+
+function set_target_depth_m_button_onclick() {
+    const target_depth_m = document.getElementById("target_depth_m_input").value;
+    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "set_target_depth_m", msg: {data: target_depth_m}}}));
+}
+
+function set_depth_pid_params_button_onclick() {
+    const p = document.getElementById("depth_pid_p_input").value;
+    const i = document.getElementById("depth_pid_i_input").value;
+    const d = document.getElementById("depth_pid_d_input").value;
+    const smoothing = document.getElementById("depth_pid_smoothing_input").value;
+
+    websocket.send(JSON.stringify({
+        type: "controller",
+        data: {
+            group: "depth_control",
+            action: "set_pid_params",
+            params: {
+                proportional_gain: p,
+                integral_gain: i,
+                derivative_gain: d,
+                derivative_smoothing_factor: smoothing,
+            }
+        }
+    }));
 }
 
 function start_waypoint_target_publisher() {

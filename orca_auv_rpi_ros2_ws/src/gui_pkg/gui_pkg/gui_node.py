@@ -9,6 +9,8 @@ from rclpy.parameter import Parameter
 from rcl_interfaces.srv import SetParameters
 from rcl_interfaces.msg import SetParametersResult
 from std_msgs.msg import Bool
+from std_msgs.msg import Float32
+from std_msgs.msg import Float64
 from std_msgs.msg import Int32MultiArray
 from geometry_msgs.msg import Wrench
 from rclpy.action import ActionClient
@@ -51,6 +53,12 @@ class GUINode(Node):
                 callback=self._is_kill_switch_closed_callback,
                 qos_profile=10
             )
+        self._pressure_sensor_depth_subscriber = self.create_subscription(
+                msg_type=Float32,
+                topic="pressure_sensor_depth_m",
+                callback=self._pressure_sensor_depth_callback,
+                qos_profile=10
+            )
 
         self._initialize_all_thrusters_action_client = ActionClient(self, InitializeThrusterAction, '/orca_auv/initialize_all_thrusters')
 
@@ -68,6 +76,7 @@ class GUINode(Node):
         )
 
         self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'set_output_wrench_at_center_N_Nm', 10)
+        self._target_depth_publisher = self.create_publisher(Float64, 'target_depth_m', 10)
         self._process_commands = {
             "bottom_camera_pid_fbc_launch": ["ros2", "launch", "orca_auv_pose_control_pkg", "bottom_camera_pid_fbc_launch.py"],
             "depth_control_launch": ["ros2", "launch", "orca_auv_pose_control_pkg", "depth_control_launch.py"],
@@ -89,6 +98,9 @@ class GUINode(Node):
 
     def _is_kill_switch_closed_callback(self, msg):
         self.aiohttp_server.send_topic("is_kill_switch_closed", msg.data)
+
+    def _pressure_sensor_depth_callback(self, msg: Float32):
+        self.aiohttp_server.send_topic("pressure_sensor_depth_m", msg.data)
 
     def _pwm_output_signal_value_subscription_callback(self, msg: Int32MultiArray):
         values = list(msg.data)
@@ -147,6 +159,16 @@ class GUINode(Node):
                 else:
                     self._set_output_wrench_at_center_publisher.publish(msg)
 
+            if topic_name == "set_target_depth_m":
+                try:
+                    target_depth = float(msg_data["msg"]["data"])
+                except (KeyError, TypeError, ValueError):
+                    self.get_logger().warning(f"Invalid target depth message: {msg_json_object}")
+                else:
+                    msg = Float64()
+                    msg.data = target_depth
+                    self._target_depth_publisher.publish(msg)
+
         if msg_type == "process":
             target = msg_data.get("target")
             action = msg_data.get("action")
@@ -168,6 +190,8 @@ class GUINode(Node):
                 self._set_group_enabled(group, action == "enable")
             elif action == "reset":
                 self._reset_group(group)
+            elif action == "set_pid_params":
+                self._set_group_pid_params(group, msg_data.get("params", {}))
             else:
                 self.get_logger().warning(f"Unknown controller action: {msg_data}")
 
@@ -284,6 +308,39 @@ class GUINode(Node):
             return
         if not response.success:
             self.get_logger().warning(f"Reset failed on {node_name}: {response.message}")
+
+    def _set_group_pid_params(self, group: str, params):
+        nodes = self._controller_groups.get(group, [])
+        if not nodes:
+            self.get_logger().warning(f"No nodes configured for {group}")
+            return
+
+        try:
+            p = float(params["proportional_gain"])
+            i = float(params["integral_gain"])
+            d = float(params["derivative_gain"])
+            smoothing = float(params["derivative_smoothing_factor"])
+        except (KeyError, TypeError, ValueError):
+            self.get_logger().warning(f"Invalid PID params: {params}")
+            return
+
+        if not (0.0 <= smoothing <= 1.0):
+            self.get_logger().warning(f"derivative_smoothing_factor out of range: {smoothing}")
+            return
+
+        for node_name in nodes:
+            client = self._get_param_client(node_name)
+            if not client.service_is_ready():
+                self.get_logger().warning(f"Parameter service not ready for {node_name}")
+                continue
+            parameters = [
+                Parameter("proportional_gain", Parameter.Type.DOUBLE, p),
+                Parameter("integral_gain", Parameter.Type.DOUBLE, i),
+                Parameter("derivative_gain", Parameter.Type.DOUBLE, d),
+                Parameter("derivative_smoothing_factor", Parameter.Type.DOUBLE, smoothing),
+            ]
+            future = client.set_parameters(parameters)
+            future.add_done_callback(lambda f, n=node_name: self._log_param_result(n, f))
 
 def main(args=None):
     rclpy.init(args=args)
