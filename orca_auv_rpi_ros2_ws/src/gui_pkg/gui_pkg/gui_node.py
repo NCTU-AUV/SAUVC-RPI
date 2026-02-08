@@ -75,6 +75,7 @@ class GUINode(Node):
         )
 
         self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'set_output_wrench_at_center_N_Nm', 10)
+        self._target_depth_publisher = self.create_publisher(Float32, 'target_depth_m', 10)
         self._process_commands = {
             "bottom_camera_pid_fbc_launch": ["ros2", "launch", "orca_auv_pose_control_pkg", "bottom_camera_pid_fbc_launch.py"],
             "depth_control_launch": ["ros2", "launch", "orca_auv_pose_control_pkg", "depth_control_launch.py"],
@@ -156,6 +157,16 @@ class GUINode(Node):
                     self.get_logger().warning(f"Invalid wrench message: {msg_json_object}")
                 else:
                     self._set_output_wrench_at_center_publisher.publish(msg)
+
+            if topic_name == "set_target_depth_m":
+                try:
+                    target_depth = float(msg_data["msg"]["data"])
+                except (KeyError, TypeError, ValueError):
+                    self.get_logger().warning(f"Invalid target depth message: {msg_json_object}")
+                else:
+                    msg = Float32()
+                    msg.data = target_depth
+                    self._target_depth_publisher.publish(msg)
 
         if msg_type == "process":
             target = msg_data.get("target")

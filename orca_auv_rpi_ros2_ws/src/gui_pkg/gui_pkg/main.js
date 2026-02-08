@@ -51,6 +51,11 @@ function reset_depth_control() {
     send_controller_action("depth_control", "reset");
 }
 
+function set_target_depth_m_button_onclick() {
+    const target_depth_m = document.getElementById("target_depth_m_input").value;
+    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "set_target_depth_m", msg: {data: target_depth_m}}}));
+}
+
 function start_waypoint_target_publisher() {
     send_process_action("waypoint_target_publisher", "start");
 }

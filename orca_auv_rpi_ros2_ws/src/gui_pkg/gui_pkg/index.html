@@ -26,6 +26,10 @@
             <button onclick="reset_depth_control()">reset</button>
         </div>
         <div>
+            target_depth_m: <input type="number" id="target_depth_m_input">
+            <button onclick="set_target_depth_m_button_onclick()">set</button>
+        </div>
+        <div>
             waypoint_target_publisher
             <button onclick="start_waypoint_target_publisher()">start</button>
             <button onclick="stop_waypoint_target_publisher()">kill</button>
