@@ -10,6 +10,7 @@ from rcl_interfaces.srv import SetParameters
 from rcl_interfaces.msg import SetParametersResult
 from std_msgs.msg import Bool
 from std_msgs.msg import Float32
+from std_msgs.msg import Float64
 from std_msgs.msg import Int32MultiArray
 from geometry_msgs.msg import Wrench
 from rclpy.action import ActionClient
@@ -75,7 +76,7 @@ class GUINode(Node):
         )
 
         self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'set_output_wrench_at_center_N_Nm', 10)
-        self._target_depth_publisher = self.create_publisher(Float32, 'target_depth_m', 10)
+        self._target_depth_publisher = self.create_publisher(Float64, 'target_depth_m', 10)
         self._process_commands = {
             "bottom_camera_pid_fbc_launch": ["ros2", "launch", "orca_auv_pose_control_pkg", "bottom_camera_pid_fbc_launch.py"],
             "depth_control_launch": ["ros2", "launch", "orca_auv_pose_control_pkg", "depth_control_launch.py"],
@@ -164,7 +165,7 @@ class GUINode(Node):
                 except (KeyError, TypeError, ValueError):
                     self.get_logger().warning(f"Invalid target depth message: {msg_json_object}")
                 else:
-                    msg = Float32()
+                    msg = Float64()
                     msg.data = target_depth
                     self._target_depth_publisher.publish(msg)
 
