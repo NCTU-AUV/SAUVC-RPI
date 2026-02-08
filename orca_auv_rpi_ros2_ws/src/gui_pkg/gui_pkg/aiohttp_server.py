@@ -15,7 +15,7 @@ class AIOHTTPServer:
 
         # Queue messages when no websocket client is connected yet to avoid crashing.
         with self._pending_lock:
-            if not self.event_loop or not self.websocket_response or self.websocket_response.closed:
+            if not self.event_loop or self.websocket_response is None or self.websocket_response.closed:
                 self._pending_topic_payloads.append(payload)
                 return
             loop = self.event_loop
