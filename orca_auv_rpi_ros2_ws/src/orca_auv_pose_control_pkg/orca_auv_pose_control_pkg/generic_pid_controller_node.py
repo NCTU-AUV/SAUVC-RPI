@@ -29,7 +29,7 @@ class GenericPIDControllerNode(Node):
         self._controller_loop_timer_period_s = self.get_parameter('controller_loop_timer_period_s').get_parameter_value().double_value
         self._controller_loop_timer = self.create_timer(self._controller_loop_timer_period_s, self._controller_loop_timer_callback)
 
-        self.declare_parameter('enabled', True)
+        self.declare_parameter('enabled', False)
         self._enabled = bool(self.get_parameter('enabled').value)
 
         self.declare_parameter('proportional_gain', 0.0)
