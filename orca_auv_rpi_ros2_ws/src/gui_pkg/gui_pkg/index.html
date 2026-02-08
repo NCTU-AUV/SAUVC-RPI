@@ -26,6 +26,22 @@
             <button onclick="reset_depth_control()">reset</button>
         </div>
         <div>
+            depth PID params:
+            <div>
+                P: <input type="number" step="any" id="depth_pid_p_input">
+            </div>
+            <div>
+                I: <input type="number" step="any" id="depth_pid_i_input">
+            </div>
+            <div>
+                D: <input type="number" step="any" id="depth_pid_d_input">
+            </div>
+            <div>
+                smoothing: <input type="number" step="any" id="depth_pid_smoothing_input">
+            </div>
+            <button onclick="set_depth_pid_params_button_onclick()">set PID params</button>
+        </div>
+        <div>
             target_depth_m: <input type="number" id="target_depth_m_input">
             <button onclick="set_target_depth_m_button_onclick()">set</button>
         </div>

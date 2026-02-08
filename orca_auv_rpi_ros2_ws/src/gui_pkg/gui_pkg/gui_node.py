@@ -189,6 +189,8 @@ class GUINode(Node):
                 self._set_group_enabled(group, action == "enable")
             elif action == "reset":
                 self._reset_group(group)
+            elif action == "set_pid_params":
+                self._set_group_pid_params(group, msg_data.get("params", {}))
             else:
                 self.get_logger().warning(f"Unknown controller action: {msg_data}")
 
@@ -305,6 +307,39 @@ class GUINode(Node):
             return
         if not response.success:
             self.get_logger().warning(f"Reset failed on {node_name}: {response.message}")
+
+    def _set_group_pid_params(self, group: str, params):
+        nodes = self._controller_groups.get(group, [])
+        if not nodes:
+            self.get_logger().warning(f"No nodes configured for {group}")
+            return
+
+        try:
+            p = float(params["proportional_gain"])
+            i = float(params["integral_gain"])
+            d = float(params["derivative_gain"])
+            smoothing = float(params["derivative_smoothing_factor"])
+        except (KeyError, TypeError, ValueError):
+            self.get_logger().warning(f"Invalid PID params: {params}")
+            return
+
+        if not (0.0 <= smoothing <= 1.0):
+            self.get_logger().warning(f"derivative_smoothing_factor out of range: {smoothing}")
+            return
+
+        for node_name in nodes:
+            client = self._get_param_client(node_name)
+            if not client.service_is_ready():
+                self.get_logger().warning(f"Parameter service not ready for {node_name}")
+                continue
+            parameters = [
+                Parameter("proportional_gain", Parameter.Type.DOUBLE, p),
+                Parameter("integral_gain", Parameter.Type.DOUBLE, i),
+                Parameter("derivative_gain", Parameter.Type.DOUBLE, d),
+                Parameter("derivative_smoothing_factor", Parameter.Type.DOUBLE, smoothing),
+            ]
+            future = client.set_parameters(parameters)
+            future.add_done_callback(lambda f, n=node_name: self._log_param_result(n, f))
 
 def main(args=None):
     rclpy.init(args=args)
