@@ -14,11 +14,9 @@ from std_msgs.msg import Float64
 from std_msgs.msg import Int32MultiArray
 from std_msgs.msg import String
 from geometry_msgs.msg import Wrench
-from rclpy.action import ActionClient
 from std_srvs.srv import Trigger
 
 from .aiohttp_server import AIOHTTPServer
-from orca_auv_thruster_interfaces_pkg.action import InitializeThrusterAction
 
 
 class _AsyncParameterClient:
@@ -67,7 +65,7 @@ class GUINode(Node):
                 qos_profile=10
             )
 
-        self._initialize_all_thrusters_action_client = ActionClient(self, InitializeThrusterAction, '/orca_auv/initialize_all_thrusters')
+        self._initialize_all_thrusters_client = self.create_client(Trigger, '/orca_auv/initialize_all_thrusters')
         self._flash_stm32_client = self.create_client(Trigger, '/flash_stm32')
 
         self._pwm_output_signal_value_subscription = self.create_subscription(
@@ -133,7 +131,7 @@ class GUINode(Node):
         if msg_type == "action":
             action_name = msg_data.get("action_name")
             if action_name == "initialize_all_thrusters":
-                self._initialize_all_thrusters_action_client.send_goal_async(InitializeThrusterAction.Goal())
+                self._initialize_all_thrusters_client.call_async(Trigger.Request())
             elif action_name == "flash_stm32":
                 self._flash_stm32()
             else:

@@ -4,11 +4,9 @@ import time
 
 import rclpy
 from rclpy.node import Node
-from rclpy.action import ActionServer
 from std_msgs.msg import Bool
 from std_msgs.msg import Int32MultiArray
-
-from orca_auv_thruster_interfaces_pkg.action import InitializeThrusterAction
+from std_srvs.srv import Trigger
 
 
 class ThrusterInitializationNode(Node):
@@ -46,22 +44,20 @@ class ThrusterInitializationNode(Node):
             qos_profile=10
         )
 
-        self.__initialize_thruster_action_servers = [
-            ActionServer(
-                self,
-                InitializeThrusterAction,
+        self.__initialize_thruster_services = [
+            self.create_service(
+                Trigger,
                 f"thruster_{thruster_number}/initialize_thruster",
-                lambda goal_handle, thruster_number=thruster_number: self.__initialize_thruster_action_callback_with_thruster_number(goal_handle, thruster_number)
+                lambda request, response, thruster_number=thruster_number: self.__initialize_thruster_service_callback_with_thruster_number(request, response, thruster_number)
             )
             for thruster_number in range(self._thruster_count)
         ]
 
-        self.__initialize_all_thrusters_action_servers = ActionServer(
-                self,
-                InitializeThrusterAction,
-                "initialize_all_thrusters",
-                self.__initialize_all_thrusters_action_callback
-            )
+        self.__initialize_all_thrusters_service = self.create_service(
+            Trigger,
+            "initialize_all_thrusters",
+            self.__initialize_all_thrusters_service_callback
+        )
 
     def __pwm_output_signal_value_subscription_callback(self, msg: Int32MultiArray):
         received_values = list(msg.data)
@@ -69,8 +65,8 @@ class ThrusterInitializationNode(Node):
             received_values += [self._initial_pwm_output_signal_value_us] * (self._thruster_count - len(received_values))
         self._pwm_output_signal_value_us = received_values[:self._thruster_count]
 
-    def __initialize_thruster_action_callback_with_thruster_number(self, goal_handle, thruster_number):
-        self.get_logger().info(f"Execute thruster_{thruster_number}/initialize_thruster action")
+    def __initialize_thruster_service_callback_with_thruster_number(self, request, response, thruster_number):
+        self.get_logger().info(f"Execute thruster_{thruster_number}/initialize_thruster service")
 
         self.__publish_is_initializing(True)
         self.__publish_set_pwm_output_on(False)
@@ -91,11 +87,12 @@ class ThrusterInitializationNode(Node):
 
         self.__publish_is_initializing(False)
 
-        goal_handle.succeed()
-        return InitializeThrusterAction.Result()
+        response.success = True
+        response.message = "Thruster initialized"
+        return response
 
-    def __initialize_all_thrusters_action_callback(self, goal_handle):
-        self.get_logger().info(f"Execute initialize_all_thrusters action")
+    def __initialize_all_thrusters_service_callback(self, request, response):
+        self.get_logger().info("Execute initialize_all_thrusters service")
 
         self.__publish_is_initializing(True)
         self.__publish_set_pwm_output_on(False)
@@ -113,8 +110,9 @@ class ThrusterInitializationNode(Node):
 
         self.__publish_is_initializing(False)
 
-        goal_handle.succeed()
-        return InitializeThrusterAction.Result()
+        response.success = True
+        response.message = "All thrusters initialized"
+        return response
 
     def __publish_pwm_output_signal_values(self, pwm_values):
         msg = Int32MultiArray()
