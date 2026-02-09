@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Hello World</title>
+    <title>ORCA AUV GUI</title>
     <style>
         :root {
             --bg: #0c1220;
@@ -31,6 +31,50 @@
         }
         p, div {
             margin: 0 0 12px;
+        }
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px 24px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            align-items: center;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 8px 12px;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 8px 12px;
+        }
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 8px 12px;
+        }
+        .stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .inline-field {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 10px;
+            align-items: center;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 16px;
         }
         button {
             border: 1px solid var(--border);
@@ -63,13 +107,12 @@
             border-color: var(--accent-2);
             box-shadow: 0 0 0 2px rgba(122, 167, 255, 0.2);
         }
-        body > div {
+        .panel {
             background: var(--card);
             padding: 16px 18px;
             border-radius: 14px;
             border: 1px solid var(--border);
             box-shadow: 0 10px 24px var(--shadow);
-            margin-bottom: 16px;
         }
         body > p {
             font-size: 15px;
@@ -83,177 +126,150 @@
     <script src="/static/main.js"></script>
 </head>
 <body>
-    <p>is_kill_switch_closed: <i id="is_kill_switch_closed">none</i></p>
-    <p>pressure_sensor_depth_m: <i id="pressure_sensor_depth_m">none</i></p>
-
-    <button onclick="initialize_all_thrusters_button_onclick()">initialize_all_thrusters</button>
-    <button onclick="flash_stm32_button_onclick()">flash_stm32</button>
-    <p>flash_stm32_status: <i id="flash_stm32_status">idle</i></p>
-    <div>
-        <div>
-            stm32_debug_log:
-            <button onclick="clear_stm32_log_button_onclick()">clear</button>
-        </div>
-        <pre id="stm32_debug_log" style="max-height: 220px; overflow: auto; margin: 8px 0 0;"></pre>
+    <div class="status-bar">
+        <div>is_kill_switch_closed: <i id="is_kill_switch_closed">none</i></div>
+        <div>pressure_sensor_depth_m: <i id="pressure_sensor_depth_m">none</i></div>
     </div>
 
-    <div>
-        <p>Process control:</p>
-        <div>
-            bottom_camera_pid_fbc_launch.py
-            <button onclick="enable_bottom_camera_pid_fbc()">on</button>
-            <button onclick="disable_bottom_camera_pid_fbc()">off</button>
-            <button onclick="reset_bottom_camera_pid_fbc()">reset</button>
-        </div>
-        <div>
-            depth_control_launch.py
-            <button onclick="enable_depth_control()">on</button>
-            <button onclick="disable_depth_control()">off</button>
-            <button onclick="reset_depth_control()">reset</button>
-        </div>
-        <div>
-            depth PID params:
-            <div>
-                P: <input type="number" step="any" id="depth_pid_p_input">
-            </div>
-            <div>
-                I: <input type="number" step="any" id="depth_pid_i_input">
-            </div>
-            <div>
-                D: <input type="number" step="any" id="depth_pid_d_input">
-            </div>
-            <div>
-                smoothing: <input type="number" step="any" id="depth_pid_smoothing_input">
-            </div>
-            <button onclick="set_depth_pid_params_button_onclick()">set PID params</button>
-        </div>
-        <div>
-            target_depth_m: <input type="number" id="target_depth_m_input">
-            <button onclick="set_target_depth_m_button_onclick()">set</button>
-        </div>
-        <div>
-            waypoint_target_publisher
-            <button onclick="start_waypoint_target_publisher()">start</button>
-            <button onclick="stop_waypoint_target_publisher()">kill</button>
-        </div>
+    <div class="row" style="margin-bottom: 16px;">
+        <button onclick="initialize_all_thrusters_button_onclick()">initialize_all_thrusters</button>
+        <button onclick="flash_stm32_button_onclick()">flash_stm32</button>
+        <div>flash_stm32_status: <i id="flash_stm32_status">idle</i></div>
     </div>
 
-    <div>
-        <div>set_pwm_output_signal_value_us:</div>
-        <div>
-            thruster 0: <input type="number" id="set_pwm_output_signal_value_us_0" min="0" max="3000" value="1500">
+    <div class="layout">
+        <div class="panel">
+            <div class="row">
+                <div>stm32_debug_log:</div>
+                <button onclick="clear_stm32_log_button_onclick()">clear</button>
+            </div>
+            <pre id="stm32_debug_log" style="max-height: 220px; overflow: auto; margin: 8px 0 0;"></pre>
         </div>
-        <div>
-            thruster 1: <input type="number" id="set_pwm_output_signal_value_us_1" min="0" max="3000" value="1500">
+
+        <div class="panel">
+            <p>Process control:</p>
+            <div class="row">
+                <div>bottom_camera_pid_fbc_launch.py</div>
+                <button onclick="enable_bottom_camera_pid_fbc()">on</button>
+                <button onclick="disable_bottom_camera_pid_fbc()">off</button>
+                <button onclick="reset_bottom_camera_pid_fbc()">reset</button>
+            </div>
+            <div class="row">
+                <div>depth_control_launch.py</div>
+                <button onclick="enable_depth_control()">on</button>
+                <button onclick="disable_depth_control()">off</button>
+                <button onclick="reset_depth_control()">reset</button>
+            </div>
+            <div>
+                <div style="margin-bottom: 8px;">depth PID params:</div>
+                <div class="grid-2">
+                    <div class="inline-field">P: <input type="number" step="any" id="depth_pid_p_input"></div>
+                    <div class="inline-field">I: <input type="number" step="any" id="depth_pid_i_input"></div>
+                    <div class="inline-field">D: <input type="number" step="any" id="depth_pid_d_input"></div>
+                    <div class="inline-field">smoothing: <input type="number" step="any" id="depth_pid_smoothing_input"></div>
+                </div>
+                <div class="row" style="margin-top: 8px;">
+                    <button onclick="set_depth_pid_params_button_onclick()">set PID params</button>
+                </div>
+            </div>
+            <div class="row">
+                <div>target_depth_m:</div>
+                <input type="number" id="target_depth_m_input">
+                <button onclick="set_target_depth_m_button_onclick()">set</button>
+            </div>
+            <div class="row">
+                <div>waypoint_target_publisher</div>
+                <button onclick="start_waypoint_target_publisher()">start</button>
+                <button onclick="stop_waypoint_target_publisher()">kill</button>
+            </div>
         </div>
-        <div>
-            thruster 2: <input type="number" id="set_pwm_output_signal_value_us_2" min="0" max="3000" value="1500">
+
+        <div class="panel">
+            <div>set_pwm_output_signal_value_us:</div>
+            <div class="grid-4">
+                <div class="inline-field">thruster 4: <input type="number" id="set_pwm_output_signal_value_us_4" min="0" max="3000" value="1500"></div>
+                <div class="inline-field">thruster 5: <input type="number" id="set_pwm_output_signal_value_us_5" min="0" max="3000" value="1500"></div>
+                <div class="inline-field">thruster 0: <input type="number" id="set_pwm_output_signal_value_us_0" min="0" max="3000" value="1500"></div>
+                <div class="inline-field">thruster 1: <input type="number" id="set_pwm_output_signal_value_us_1" min="0" max="3000" value="1500"></div>
+                <div class="inline-field">thruster 2: <input type="number" id="set_pwm_output_signal_value_us_2" min="0" max="3000" value="1500"></div>
+                <div class="inline-field">thruster 3: <input type="number" id="set_pwm_output_signal_value_us_3" min="0" max="3000" value="1500"></div>
+                <div class="inline-field">thruster 6: <input type="number" id="set_pwm_output_signal_value_us_6" min="0" max="3000" value="1500"></div>
+                <div class="inline-field">thruster 7: <input type="number" id="set_pwm_output_signal_value_us_7" min="0" max="3000" value="1500"></div>
+            </div>
+            <button onclick="set_pwm_output_signal_value_us_button_onclick()">publish topic</button>
         </div>
-        <div>
-            thruster 3: <input type="number" id="set_pwm_output_signal_value_us_3" min="0" max="3000" value="1500">
+
+        <div class="panel">
+            <div>received_pwm_output_signal_value_us:</div>
+            <div class="grid-4">
+                <div>thruster 4: <i id="pwm_output_signal_value_us_4">none</i></div>
+                <div>thruster 5: <i id="pwm_output_signal_value_us_5">none</i></div>
+                <div>thruster 0: <i id="pwm_output_signal_value_us_0">none</i></div>
+                <div>thruster 1: <i id="pwm_output_signal_value_us_1">none</i></div>
+                <div>thruster 2: <i id="pwm_output_signal_value_us_2">none</i></div>
+                <div>thruster 3: <i id="pwm_output_signal_value_us_3">none</i></div>
+                <div>thruster 6: <i id="pwm_output_signal_value_us_6">none</i></div>
+                <div>thruster 7: <i id="pwm_output_signal_value_us_7">none</i></div>
+            </div>
         </div>
-        <div>
-            thruster 4: <input type="number" id="set_pwm_output_signal_value_us_4" min="0" max="3000" value="1500">
+
+        <div class="panel">
+            set_output_wrench_at_center_N_Nm:
+            <div class="row" style="align-items: flex-start;">
+                <div class="stack">
+                    <div>force:</div>
+                    <div class="inline-field">x: <input type="number" id="set_output_wrench_at_center_N_Nm_force_x"></div>
+                    <div class="inline-field">y: <input type="number" id="set_output_wrench_at_center_N_Nm_force_y"></div>
+                    <div class="inline-field">z: <input type="number" id="set_output_wrench_at_center_N_Nm_force_z"></div>
+                </div>
+                <div class="stack">
+                    <div>torque:</div>
+                    <div class="inline-field">x: <input type="number" id="set_output_wrench_at_center_N_Nm_torque_x"></div>
+                    <div class="inline-field">y: <input type="number" id="set_output_wrench_at_center_N_Nm_torque_y"></div>
+                    <div class="inline-field">z: <input type="number" id="set_output_wrench_at_center_N_Nm_torque_z"></div>
+                </div>
+            </div>
+            <button onclick="set_output_wrench_at_center_N_Nm_button_onclick()">publish topic</button>
         </div>
-        <div>
-            thruster 5: <input type="number" id="set_pwm_output_signal_value_us_5" min="0" max="3000" value="1500">
+
+        <div class="panel">
+            simple motion control interface:
+            <div class="grid-3">
+                <div class="inline-field">
+                    constant sink force (N):
+                    <input type="number" id="constant_sink_force_N_input">
+                    <button onclick="set_constant_sink_force_button_onclick()">set</button>
+                </div>
+
+                <div class="inline-field">
+                    translational push force (N):
+                    <input type="number" id="translational_push_force_N_input">
+                    <button onclick="set_translational_push_force_button_onclick()">set</button>
+                </div>
+
+                <div class="inline-field">
+                    rotational twist torque (Nm):
+                    <input type="number" id="rotational_twist_torque_Nm_input">
+                    <button onclick="set_rotational_twist_torque_button_onclick()">set</button>
+                </div>
+            </div>
+
+            <div class="grid-3" style="margin-top: 8px;">
+                <button id="push_down_button">push down</button>
+                <button id="push_up_button">push up</button>
+                <button id="push_left_button">push left</button>
+                <button id="push_right_button">push right</button>
+                <button id="push_backward_button">push backward</button>
+                <button id="push_forward_button">push forward</button>
+                <button id="twist_leftward_button">twist leftward</button>
+                <button id="twist_rightward_button" onup>twist rightward</button>
+            </div>
         </div>
-        <div>
-            thruster 6: <input type="number" id="set_pwm_output_signal_value_us_6" min="0" max="3000" value="1500">
+
+        <div class="panel">
+            <img src="/static/orca_auv_thruster_numbering.png" height="400">
         </div>
-        <div>
-            thruster 7: <input type="number" id="set_pwm_output_signal_value_us_7" min="0" max="3000" value="1500">
-        </div>
-        <button onclick="set_pwm_output_signal_value_us_button_onclick()">publish topic</button>
     </div>
-
-    <div>
-        <div>received_pwm_output_signal_value_us:</div>
-        <div>thruster 0: <i id="pwm_output_signal_value_us_0">none</i></div>
-        <div>thruster 1: <i id="pwm_output_signal_value_us_1">none</i></div>
-        <div>thruster 2: <i id="pwm_output_signal_value_us_2">none</i></div>
-        <div>thruster 3: <i id="pwm_output_signal_value_us_3">none</i></div>
-        <div>thruster 4: <i id="pwm_output_signal_value_us_4">none</i></div>
-        <div>thruster 5: <i id="pwm_output_signal_value_us_5">none</i></div>
-        <div>thruster 6: <i id="pwm_output_signal_value_us_6">none</i></div>
-        <div>thruster 7: <i id="pwm_output_signal_value_us_7">none</i></div>
-    </div>
-
-    <div>
-        set_output_wrench_at_center_N_Nm:
-        <div>
-            force:
-            <div>
-                x:
-                <input type="number" id="set_output_wrench_at_center_N_Nm_force_x">
-            </div>
-            <div>
-                y:
-                <input type="number" id="set_output_wrench_at_center_N_Nm_force_y">
-            </div>
-            <div>
-                z:
-                <input type="number" id="set_output_wrench_at_center_N_Nm_force_z">
-            </div>
-        </div>
-        <div>
-            torque:
-            <div>
-                x:
-                <input type="number" id="set_output_wrench_at_center_N_Nm_torque_x">
-            </div>
-            <div>
-                y:
-                <input type="number" id="set_output_wrench_at_center_N_Nm_torque_y">
-            </div>
-            <div>
-                z:
-                <input type="number" id="set_output_wrench_at_center_N_Nm_torque_z">
-            </div>
-        </div>
-        <button onclick="set_output_wrench_at_center_N_Nm_button_onclick()">publish topic</button>
-    </div>
-
-    <div>
-        simple motion control interface:
-        <div>
-            constant sink force (N):
-            <input type="number" id="constant_sink_force_N_input">
-            <button onclick="set_constant_sink_force_button_onclick()">set</button>
-        </div>
-
-        <div>
-            translational push force (N):
-            <input type="number" id="translational_push_force_N_input">
-            <button onclick="set_translational_push_force_button_onclick()">set</button>
-        </div>
-
-        <div>
-            rotational twist torque (Nm):
-            <input type="number" id="rotational_twist_torque_Nm_input">
-            <button onclick="set_rotational_twist_torque_button_onclick()">set</button>
-        </div>
-
-        <div>
-            <button id="push_down_button">push down</button>
-            <button id="push_up_button">push up</button>
-        </div>
-        <div>
-            <button id="push_left_button">push left</button>
-            <button id="push_right_button">push right</button>
-        </div>
-        <div>
-            <button id="push_backward_button">push backward</button>
-            <button id="push_forward_button">push forward</button>
-        </div>
-
-        <div>
-            <button id="twist_leftward_button">twist leftward</button>
-            <button id="twist_rightward_button" onup>twist rightward</button>
-        </div>
-    </div>
-
-    <img src="/static/orca_auv_thruster_numbering.png" height="400">
 
     <script src="/static/simple_motion_control_interface.js"></script>
 </body>
