@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'stm32_flasher_node = stm32_pkg.stm32_flasher_node:main',
         ],
     },
 )
