@@ -2,10 +2,6 @@
 
 This repository should contain all the codes that need to be run on the Raspberry PI of the Orca-AUV.
 
-## use-ros2
-
-This branch is intended to be developed alongside [SAUVC-STM32/use-micro-ros](https://github.com/NCTU-AUV/SAUVC-STM32/tree/use-micro-ros).
-
 ## Quick Start (docker compose)
 
 1. `ssh orca@raspberrypi.local`
