@@ -284,11 +284,11 @@ class GUINode(Node):
 
     def _log_param_result(self, node_name: str, future):
         try:
-            results = future.result()
+            response = future.result()
         except Exception as exc:  # noqa: BLE001
             self.get_logger().warning(f"Failed to set params on {node_name}: {exc}")
             return
-        for res in results:
+        for res in response.results:
             if not res.successful:
                 self.get_logger().warning(f"Param set failed on {node_name}: {res.reason}")
 
