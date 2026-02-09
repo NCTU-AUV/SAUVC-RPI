@@ -22,7 +22,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            # 'bottom_camera_node = bottom_camera_pkg.bottom_camera_node:main',
+            'bottom_camera_node = bottom_camera_pkg.bottom_camera_node:main',
             'lk_total_transform_node = bottom_camera_pkg.lk_total_transform_node:main',
             # 'frame_transform_node = bottom_camera_pkg.frame_transform_node:main',
             # 'total_transform_node = bottom_camera_pkg.total_transform_node:main',
