@@ -22,6 +22,15 @@ websocket.onmessage = (event) => {
                 }
             }
         }
+        if (msg_json_object.data.topic_name == "flash_stm32_status") {
+            const status = msg_json_object.data.msg || {};
+            const message = status.message || "";
+            const successText = status.success === true ? "success" : "failed";
+            const element = document.getElementById("flash_stm32_status");
+            if (element) {
+                element.innerHTML = message ? `${successText}: ${message}` : successText;
+            }
+        }
     }
 };
 
@@ -99,6 +108,15 @@ function initialize_all_thrusters_button_onclick(){
       console.log("initialize_all_thrusters_button_onclick");
 
       websocket.send(JSON.stringify({type: "action", data: {action_name: "initialize_all_thrusters", goal: ""}}));
+}
+
+function flash_stm32_button_onclick() {
+    console.log("flash_stm32_button_onclick");
+    const element = document.getElementById("flash_stm32_status");
+    if (element) {
+        element.innerHTML = "running...";
+    }
+    websocket.send(JSON.stringify({type: "action", data: {action_name: "flash_stm32"}}));
 }
 
 function set_pwm_output_signal_value_us_button_onclick() {

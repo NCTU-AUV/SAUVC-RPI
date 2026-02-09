@@ -107,8 +107,14 @@ def generate_launch_description():
         arguments=['serial', '--dev', '/dev/ttyUSB0']
     )
 
+    stm32_flasher_node = Node(
+        package='stm32_pkg',
+        executable='stm32_flasher_node',
+        name='stm32_flasher_node',
+    )
+
     flash_stm32 = ExecuteProcess(
-        cmd=['st-flash', '--reset', 'write', '/root/orca_auv_rpi_ros2_ws/stm32_binary/SAUVC2024.bin', '0x08000000'],
+        cmd=['ros2', 'service', 'call', '/flash_stm32', 'std_srvs/srv/Trigger', '{}'],
         shell=True,
     )
 
@@ -128,6 +134,7 @@ def generate_launch_description():
         # velocity_node,
         # mavros,
         gui_node,
+        stm32_flasher_node,
         micro_ros_agent,
         event,
     ])
