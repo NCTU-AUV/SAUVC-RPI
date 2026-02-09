@@ -14,7 +14,3 @@ This branch is intended to be developed alongside [SAUVC-STM32/use-micro-ros](ht
 4. `make compose_init` (installs deps and builds the workspace; first time or after source changes)
 5. `make compose_launch` to run `ros2 launch src/launch/test_launch.py`
 6. Open GUI in your browser: [http://raspberrypi.local](http://raspberrypi.local)
-
-## Test Pressure Sensor
-
-See [How to Test Pressure Sensor](./documentation/how_to_test_pressure_sensor.md).
