@@ -107,6 +107,7 @@ class GUINode(Node):
         if len(values) < self._thruster_count:
             values += [self._initial_pwm_output_signal_value_us] * (self._thruster_count - len(values))
         self._pwm_output_signal_value_us = values[:self._thruster_count]
+        self.aiohttp_server.send_topic("set_pwm_output_signal_value_us", list(self._pwm_output_signal_value_us))
 
     def _msg_callback(self, msg):
         try:
@@ -129,15 +130,16 @@ class GUINode(Node):
             topic_name = msg_data.get("topic_name")
             if topic_name == "set_pwm_output_signal_value_us":
                 try:
-                    thruster_number = int(msg_data["thruster_number"])
-                    if thruster_number < 0 or thruster_number >= self._thruster_count:
-                        raise IndexError
-                    pwm_value = int(msg_data["msg"]["data"])
-                except (KeyError, TypeError, ValueError, IndexError):
+                    raw_values = msg_data["msg"]["data"]
+                    if not isinstance(raw_values, list):
+                        raise TypeError
+                    pwm_values = [int(value) for value in raw_values]
+                except (KeyError, TypeError, ValueError):
                     self.get_logger().warning(f"Invalid PWM set message: {msg_json_object}")
                 else:
-                    pwm_values = list(self._pwm_output_signal_value_us)
-                    pwm_values[thruster_number] = pwm_value
+                    if len(pwm_values) < self._thruster_count:
+                        pwm_values += [self._initial_pwm_output_signal_value_us] * (self._thruster_count - len(pwm_values))
+                    pwm_values = pwm_values[:self._thruster_count]
                     pwm_array_msg = Int32MultiArray()
                     pwm_array_msg.data = pwm_values
                     self._set_pwm_output_signal_value_publisher.publish(pwm_array_msg)

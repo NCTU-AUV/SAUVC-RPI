@@ -53,13 +53,44 @@
     </div>
 
     <div>
+        <div>set_pwm_output_signal_value_us:</div>
         <div>
-            thruster number: <input type="number" id="thruster_number_input">
+            thruster 0: <input type="number" id="set_pwm_output_signal_value_us_0" min="0" max="3000" value="1500">
         </div>
         <div>
-            set_pwm_output_signal_value_us: <input type="number" id="set_pwm_output_signal_value_us_input">
-            <button onclick="set_pwm_output_signal_value_us_button_onclick()">publish topic</button>
+            thruster 1: <input type="number" id="set_pwm_output_signal_value_us_1" min="0" max="3000" value="1500">
         </div>
+        <div>
+            thruster 2: <input type="number" id="set_pwm_output_signal_value_us_2" min="0" max="3000" value="1500">
+        </div>
+        <div>
+            thruster 3: <input type="number" id="set_pwm_output_signal_value_us_3" min="0" max="3000" value="1500">
+        </div>
+        <div>
+            thruster 4: <input type="number" id="set_pwm_output_signal_value_us_4" min="0" max="3000" value="1500">
+        </div>
+        <div>
+            thruster 5: <input type="number" id="set_pwm_output_signal_value_us_5" min="0" max="3000" value="1500">
+        </div>
+        <div>
+            thruster 6: <input type="number" id="set_pwm_output_signal_value_us_6" min="0" max="3000" value="1500">
+        </div>
+        <div>
+            thruster 7: <input type="number" id="set_pwm_output_signal_value_us_7" min="0" max="3000" value="1500">
+        </div>
+        <button onclick="set_pwm_output_signal_value_us_button_onclick()">publish topic</button>
+    </div>
+
+    <div>
+        <div>received_pwm_output_signal_value_us:</div>
+        <div>thruster 0: <i id="pwm_output_signal_value_us_0">none</i></div>
+        <div>thruster 1: <i id="pwm_output_signal_value_us_1">none</i></div>
+        <div>thruster 2: <i id="pwm_output_signal_value_us_2">none</i></div>
+        <div>thruster 3: <i id="pwm_output_signal_value_us_3">none</i></div>
+        <div>thruster 4: <i id="pwm_output_signal_value_us_4">none</i></div>
+        <div>thruster 5: <i id="pwm_output_signal_value_us_5">none</i></div>
+        <div>thruster 6: <i id="pwm_output_signal_value_us_6">none</i></div>
+        <div>thruster 7: <i id="pwm_output_signal_value_us_7">none</i></div>
     </div>
 
     <div>

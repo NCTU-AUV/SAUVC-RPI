@@ -12,6 +12,16 @@ websocket.onmessage = (event) => {
         if (msg_json_object.data.topic_name == "pressure_sensor_depth_m") {
             document.getElementById("pressure_sensor_depth_m").innerHTML = msg_json_object.data.msg;
         }
+        if (msg_json_object.data.topic_name == "set_pwm_output_signal_value_us") {
+            const pwmValues = msg_json_object.data.msg || [];
+            for (let i = 0; i < 8; i += 1) {
+                const value = pwmValues[i] ?? "";
+                const element = document.getElementById("pwm_output_signal_value_us_" + i);
+                if (element) {
+                    element.innerHTML = value;
+                }
+            }
+        }
     }
 };
 
@@ -92,14 +102,21 @@ function initialize_all_thrusters_button_onclick(){
 }
 
 function set_pwm_output_signal_value_us_button_onclick() {
-    thruster_number = document.getElementById("thruster_number_input").value;
-    set_pwm_output_signal_value_us = document.getElementById("set_pwm_output_signal_value_us_input").value;
+    const pwm_values = [];
+    for (let i = 0; i < 8; i += 1) {
+        const value = document.getElementById("set_pwm_output_signal_value_us_" + i).value;
+        pwm_values.push(value);
+    }
 
-    console.log("set_pwm_output_signal_value_us_button_onclick",
-                "thruster_number: " + thruster_number,
-                "set_pwm_output_signal_value_us: " + set_pwm_output_signal_value_us);
+    console.log("set_pwm_output_signal_value_us_button_onclick", pwm_values);
 
-    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "set_pwm_output_signal_value_us", thruster_number: thruster_number, msg: {data: set_pwm_output_signal_value_us}}}));
+    websocket.send(JSON.stringify({
+        type: "topic",
+        data: {
+            topic_name: "set_pwm_output_signal_value_us",
+            msg: {data: pwm_values}
+        }
+    }));
 }
 
 function set_output_wrench_at_center_N_Nm_button_onclick() {
