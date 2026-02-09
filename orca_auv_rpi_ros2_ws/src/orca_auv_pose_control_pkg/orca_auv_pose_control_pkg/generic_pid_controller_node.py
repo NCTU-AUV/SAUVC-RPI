@@ -85,7 +85,6 @@ class GenericPIDControllerNode(Node):
 
     def _controller_loop_timer_callback(self):
         if not self._enabled:
-            self._publish_output(0.0)
             return
 
         error = self._reference_input - self._output_feedback
