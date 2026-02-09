@@ -1,4 +1,28 @@
 const websocket = new WebSocket("ws://" + window.location.hostname + "/websocket", "protocolOne");
+const stm32LogState = {
+    shouldAutoScroll: true,
+};
+
+function isAtBottom(element, thresholdPx = 8) {
+    return element.scrollTop + element.clientHeight >= element.scrollHeight - thresholdPx;
+}
+
+function updateStm32LogAutoScrollState() {
+    const element = document.getElementById("stm32_debug_log");
+    if (!element) {
+        return;
+    }
+    stm32LogState.shouldAutoScroll = isAtBottom(element);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const element = document.getElementById("stm32_debug_log");
+    if (!element) {
+        return;
+    }
+    element.addEventListener("scroll", updateStm32LogAutoScrollState);
+    stm32LogState.shouldAutoScroll = isAtBottom(element);
+});
 
 websocket.onmessage = (event) => {
   console.log(event.data);
@@ -41,6 +65,9 @@ websocket.onmessage = (event) => {
                     const maxLines = 200;
                     const trimmed = lines.slice(-maxLines);
                     element.textContent = trimmed.join("\n");
+                    if (stm32LogState.shouldAutoScroll) {
+                        element.scrollTop = element.scrollHeight;
+                    }
                 }
             }
         }
@@ -132,6 +159,8 @@ function flash_stm32_button_onclick() {
     const logElement = document.getElementById("stm32_debug_log");
     if (logElement) {
         logElement.textContent = "";
+        logElement.scrollTop = logElement.scrollHeight;
+        stm32LogState.shouldAutoScroll = true;
     }
     websocket.send(JSON.stringify({type: "action", data: {action_name: "flash_stm32"}}));
 }
@@ -140,6 +169,8 @@ function clear_stm32_log_button_onclick() {
     const logElement = document.getElementById("stm32_debug_log");
     if (logElement) {
         logElement.textContent = "";
+        logElement.scrollTop = logElement.scrollHeight;
+        stm32LogState.shouldAutoScroll = true;
     }
 }
 
