@@ -89,6 +89,13 @@
     <button onclick="initialize_all_thrusters_button_onclick()">initialize_all_thrusters</button>
     <button onclick="flash_stm32_button_onclick()">flash_stm32</button>
     <p>flash_stm32_status: <i id="flash_stm32_status">idle</i></p>
+    <div>
+        <div>
+            stm32_debug_log:
+            <button onclick="clear_stm32_log_button_onclick()">clear</button>
+        </div>
+        <pre id="stm32_debug_log" style="max-height: 220px; overflow: auto; margin: 8px 0 0;"></pre>
+    </div>
 
     <div>
         <p>Process control:</p>

@@ -12,6 +12,7 @@ from std_msgs.msg import Bool
 from std_msgs.msg import Float32
 from std_msgs.msg import Float64
 from std_msgs.msg import Int32MultiArray
+from std_msgs.msg import String
 from geometry_msgs.msg import Wrench
 from rclpy.action import ActionClient
 from std_srvs.srv import Trigger
@@ -59,6 +60,12 @@ class GUINode(Node):
                 callback=self._pressure_sensor_depth_callback,
                 qos_profile=10
             )
+        self._stm32_log_subscriber = self.create_subscription(
+                msg_type=String,
+                topic="stm32_debug_log",
+                callback=self._stm32_log_callback,
+                qos_profile=10
+            )
 
         self._initialize_all_thrusters_action_client = ActionClient(self, InitializeThrusterAction, '/orca_auv/initialize_all_thrusters')
         self._flash_stm32_client = self.create_client(Trigger, '/flash_stm32')
@@ -102,6 +109,9 @@ class GUINode(Node):
 
     def _pressure_sensor_depth_callback(self, msg: Float32):
         self.aiohttp_server.send_topic("pressure_sensor_depth_m", msg.data)
+
+    def _stm32_log_callback(self, msg: String):
+        self.aiohttp_server.send_topic("stm32_debug_log", msg.data)
 
     def _pwm_output_signal_value_subscription_callback(self, msg: Int32MultiArray):
         values = list(msg.data)

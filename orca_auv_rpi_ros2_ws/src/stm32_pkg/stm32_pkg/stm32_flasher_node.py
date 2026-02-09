@@ -5,6 +5,7 @@ from typing import Optional
 
 import rclpy
 from rclpy.node import Node
+from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
 
@@ -17,6 +18,7 @@ class Stm32FlasherNode(Node):
         self.declare_parameter('st_flash_cmd', 'st-flash')
 
         self._service = self.create_service(Trigger, 'flash_stm32', self._handle_flash)
+        self._log_publisher = self.create_publisher(String, 'stm32_log', 10)
         self.get_logger().info('STM32 flasher node ready. Service: /flash_stm32')
 
     def _handle_flash(self, request: Trigger.Request, response: Trigger.Response) -> Trigger.Response:
@@ -33,7 +35,7 @@ class Stm32FlasherNode(Node):
             return response
 
         cmd = [st_flash_cmd, '--reset', 'write', resolved_bin, flash_address]
-        self.get_logger().info(f'Running: {" ".join(cmd)}')
+        self._publish_log(f'Running: {" ".join(cmd)}')
 
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -41,17 +43,21 @@ class Stm32FlasherNode(Node):
             response.success = False
             response.message = f'Command not found: {st_flash_cmd}'
             self.get_logger().error(response.message)
+            self._publish_log(response.message)
             return response
         except Exception as exc:
             response.success = False
             response.message = f'Failed to run flash command: {exc}'
             self.get_logger().error(response.message)
+            self._publish_log(response.message)
             return response
 
         if result.returncode == 0:
             response.success = True
             response.message = (result.stdout or 'Flash completed successfully.').strip()
             self.get_logger().info(response.message)
+            self._publish_log(response.message)
+            self._publish_log(self._format_command_output(result.stdout, result.stderr))
             return response
 
         stderr = (result.stderr or '').strip()
@@ -59,6 +65,8 @@ class Stm32FlasherNode(Node):
         response.success = False
         response.message = f'Flash failed (code {result.returncode}). {stderr or stdout}'.strip()
         self.get_logger().error(response.message)
+        self._publish_log(response.message)
+        self._publish_log(self._format_command_output(stdout, stderr))
         return response
 
     def _resolve_bin_path(self, bin_path: str) -> Optional[str]:
@@ -80,6 +88,27 @@ class Stm32FlasherNode(Node):
             if (parent / 'SAUVC-STM32').is_dir():
                 return parent
         return None
+
+    def _format_command_output(self, stdout: Optional[str], stderr: Optional[str]) -> str:
+        output_lines = []
+        if stdout:
+            for line in stdout.splitlines():
+                if line.strip():
+                    output_lines.append(f'stdout: {line}')
+        if stderr:
+            for line in stderr.splitlines():
+                if line.strip():
+                    output_lines.append(f'stderr: {line}')
+        if not output_lines:
+            return 'No output from flash command.'
+        return "\n".join(output_lines)
+
+    def _publish_log(self, message: str) -> None:
+        if not message:
+            return
+        msg = String()
+        msg.data = message
+        self._log_publisher.publish(msg)
 
 
 def main(args=None) -> None:
