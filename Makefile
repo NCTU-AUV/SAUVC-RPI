@@ -88,16 +88,3 @@ compose_launch_detached: compose_up
 
 compose_clean:
 	$(COMPOSE) down -v
-
-
-clean: compose_clean
-	-@docker rmi $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest
-	rm -rf $(WORKSPACE)/build $(WORKSPACE)/install $(WORKSPACE)/log
-
-flash_stm32:
-	git submodule sync SAUVC-STM32
-	git submodule update --init SAUVC-STM32
-	st-flash --reset write SAUVC-STM32/build/SAUVC2024.bin 0x08000000
-
-reset_stm32:
-	st-flash reset
