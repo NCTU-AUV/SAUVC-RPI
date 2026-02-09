@@ -61,6 +61,7 @@ class GUINode(Node):
             )
 
         self._initialize_all_thrusters_action_client = ActionClient(self, InitializeThrusterAction, '/orca_auv/initialize_all_thrusters')
+        self._flash_stm32_client = self.create_client(Trigger, '/flash_stm32')
 
         self._pwm_output_signal_value_subscription = self.create_subscription(
             msg_type=Int32MultiArray,
@@ -123,6 +124,8 @@ class GUINode(Node):
             action_name = msg_data.get("action_name")
             if action_name == "initialize_all_thrusters":
                 self._initialize_all_thrusters_action_client.send_goal_async(InitializeThrusterAction.Goal())
+            elif action_name == "flash_stm32":
+                self._flash_stm32()
             else:
                 self.get_logger().warning(f"Unknown action request: {action_name}")
 
@@ -256,6 +259,30 @@ class GUINode(Node):
     def _stop_all_processes(self):
         for name in list(self._processes.keys()):
             self._stop_process(name)
+
+    def _flash_stm32(self):
+        if not self._flash_stm32_client.service_is_ready():
+            message = "STM32 flash service not ready."
+            self.get_logger().warning(message)
+            self.aiohttp_server.send_topic("flash_stm32_status", {"success": False, "message": message})
+            return
+
+        future = self._flash_stm32_client.call_async(Trigger.Request())
+        future.add_done_callback(self._on_flash_stm32_result)
+
+    def _on_flash_stm32_result(self, future):
+        try:
+            response = future.result()
+        except Exception as exc:  # noqa: BLE001
+            message = f"STM32 flash failed: {exc}"
+            self.get_logger().error(message)
+            self.aiohttp_server.send_topic("flash_stm32_status", {"success": False, "message": message})
+            return
+
+        self.aiohttp_server.send_topic(
+            "flash_stm32_status",
+            {"success": response.success, "message": response.message},
+        )
 
     def _get_param_client(self, node_name: str):
         client = self._param_clients.get(node_name)
