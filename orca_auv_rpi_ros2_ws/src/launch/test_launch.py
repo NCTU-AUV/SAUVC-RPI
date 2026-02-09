@@ -125,7 +125,7 @@ def generate_launch_description():
         depth_control_launch,
         thruster_pkg_launch,
         wrench_sum_node,
-        velocity_node,
+        # velocity_node,
         # mavros,
         gui_node,
         micro_ros_agent,
