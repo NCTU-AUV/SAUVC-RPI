@@ -2,6 +2,14 @@
 
 This repository should contain all the codes that need to be run on the Raspberry PI of the Orca-AUV.
 
+## Download
+
+```shell
+git clone https://github.com/NCTU-AUV/SAUVC-RPI.git
+cd SAUVC-RPI
+git submodule update --init --recursive
+```
+
 ## Quick Start (docker compose)
 
 1. `ssh pi@raspberrypi.local`
