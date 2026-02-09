@@ -114,7 +114,7 @@ def generate_launch_description():
     )
 
     flash_stm32 = ExecuteProcess(
-        cmd=['st-flash', '--reset', 'write', '/root/orca_auv_rpi_ros2_ws/stm32_binary/SAUVC2024.bin', '0x08000000'],
+        cmd=['ros2', 'service', 'call', '/flash_stm32', 'std_srvs/srv/Trigger', '{}'],
         shell=True,
     )
 
