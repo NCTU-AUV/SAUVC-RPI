@@ -107,6 +107,7 @@ class GUINode(Node):
         if len(values) < self._thruster_count:
             values += [self._initial_pwm_output_signal_value_us] * (self._thruster_count - len(values))
         self._pwm_output_signal_value_us = values[:self._thruster_count]
+        self.aiohttp_server.send_topic("set_pwm_output_signal_value_us", list(self._pwm_output_signal_value_us))
 
     def _msg_callback(self, msg):
         try:

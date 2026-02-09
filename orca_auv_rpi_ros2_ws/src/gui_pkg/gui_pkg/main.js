@@ -12,6 +12,16 @@ websocket.onmessage = (event) => {
         if (msg_json_object.data.topic_name == "pressure_sensor_depth_m") {
             document.getElementById("pressure_sensor_depth_m").innerHTML = msg_json_object.data.msg;
         }
+        if (msg_json_object.data.topic_name == "set_pwm_output_signal_value_us") {
+            const pwmValues = msg_json_object.data.msg || [];
+            for (let i = 0; i < 8; i += 1) {
+                const value = pwmValues[i] ?? "";
+                const element = document.getElementById("pwm_output_signal_value_us_" + i);
+                if (element) {
+                    element.innerHTML = value;
+                }
+            }
+        }
     }
 };
 
