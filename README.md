@@ -10,6 +10,8 @@ ssh pi@raspberrypi.local
 
 ## Download
 
+You start from here if you want to run on your local machine.
+
 ```shell
 git clone https://github.com/NCTU-AUV/SAUVC-RPI.git
 cd SAUVC-RPI
