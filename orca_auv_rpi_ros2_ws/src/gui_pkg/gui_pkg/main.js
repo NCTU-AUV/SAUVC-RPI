@@ -31,6 +31,19 @@ websocket.onmessage = (event) => {
                 element.innerHTML = message ? `${successText}: ${message}` : successText;
             }
         }
+        if (msg_json_object.data.topic_name == "stm32_debug_log") {
+            const element = document.getElementById("stm32_debug_log");
+            if (element) {
+                const line = msg_json_object.data.msg || "";
+                if (line) {
+                    const lines = element.textContent.split("\n").filter(Boolean);
+                    lines.push(line);
+                    const maxLines = 200;
+                    const trimmed = lines.slice(-maxLines);
+                    element.textContent = trimmed.join("\n");
+                }
+            }
+        }
     }
 };
 
@@ -116,7 +129,18 @@ function flash_stm32_button_onclick() {
     if (element) {
         element.innerHTML = "running...";
     }
+    const logElement = document.getElementById("stm32_debug_log");
+    if (logElement) {
+        logElement.textContent = "";
+    }
     websocket.send(JSON.stringify({type: "action", data: {action_name: "flash_stm32"}}));
+}
+
+function clear_stm32_log_button_onclick() {
+    const logElement = document.getElementById("stm32_debug_log");
+    if (logElement) {
+        logElement.textContent = "";
+    }
 }
 
 function set_pwm_output_signal_value_us_button_onclick() {
