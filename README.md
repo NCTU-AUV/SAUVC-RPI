@@ -18,7 +18,7 @@ cd SAUVC-RPI
 git submodule update --init --recursive
 ```
 
-## Quick Start (docker compose)
+## Quick Start
 
 1. `make compose_init` (installs deps and builds the workspace; first time or after source changes)
 1. `make compose_launch` to run `ros2 launch src/launch/test_launch.py`
