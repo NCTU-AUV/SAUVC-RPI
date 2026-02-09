@@ -3,6 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <title>Hello World</title>
+    <style>
+        :root {
+            --bg: #0c1220;
+            --bg-alt: #111a2b;
+            --card: #161f33;
+            --text: #e7ecf6;
+            --muted: #9fb0d0;
+            --accent: #5ed1b6;
+            --accent-2: #7aa7ff;
+            --border: #27324a;
+            --shadow: rgba(4, 10, 22, 0.35);
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: "Space Grotesk", "Noto Sans", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(900px 500px at 10% -10%, rgba(94, 209, 182, 0.16), transparent 60%),
+                radial-gradient(900px 500px at 90% -20%, rgba(122, 167, 255, 0.2), transparent 60%),
+                var(--bg);
+            line-height: 1.5;
+        }
+        p, div {
+            margin: 0 0 12px;
+        }
+        button {
+            border: 1px solid var(--border);
+            background: linear-gradient(135deg, rgba(94, 209, 182, 0.16), rgba(122, 167, 255, 0.18));
+            color: var(--text);
+            padding: 8px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px var(--shadow);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+        button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(94, 209, 182, 0.7);
+            box-shadow: 0 12px 28px var(--shadow);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        input[type="number"] {
+            width: 160px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 10px;
+            border-radius: 8px;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent-2);
+            box-shadow: 0 0 0 2px rgba(122, 167, 255, 0.2);
+        }
+        body > div {
+            background: var(--card);
+            padding: 16px 18px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 24px var(--shadow);
+            margin-bottom: 16px;
+        }
+        body > p {
+            font-size: 15px;
+            color: var(--muted);
+        }
+        i {
+            color: var(--accent);
+            font-style: normal;
+        }
+    </style>
     <script src="/static/main.js"></script>
 </head>
 <body>
