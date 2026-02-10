@@ -28,7 +28,7 @@ class ThrusterForceToPWMOutputSignalNode(Node):
         self._is_output_enabled = bool(self.declare_parameter("force_to_pwm_output_enabled", True).value)
         self._is_initializing = False
         self._max_set_pwm_output_signal_value_publish_rate_hz = float(
-            self.declare_parameter("set_pwm_output_signal_value_max_publish_rate_hz", 30.0).value
+            self.declare_parameter("set_pwm_output_signal_value_max_publish_rate_hz", 20.0).value
         )
         self._publish_min_interval_s = (
             0.0
