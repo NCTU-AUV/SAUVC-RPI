@@ -15,6 +15,7 @@ def generate_launch_description():
             executable='thruster_force_to_pwm_output_signal_node',
             parameters=[{
                 'max_output_force_N': 15.0,  # clamp thruster output before PWM conversion (expects double)
+                'set_pwm_output_signal_value_max_publish_rate_hz': 20.0,  # 0 disables throttle
             }]
         ),
         Node(
