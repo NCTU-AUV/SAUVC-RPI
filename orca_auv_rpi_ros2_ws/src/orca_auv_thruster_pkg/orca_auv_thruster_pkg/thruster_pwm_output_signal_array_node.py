@@ -13,7 +13,7 @@ class ThrusterPWMOutputSignalArrayNode(Node):
         initial_pwm_us = int(self.declare_parameter("initial_pwm_output_signal_value_us", 1500).value)
         publish_rate_hz = float(self.declare_parameter(
             "set_pwm_output_signal_value_us_publish_rate_hz",
-            30.0
+            20.0
         ).value)
         self._pwm_output_signal_value_us = [initial_pwm_us for _ in range(self._thruster_count)]
         self._publish_dirty = False
