@@ -27,6 +27,16 @@ class ThrusterForceToPWMOutputSignalNode(Node):
         ]
         self._is_output_enabled = bool(self.declare_parameter("force_to_pwm_output_enabled", True).value)
         self._is_initializing = False
+        self._max_set_pwm_output_signal_value_publish_rate_hz = float(
+            self.declare_parameter("set_pwm_output_signal_value_max_publish_rate_hz", 30.0).value
+        )
+        self._publish_min_interval_s = (
+            0.0
+            if self._max_set_pwm_output_signal_value_publish_rate_hz <= 0.0
+            else 1.0 / self._max_set_pwm_output_signal_value_publish_rate_hz
+        )
+        self._publish_throttle_timer = None
+        self._pending_pwm_output_signal_value_us = None
 
         self._max_output_force_N = float(self.declare_parameter(
             "max_output_force_N",
@@ -65,6 +75,8 @@ class ThrusterForceToPWMOutputSignalNode(Node):
             self._pwm_output_signal_value_us = [
                 self._initial_pwm_output_signal_value_us for _ in range(self._thruster_count)
             ]
+            self._pending_pwm_output_signal_value_us = None
+            self._stop_publish_throttle_timer()
         if not self._is_initializing and self._is_output_enabled:
             # Publish the most recent PWM array when re-enabled so downstream stays in sync.
             self._publish_pwm_output_signal_value_array()
@@ -96,13 +108,50 @@ class ThrusterForceToPWMOutputSignalNode(Node):
         self._pwm_output_signal_value_us[thruster_number] = int(pwm_output_signal_value_us)
         self._publish_pwm_output_signal_value_array()
 
-    def _publish_pwm_output_signal_value_array(self):
+    def _publish_pwm_output_signal_value_array(self, pwm_values=None):
         if not self._is_output_enabled or self._is_initializing:
             return
 
+        if pwm_values is None:
+            pwm_values = self._pwm_output_signal_value_us
+
+        if self._publish_min_interval_s > 0.0 and self._publish_throttle_timer is not None:
+            self._pending_pwm_output_signal_value_us = list(pwm_values)
+            return
+
         pwm_array_msg = Int32MultiArray()
-        pwm_array_msg.data = list(self._pwm_output_signal_value_us)
+        pwm_array_msg.data = list(pwm_values)
         self._pwm_output_signal_value_array_publisher.publish(pwm_array_msg)
+
+        if self._publish_min_interval_s > 0.0:
+            self._start_publish_throttle_timer()
+
+    def _start_publish_throttle_timer(self):
+        if self._publish_min_interval_s <= 0.0:
+            return
+
+        if self._publish_throttle_timer is not None:
+            self._stop_publish_throttle_timer()
+
+        self._publish_throttle_timer = self.create_timer(
+            self._publish_min_interval_s,
+            self._publish_throttle_timer_callback
+        )
+
+    def _stop_publish_throttle_timer(self):
+        if self._publish_throttle_timer is None:
+            return
+        self.destroy_timer(self._publish_throttle_timer)
+        self._publish_throttle_timer = None
+
+    def _publish_throttle_timer_callback(self):
+        self._stop_publish_throttle_timer()
+        if self._pending_pwm_output_signal_value_us is None:
+            return
+
+        pending = self._pending_pwm_output_signal_value_us
+        self._pending_pwm_output_signal_value_us = None
+        self._publish_pwm_output_signal_value_array(pwm_values=pending)
 
     def _fit_force_to_pwm_polynomials(self):
         lookup_table_path = Path(orca_auv_thruster_pkg.__file__).parent / "thruster_lookup_table_16V.csv"
