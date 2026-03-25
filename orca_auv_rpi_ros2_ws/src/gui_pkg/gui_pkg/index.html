@@ -233,6 +233,38 @@
         </div>
 
         <div class="panel">
+            <div style="margin-bottom: 12px;">
+                <strong>Xbox Gamepad Status:</strong>
+                <div id="gamepad_status" style="margin-top: 8px; padding: 12px; background: var(--bg-alt); border-radius: 8px; font-family: monospace; font-size: 13px;">
+                    <div>Connection: <i id="gamepad_connection_status">Not Connected</i></div>
+                    <div style="margin-top: 8px;">
+                        <strong>Analog Sticks:</strong>
+                        <div style="margin-left: 12px; margin-top: 4px;">
+                            <div>Left Stick: X=<i id="gamepad_left_x">0.00</i> Y=<i id="gamepad_left_y">0.00</i></div>
+                            <div>Right Stick: X=<i id="gamepad_right_x">0.00</i> Y=<i id="gamepad_right_y">0.00</i></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <strong>Output Motion Control:</strong>
+                        <div style="margin-left: 12px; margin-top: 4px;">
+                            <div>Force X (fwd): <i id="gamepad_output_force_x">0.00</i> N</div>
+                            <div>Force Y (strafe): <i id="gamepad_output_force_y">0.00</i> N</div>
+                            <div>Force Z (depth): <i id="gamepad_output_force_z">0.00</i> N</div>
+                            <div>Torque Z (rotation): <i id="gamepad_output_torque_z">0.00</i> Nm</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <strong>Buttons:</strong>
+                        <div style="margin-left: 12px; margin-top: 4px;">
+                            <div>A (Init): <i id="gamepad_button_a" style="color: var(--muted);">Released</i></div>
+                            <div>B (E-Stop): <i id="gamepad_button_b" style="color: var(--muted);">Released</i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
             simple motion control interface:
             <div class="grid-3">
                 <div class="inline-field">
@@ -272,5 +304,6 @@
     </div>
 
     <script src="/static/simple_motion_control_interface.js"></script>
+    <script src="/static/gamepad_control.js"></script>
 </body>
 </html>
