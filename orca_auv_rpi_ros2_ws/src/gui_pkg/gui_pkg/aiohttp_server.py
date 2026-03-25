@@ -10,6 +10,9 @@ class AIOHTTPServer:
     async def respond_index(request):
         return web.FileResponse(path=Path(gui_pkg.__file__).parent/"index.html")
 
+    async def respond_controller(request):
+        return web.FileResponse(path=Path(gui_pkg.__file__).parent/"controller.html")
+
     def send_topic(self, topic_name, msg):
         payload = json.dumps({"type": "topic", "data": {"topic_name": topic_name, "msg": msg}})
 
@@ -63,6 +66,8 @@ class AIOHTTPServer:
 
         app.router.add_get('/websocket', self.websocket_handler)
         app.router.add_get('/', AIOHTTPServer.respond_index)
+        app.router.add_get('/controller', AIOHTTPServer.respond_controller)
+        app.router.add_get('/play', AIOHTTPServer.respond_controller)
         app.router.add_static('/static/', Path(gui_pkg.__file__).parent)
 
         self.runner = web.AppRunner(app)
