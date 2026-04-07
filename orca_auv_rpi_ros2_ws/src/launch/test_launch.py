@@ -68,18 +68,20 @@ def generate_launch_description():
         }]
     )
 
-    bottom_camera_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution([
-                FindPackageShare('bottom_camera_pkg'),
-                'launch',
-                'bottom_camera_optical_flow.launch.py'
-            ])
-        ),
-        launch_arguments={
-            'publish_debug_image': 'true'
-        }.items()
-    )
+    # Keep this launch block for reference, but disable it to avoid starting
+    # bottom_camera twice. bottom_camera_pid_fbc_launch already includes it.
+    # bottom_camera_launch = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(
+    #         PathJoinSubstitution([
+    #             FindPackageShare('bottom_camera_pkg'),
+    #             'launch',
+    #             'bottom_camera_optical_flow.launch.py'
+    #         ])
+    #     ),
+    #     launch_arguments={
+    #         'publish_debug_image': 'true'
+    #     }.items()
+    # )
 
     bottom_camera_pid_fbc_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -126,7 +128,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        bottom_camera_launch,
+        # bottom_camera_launch,
         bottom_camera_pid_fbc_launch,
         depth_control_launch,
         thruster_pkg_launch,
