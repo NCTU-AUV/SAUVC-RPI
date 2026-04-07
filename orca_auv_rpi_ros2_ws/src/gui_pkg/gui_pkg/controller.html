@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ORCA AUV Fullscreen Controller</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: "Space Grotesk", "Noto Sans", sans-serif;
+            color: #ffffff;
+        }
+
+        #camera_feed {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            min-width: 320px;
+            background: rgba(0, 0, 0, 0.5);
+            color: #ffffff;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(4px);
+            line-height: 1.5;
+        }
+
+        .hud-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .hud-row {
+            margin: 4px 0;
+            font-size: 14px;
+        }
+
+        .wrench {
+            margin-top: 8px;
+        }
+
+        .wrench span {
+            display: inline-block;
+            min-width: 84px;
+        }
+    </style>
+</head>
+<body>
+    <img id="camera_feed" src="" alt="Camera Feed">
+
+    <div class="hud">
+        <div class="hud-title">ORCA AUV Controller HUD</div>
+        <div class="hud-row">WebSocket: <span id="ws_status">🔴 Disconnected</span></div>
+        <div class="hud-row">Gamepad: <span id="gamepad_status">🎮 請按下搖桿任意鍵...</span></div>
+        <div class="hud-row wrench">Current Wrench:</div>
+        <div class="hud-row">
+            <span>X: <strong id="thrust_x">0.00</strong></span>
+            <span>Y: <strong id="thrust_y">0.00</strong></span>
+            <span>Z: <strong id="thrust_z">0.00</strong></span>
+            <span>Yaw: <strong id="thrust_yaw">0.00</strong></span>
+        </div>
+    </div>
+
+    <script src="/static/controller.js"></script>
+</body>
+</html>
