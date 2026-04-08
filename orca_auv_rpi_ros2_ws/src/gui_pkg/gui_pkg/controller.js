@@ -5,6 +5,9 @@ const thrustYElement = document.getElementById("thrust_y");
 const thrustZElement = document.getElementById("thrust_z");
 const thrustYawElement = document.getElementById("thrust_yaw");
 const cameraFeedElement = document.getElementById("camera_feed");
+const thrusterPwmElements = Array.from({ length: 8 }, (_, index) =>
+    document.getElementById(`thruster_pwm_${index}`)
+);
 
 const max_push = 10;
 const max_twist = 5;
@@ -28,6 +31,7 @@ let activeGamepadIndex = null;
 let animationFrameId = null;
 let lastSendTime = 0;
 let lastBPressed = false;
+const pressedKeys = new Set();
 
 const websocket = new WebSocket("ws://" + window.location.hostname + "/websocket", "protocolOne");
 
@@ -106,14 +110,52 @@ function setWrenchToZero() {
     updateHudWrench();
 }
 
-function tickGamepad() {
-    const gamepads = navigator.getGamepads();
-    const gamepad = activeGamepadIndex !== null ? gamepads[activeGamepadIndex] : null;
-
-    if (!gamepad) {
-        animationFrameId = requestAnimationFrame(tickGamepad);
-        return;
+function updateThrusterPwmDisplay(pwmValues) {
+    for (let index = 0; index < thrusterPwmElements.length; index += 1) {
+        const element = thrusterPwmElements[index];
+        if (!element) {
+            continue;
+        }
+        const value = pwmValues[index];
+        element.textContent = Number.isFinite(value) ? String(Math.round(value)) : "--";
     }
+}
+
+function findFirstConnectedGamepad() {
+    if (typeof navigator.getGamepads !== "function") {
+        return null;
+    }
+    const gamepads = navigator.getGamepads();
+    for (let i = 0; i < gamepads.length; i += 1) {
+        if (gamepads[i]) {
+            return gamepads[i];
+        }
+    }
+    return null;
+}
+
+function getActiveGamepad() {
+    const gamepads = navigator.getGamepads();
+    if (activeGamepadIndex !== null) {
+        const selected = gamepads[activeGamepadIndex] || null;
+        if (selected) {
+            return selected;
+        }
+        activeGamepadIndex = null;
+        lastBPressed = false;
+    }
+
+    const firstConnected = findFirstConnectedGamepad();
+    if (firstConnected) {
+        activeGamepadIndex = firstConnected.index;
+        return firstConnected;
+    }
+
+    return null;
+}
+
+function applyGamepadInput(gamepad) {
+    updateGamepadStatus("🎮 已連接: " + gamepad.id);
 
     const leftX = applyDeadzone(gamepad.axes[0] || 0);
     const leftY = applyDeadzone(gamepad.axes[1] || 0);
@@ -137,6 +179,40 @@ function tickGamepad() {
         sendCurrentWrench();
     }
     lastBPressed = bPressed;
+}
+
+function applyKeyboardInput() {
+    const forward = pressedKeys.has("w");
+    const backward = pressedKeys.has("s");
+    const left = pressedKeys.has("a");
+    const right = pressedKeys.has("d");
+    const up = pressedKeys.has("r") || pressedKeys.has("arrowup");
+    const down = pressedKeys.has("f") || pressedKeys.has("arrowdown");
+    const yawLeft = pressedKeys.has("q") || pressedKeys.has("arrowleft");
+    const yawRight = pressedKeys.has("e") || pressedKeys.has("arrowright");
+
+    current_wrench.force.x = (forward ? max_push : 0) + (backward ? -max_push : 0);
+    current_wrench.force.y = (right ? max_push : 0) + (left ? -max_push : 0);
+    current_wrench.force.z = (up ? max_push : 0) + (down ? -max_push : 0);
+    current_wrench.torque.z = (yawRight ? max_twist : 0) + (yawLeft ? -max_twist : 0);
+
+    if (pressedKeys.size > 0) {
+        updateGamepadStatus("⌨️ 鍵盤控制中");
+    } else {
+        updateGamepadStatus("🎮 未連接，使用鍵盤控制");
+    }
+
+    updateHudWrench();
+}
+
+function tickControls() {
+    const gamepad = getActiveGamepad();
+    if (gamepad) {
+        applyGamepadInput(gamepad);
+    } else {
+        lastBPressed = false;
+        applyKeyboardInput();
+    }
 
     const now = performance.now();
     if (now - lastSendTime >= sendIntervalMs) {
@@ -144,30 +220,74 @@ function tickGamepad() {
         lastSendTime = now;
     }
 
-    animationFrameId = requestAnimationFrame(tickGamepad);
+    animationFrameId = requestAnimationFrame(tickControls);
 }
 
 window.addEventListener("gamepadconnected", (event) => {
     activeGamepadIndex = event.gamepad.index;
-    updateGamepadStatus("🎮 Connected: " + event.gamepad.id);
-
-    if (animationFrameId === null) {
-        animationFrameId = requestAnimationFrame(tickGamepad);
-    }
+    updateGamepadStatus("🎮 已連接: " + event.gamepad.id);
 });
 
 window.addEventListener("gamepaddisconnected", (event) => {
     if (activeGamepadIndex === event.gamepad.index) {
         activeGamepadIndex = null;
         lastBPressed = false;
-        updateGamepadStatus("🎮 請按下搖桿任意鍵...");
+        updateGamepadStatus("🎮 未連接，使用鍵盤控制");
         setWrenchToZero();
         sendCurrentWrench();
     }
 });
 
+window.addEventListener("keydown", (event) => {
+    const key = event.key.toLowerCase();
+    const controlKeys = new Set([
+        "w", "a", "s", "d", "q", "e", "r", "f",
+        "arrowup", "arrowdown", "arrowleft", "arrowright",
+    ]);
+    if (!controlKeys.has(key)) {
+        return;
+    }
+    event.preventDefault();
+    pressedKeys.add(key);
+});
+
+window.addEventListener("keyup", (event) => {
+    const key = event.key.toLowerCase();
+    if (pressedKeys.delete(key)) {
+        event.preventDefault();
+    }
+});
+
+window.addEventListener("blur", () => {
+    pressedKeys.clear();
+    setWrenchToZero();
+    sendCurrentWrench();
+});
+
 websocket.onopen = () => {
     updateWsStatus(true);
+};
+
+websocket.onmessage = (event) => {
+    let msgJsonObject;
+    try {
+        msgJsonObject = JSON.parse(event.data);
+    } catch (_error) {
+        return;
+    }
+
+    if (msgJsonObject.type !== "topic") {
+        return;
+    }
+
+    const topicName = msgJsonObject.data && msgJsonObject.data.topic_name;
+    const topicMsg = msgJsonObject.data && msgJsonObject.data.msg;
+    if (topicName !== "set_pwm_output_signal_value_us" || !Array.isArray(topicMsg)) {
+        return;
+    }
+
+    const normalizedValues = topicMsg.slice(0, 8).map((value) => Number(value));
+    updateThrusterPwmDisplay(normalizedValues);
 };
 
 websocket.onclose = () => {
@@ -180,4 +300,6 @@ websocket.onerror = () => {
 
 updateWsStatus(false);
 updateHudWrench();
+updateThrusterPwmDisplay(Array(8).fill(1500));
 initializeCameraFeed();
+animationFrameId = requestAnimationFrame(tickControls);
