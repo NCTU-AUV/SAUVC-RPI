@@ -14,6 +14,8 @@
             width: 100vw;
             height: 100vh;
             overflow: hidden;
+            position: relative;
+            background: #000;
             font-family: "Space Grotesk", "Noto Sans", sans-serif;
             color: #ffffff;
         }
@@ -25,7 +27,8 @@
             position: absolute;
             top: 0;
             left: 0;
-            z-index: -1;
+            z-index: 0;
+            display: block;
         }
 
         .hud {
@@ -40,6 +43,7 @@
             border: 1px solid rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(4px);
             line-height: 1.5;
+            z-index: 1;
         }
 
         .hud-title {
@@ -61,6 +65,78 @@
             display: inline-block;
             min-width: 84px;
         }
+
+        .control-help {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .control-help-title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            margin-bottom: 6px;
+        }
+
+        .control-help-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 4px 10px;
+            font-size: 12px;
+            opacity: 0.95;
+        }
+
+        .key-chip {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .thruster-panel {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .thruster-panel-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .thruster-panel-note {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-bottom: 6px;
+        }
+
+        .thruster-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 4px 10px;
+            font-size: 12px;
+        }
+
+        .thruster-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 640px) {
+            .hud {
+                left: 10px;
+                top: 10px;
+                right: 10px;
+                min-width: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -76,6 +152,31 @@
             <span>Y: <strong id="thrust_y">0.00</strong></span>
             <span>Z: <strong id="thrust_z">0.00</strong></span>
             <span>Yaw: <strong id="thrust_yaw">0.00</strong></span>
+        </div>
+
+        <div class="control-help">
+            <div class="control-help-title">Keyboard Mapping</div>
+            <div class="control-help-grid">
+                <span class="key-chip">W / S</span><span>前進 / 後退</span>
+                <span class="key-chip">A / D</span><span>左移 / 右移</span>
+                <span class="key-chip">R / F 或 ↑ / ↓</span><span>上升 / 下降</span>
+                <span class="key-chip">Q / E 或 ← / →</span><span>左轉 / 右轉</span>
+            </div>
+        </div>
+
+        <div class="thruster-panel">
+            <div class="thruster-panel-title">Thruster Output (PWM us)</div>
+            <div class="thruster-panel-note">即時顯示控制輸出，不是實測 RPM</div>
+            <div class="thruster-grid">
+                <div class="thruster-item"><span>T0</span><strong id="thruster_pwm_0">1500</strong></div>
+                <div class="thruster-item"><span>T1</span><strong id="thruster_pwm_1">1500</strong></div>
+                <div class="thruster-item"><span>T2</span><strong id="thruster_pwm_2">1500</strong></div>
+                <div class="thruster-item"><span>T3</span><strong id="thruster_pwm_3">1500</strong></div>
+                <div class="thruster-item"><span>T4</span><strong id="thruster_pwm_4">1500</strong></div>
+                <div class="thruster-item"><span>T5</span><strong id="thruster_pwm_5">1500</strong></div>
+                <div class="thruster-item"><span>T6</span><strong id="thruster_pwm_6">1500</strong></div>
+                <div class="thruster-item"><span>T7</span><strong id="thruster_pwm_7">1500</strong></div>
+            </div>
         </div>
     </div>
 

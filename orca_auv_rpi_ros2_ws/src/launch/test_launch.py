@@ -68,18 +68,20 @@ def generate_launch_description():
         }]
     )
 
-    bottom_camera_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution([
-                FindPackageShare('bottom_camera_pkg'),
-                'launch',
-                'bottom_camera_optical_flow.launch.py'
-            ])
-        ),
-        launch_arguments={
-            'publish_debug_image': 'true'
-        }.items()
-    )
+    # Keep this launch block for reference, but disable it to avoid starting
+    # bottom_camera twice. bottom_camera_pid_fbc_launch already includes it.
+    # bottom_camera_launch = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(
+    #         PathJoinSubstitution([
+    #             FindPackageShare('bottom_camera_pkg'),
+    #             'launch',
+    #             'bottom_camera_optical_flow.launch.py'
+    #         ])
+    #     ),
+    #     launch_arguments={
+    #         'publish_debug_image': 'true'
+    #     }.items()
+    # )
 
     bottom_camera_pid_fbc_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -107,6 +109,12 @@ def generate_launch_description():
         arguments=['serial', '--dev', '/dev/ttyUSB0']
     )
 
+    web_video_server = Node(
+        package='web_video_server',
+        executable='web_video_server',
+        name='web_video_server',
+    )
+
     stm32_flasher_node = Node(
         package='stm32_pkg',
         executable='stm32_flasher_node',
@@ -126,7 +134,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        bottom_camera_launch,
+        # bottom_camera_launch,
         bottom_camera_pid_fbc_launch,
         depth_control_launch,
         thruster_pkg_launch,
@@ -136,5 +144,6 @@ def generate_launch_description():
         gui_node,
         stm32_flasher_node,
         micro_ros_agent,
+        web_video_server,
         event,
     ])
