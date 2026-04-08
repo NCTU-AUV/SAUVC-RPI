@@ -14,6 +14,8 @@
             width: 100vw;
             height: 100vh;
             overflow: hidden;
+            position: relative;
+            background: #000;
             font-family: "Space Grotesk", "Noto Sans", sans-serif;
             color: #ffffff;
         }
@@ -25,7 +27,8 @@
             position: absolute;
             top: 0;
             left: 0;
-            z-index: -1;
+            z-index: 0;
+            display: block;
         }
 
         .hud {
@@ -40,6 +43,7 @@
             border: 1px solid rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(4px);
             line-height: 1.5;
+            z-index: 1;
         }
 
         .hud-title {
