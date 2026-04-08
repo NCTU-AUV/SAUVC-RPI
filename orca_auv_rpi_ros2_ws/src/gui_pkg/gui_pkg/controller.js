@@ -42,7 +42,7 @@ function initializeCameraFeed() {
 
     const bottomCameraTopic = "/orca_auv/bottom_camera/image_raw";
     const streamUrl = "http://" + window.location.hostname + ":8080/stream?topic="
-        + encodeURIComponent(bottomCameraTopic)
+        + bottomCameraTopic
         + "&type=ros_compressed";
     cameraFeedElement.src = streamUrl;
 }
