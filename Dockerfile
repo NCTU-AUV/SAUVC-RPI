@@ -25,6 +25,7 @@ RUN source /opt/ros/humble/setup.bash && ros2 run mavros install_geographiclib_d
 
 
 RUN apt-get install -y ros-humble-rqt*
+RUN apt-get install -y ros-humble-web-video-server
 
 
 WORKDIR /root

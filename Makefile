@@ -71,6 +71,8 @@ compose_init: compose_up
 
 compose_launch: compose_up
 	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
+		pkill -f 'ros2 launch src/launch/test_launch.py' || true"
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
 		cd $(WORKSPACE) && \
 		source /opt/ros/humble/setup.bash && \
 		source /root/uros_ws/install/local_setup.bash && \
@@ -79,6 +81,8 @@ compose_launch: compose_up
 
 compose_launch_detached: compose_up
 	@echo "Launching ROS stack in detached mode"
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
+		pkill -f 'ros2 launch src/launch/test_launch.py' || true"
 	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec -d orca /bin/bash -lc "\
 		cd $(WORKSPACE) && \
 		source /opt/ros/humble/setup.bash && \

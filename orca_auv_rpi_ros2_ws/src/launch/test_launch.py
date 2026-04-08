@@ -109,6 +109,12 @@ def generate_launch_description():
         arguments=['serial', '--dev', '/dev/ttyUSB0']
     )
 
+    web_video_server = Node(
+        package='web_video_server',
+        executable='web_video_server',
+        name='web_video_server',
+    )
+
     stm32_flasher_node = Node(
         package='stm32_pkg',
         executable='stm32_flasher_node',
@@ -138,5 +144,6 @@ def generate_launch_description():
         gui_node,
         stm32_flasher_node,
         micro_ros_agent,
+        web_video_server,
         event,
     ])
