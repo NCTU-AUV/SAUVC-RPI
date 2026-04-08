@@ -10,16 +10,16 @@ from launch.substitutions import PathJoinSubstitution
 def generate_launch_description():
     thruster_pkg_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(PathJoinSubstitution([
-            FindPackageShare('orca_auv_thruster_pkg'),
+            FindPackageShare('orca_rpi_thrusters'),
             'launch',
             'start_all_nodes_launch.py'
         ])),
     )
 
-    wrench_sum_node = Node(
-        package='wrench_sum',
-        executable='wrench_sum_node',
-        name='wrench_sum',
+    orca_rpi_wrench_mux_node = Node(
+        package='orca_rpi_wrench_mux',
+        executable='orca_rpi_wrench_mux_node',
+        name='orca_rpi_wrench_mux',
         parameters=[{
             'input_topics': [
                 '/gui_wrench',
@@ -38,14 +38,14 @@ def generate_launch_description():
     )
 
     gui_node = Node(
-        package='gui_pkg',
+        package='orca_rpi_gui',
         executable='gui_node',
         remappings=[
             ('/orca_auv/set_output_wrench_at_center_N_Nm', '/gui_wrench')
         ]
     )
     velocity_node = Node(
-        package='orca_auv_pose_control_pkg',
+        package='orca_rpi_control',
         executable='velocity_controller_node',
         name='velocity_controller_node',
         parameters=[{
@@ -73,7 +73,7 @@ def generate_launch_description():
     # bottom_camera_launch = IncludeLaunchDescription(
     #     PythonLaunchDescriptionSource(
     #         PathJoinSubstitution([
-    #             FindPackageShare('bottom_camera_pkg'),
+    #             FindPackageShare('orca_rpi_bottom_camera'),
     #             'launch',
     #             'bottom_camera_optical_flow.launch.py'
     #         ])
@@ -86,7 +86,7 @@ def generate_launch_description():
     bottom_camera_pid_fbc_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
-                FindPackageShare('orca_auv_pose_control_pkg'),
+                FindPackageShare('orca_rpi_control'),
                 'launch',
                 'bottom_camera_pid_fbc_launch.py'
             ])
@@ -96,7 +96,7 @@ def generate_launch_description():
     depth_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
-                FindPackageShare('orca_auv_pose_control_pkg'),
+                FindPackageShare('orca_rpi_control'),
                 'launch',
                 'depth_control_launch.py'
             ])
@@ -116,7 +116,7 @@ def generate_launch_description():
     )
 
     stm32_flasher_node = Node(
-        package='stm32_pkg',
+        package='orca_rpi_stm32_bridge',
         executable='stm32_flasher_node',
         name='stm32_flasher_node',
     )
@@ -138,7 +138,7 @@ def generate_launch_description():
         bottom_camera_pid_fbc_launch,
         depth_control_launch,
         thruster_pkg_launch,
-        wrench_sum_node,
+        orca_rpi_wrench_mux_node,
         # velocity_node,
         # mavros,
         gui_node,
