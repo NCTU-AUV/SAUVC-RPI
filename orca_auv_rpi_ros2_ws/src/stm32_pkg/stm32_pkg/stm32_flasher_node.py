@@ -13,7 +13,7 @@ class Stm32FlasherNode(Node):
     def __init__(self) -> None:
         super().__init__('stm32_flasher_node')
 
-        self.declare_parameter('bin_path', '/root/orca_auv_rpi_ros2_ws/stm32_binary/SAUVC2024.bin')
+        self.declare_parameter('bin_path', '/root/orca_auv_rpi_ros2_ws/stm32_binary/ORCA-STM32.bin')
         self.declare_parameter('flash_address', '0x08000000')
         self.declare_parameter('st_flash_cmd', 'st-flash')
 
