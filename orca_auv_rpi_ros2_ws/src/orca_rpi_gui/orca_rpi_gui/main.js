@@ -46,6 +46,17 @@ websocket.onmessage = (event) => {
                 }
             }
         }
+        if (msg_json_object.data.topic_name == "electromagnet_set_on") {
+            const enabled = msg_json_object.data.msg === true;
+            const checkbox = document.getElementById("electromagnet_set_on_input");
+            const status = document.getElementById("electromagnet_set_on_status");
+            if (checkbox) {
+                checkbox.checked = enabled;
+            }
+            if (status) {
+                status.innerHTML = enabled ? "on" : "off";
+            }
+        }
         if (msg_json_object.data.topic_name == "flash_stm32_status") {
             const status = msg_json_object.data.msg || {};
             const message = status.message || "";
@@ -113,6 +124,15 @@ function reset_depth_control() {
 function set_target_depth_m_button_onclick() {
     const target_depth_m = document.getElementById("target_depth_m_input").value;
     websocket.send(JSON.stringify({type: "topic", data: {topic_name: "set_target_depth_m", msg: {data: target_depth_m}}}));
+}
+
+function set_electromagnet_on(enabled) {
+    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "electromagnet_set_on", msg: {data: enabled}}}));
+}
+
+function electromagnet_set_on_input_onchange() {
+    const checkbox = document.getElementById("electromagnet_set_on_input");
+    set_electromagnet_on(Boolean(checkbox && checkbox.checked));
 }
 
 function set_depth_pid_params_button_onclick() {

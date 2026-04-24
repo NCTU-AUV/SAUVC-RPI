@@ -74,10 +74,21 @@ class GUINode(Node):
             callback=self._pwm_output_signal_value_subscription_callback,
             qos_profile=10
         )
+        self._electromagnet_set_on_subscription = self.create_subscription(
+            msg_type=Bool,
+            topic="electromagnet/set_on",
+            callback=self._electromagnet_set_on_callback,
+            qos_profile=10
+        )
 
         self._set_pwm_output_signal_value_publisher = self.create_publisher(
             msg_type=Int32MultiArray,
             topic="thrusters/set_pwm_output_signal_value_us",
+            qos_profile=10
+        )
+        self._electromagnet_set_on_publisher = self.create_publisher(
+            msg_type=Bool,
+            topic="electromagnet/set_on",
             qos_profile=10
         )
 
@@ -117,6 +128,9 @@ class GUINode(Node):
             values += [self._initial_pwm_output_signal_value_us] * (self._thruster_count - len(values))
         self._pwm_output_signal_value_us = values[:self._thruster_count]
         self.aiohttp_server.send_topic("set_pwm_output_signal_value_us", list(self._pwm_output_signal_value_us))
+
+    def _electromagnet_set_on_callback(self, msg: Bool):
+        self.aiohttp_server.send_topic("electromagnet_set_on", msg.data)
 
     def _msg_callback(self, msg):
         try:
@@ -181,6 +195,16 @@ class GUINode(Node):
                     msg = Float64()
                     msg.data = target_depth
                     self._target_depth_publisher.publish(msg)
+
+            if topic_name == "electromagnet_set_on":
+                try:
+                    electromagnet_set_on = bool(msg_data["msg"]["data"])
+                except (KeyError, TypeError):
+                    self.get_logger().warning(f"Invalid electromagnet set message: {msg_json_object}")
+                else:
+                    msg = Bool()
+                    msg.data = electromagnet_set_on
+                    self._electromagnet_set_on_publisher.publish(msg)
 
         if msg_type == "process":
             target = msg_data.get("target")
