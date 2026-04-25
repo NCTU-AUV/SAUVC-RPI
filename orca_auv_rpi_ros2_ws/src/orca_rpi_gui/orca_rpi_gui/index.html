@@ -107,6 +107,11 @@
             border-color: var(--accent-2);
             box-shadow: 0 0 0 2px rgba(122, 167, 255, 0.2);
         }
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+        }
         .panel {
             background: var(--card);
             padding: 16px 18px;
@@ -197,6 +202,19 @@
                 <div class="inline-field">thruster 7: <input type="number" id="set_pwm_output_signal_value_us_7" min="0" max="3000" value="1500"></div>
             </div>
             <button onclick="set_pwm_output_signal_value_us_button_onclick()">publish topic</button>
+        </div>
+
+        <div class="panel">
+            <div>electromagnet:</div>
+            <div class="row">
+                <label class="inline-field">
+                    <input type="checkbox" id="electromagnet_set_on_input" onchange="electromagnet_set_on_input_onchange()">
+                    <span>set_on</span>
+                </label>
+                <button onclick="set_electromagnet_on(true)">on</button>
+                <button onclick="set_electromagnet_on(false)">off</button>
+                <div>status: <i id="electromagnet_set_on_status">off</i></div>
+            </div>
         </div>
 
         <div class="panel">
