@@ -65,6 +65,20 @@ class GUINode(Node):
                 callback=self._stm32_log_callback,
                 qos_profile=10
             )
+        self._bottom_camera_pid_topic_subscribers = [
+            self.create_subscription(
+                msg_type=Float64,
+                topic=topic,
+                callback=lambda msg, topic_name=topic: self._float64_topic_callback(topic_name, msg),
+                qos_profile=10,
+            )
+            for topic in (
+                "control/pid/bottom_camera/x/reference_px",
+                "control/pid/bottom_camera/y/reference_px",
+                "control/pid/bottom_camera/x/feedback_px",
+                "control/pid/bottom_camera/y/feedback_px",
+            )
+        ]
 
         self._initialize_all_thrusters_client = self.create_client(Trigger, 'thrusters/initialize_all')
         self._flash_stm32_client = self.create_client(Trigger, '/flash_stm32')
@@ -137,6 +151,9 @@ class GUINode(Node):
 
     def _stm32_log_callback(self, msg: String):
         self.aiohttp_server.send_topic("diagnostics/stm32/log", msg.data)
+
+    def _float64_topic_callback(self, topic_name: str, msg: Float64):
+        self.aiohttp_server.send_topic(topic_name, msg.data)
 
     def _pwm_output_signal_value_subscription_callback(self, msg: Int32MultiArray):
         values = list(msg.data)

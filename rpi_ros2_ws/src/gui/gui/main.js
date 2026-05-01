@@ -89,6 +89,20 @@ websocket.onmessage = (event) => {
                 }
             }
         }
+
+        const bottomCameraPidTopicElements = {
+            "control/pid/bottom_camera/x/reference_px": "bottom_camera_pid_x_reference_px",
+            "control/pid/bottom_camera/y/reference_px": "bottom_camera_pid_y_reference_px",
+            "control/pid/bottom_camera/x/feedback_px": "bottom_camera_pid_x_feedback_px",
+            "control/pid/bottom_camera/y/feedback_px": "bottom_camera_pid_y_feedback_px",
+        };
+        const bottomCameraPidElementId = bottomCameraPidTopicElements[msg_json_object.data.topic_name];
+        if (bottomCameraPidElementId) {
+            const element = document.getElementById(bottomCameraPidElementId);
+            if (element) {
+                element.innerHTML = msg_json_object.data.msg;
+            }
+        }
     }
 };
 
