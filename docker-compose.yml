@@ -14,8 +14,8 @@ services:
       XAUTHORITY: ${XAUTHORITY:-/tmp/.Xauthority}
     volumes:
       - /dev:/dev
-      - ./orca_auv_rpi_ros2_ws:/root/orca_auv_rpi_ros2_ws
-      - ./SAUVC-STM32/build:/root/orca_auv_rpi_ros2_ws/stm32_binary
+      - ./rpi_ros2_ws:/root/rpi_ros2_ws
+      - ./SAUVC-STM32/build:/root/rpi_ros2_ws/stm32_binary
       - ${XAUTH_FILE:-/tmp/.Xauthority}:${XAUTHORITY:-/tmp/.Xauthority}:ro
     working_dir: /root
     command: ["/bin/bash", "-lc", "tail -f /dev/null"]
