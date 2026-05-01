@@ -12,7 +12,7 @@ from std_srvs.srv import Trigger
 class ThrusterInitializationNode(Node):
 
     def __init__(self):
-        super().__init__("thruster_initialization_node", namespace="orca_auv")
+        super().__init__("thruster_initialization_node")
 
         self._thruster_count = 8
         self._initial_pwm_output_signal_value_us = int(self.declare_parameter("initial_pwm_output_signal_value_us", 1500).value)

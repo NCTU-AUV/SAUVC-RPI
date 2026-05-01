@@ -8,7 +8,7 @@ from std_msgs.msg import Float64
 class Float32ToFloat64ConverterNode(Node):
 
     def __init__(self):
-        super().__init__('float32_to_float64_converter_node', namespace="orca_auv")
+        super().__init__('float32_to_float64_converter_node')
 
         self._float32_topic_subscriber = self.create_subscription(
             Float32,

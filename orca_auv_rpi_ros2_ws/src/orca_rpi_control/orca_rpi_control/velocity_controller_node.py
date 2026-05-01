@@ -17,13 +17,13 @@ class VelocityPIDControllerNode(Node):
     D term is low-pass filtered (1st order) to reduce noise amplification.
 
     Subscribes:
-      - measured_topic (Float64MultiArray): default "/orca_auv/camera/bottom/velocity_mps"
+      - measured_topic (Float64MultiArray): default "camera/bottom/velocity_mps"
           expected format: [vx, vy, wz] (customize via measured_index)
-      - target_topic (Float64): optional live target speed, default "/orca_auv/control/targets/speed_mps"
+      - target_topic (Float64): optional live target speed, default "control/targets/speed_mps"
         (If you don't publish target_topic, it will use parameter target_speed_mps.)
 
     Publishes:
-      - output_topic (Wrench): default "/orca_auv/control/wrench_sources/velocity"
+      - output_topic (Wrench): default "control/wrench_sources/velocity"
         Only force.y is used by default (forward).
     """
 
@@ -31,9 +31,9 @@ class VelocityPIDControllerNode(Node):
         super().__init__("velocity_pid_controller_node")
 
         # ---- Topics ----
-        self.declare_parameter("measured_topic", "/orca_auv/camera/bottom/velocity_mps")
-        self.declare_parameter("target_topic", "/orca_auv/control/targets/speed_mps")  # optional
-        self.declare_parameter("output_topic", "/orca_auv/control/wrench_sources/velocity")
+        self.declare_parameter("measured_topic", "camera/bottom/velocity_mps")
+        self.declare_parameter("target_topic", "control/targets/speed_mps")  # optional
+        self.declare_parameter("output_topic", "control/wrench_sources/velocity")
 
         # ---- Measured velocity format ----
         self.declare_parameter("measured_index", 1)  # default: vy (forward if your convention is force.y forward)

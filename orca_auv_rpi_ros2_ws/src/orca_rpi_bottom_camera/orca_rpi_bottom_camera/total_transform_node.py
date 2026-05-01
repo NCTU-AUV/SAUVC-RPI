@@ -12,7 +12,7 @@ class TotalTransformNode(Node):
     invert it to recover vehicle motion and integrate from the first frame.
     """
     def __init__(self):
-        super().__init__('bottom_camera_total_transform_node', namespace='orca_auv')
+        super().__init__('bottom_camera_total_transform_node')
 
         self.declare_parameter('input_topic', 'camera/bottom/frame_transform_px')
         self.declare_parameter('output_topic', 'camera/bottom/pose_px')

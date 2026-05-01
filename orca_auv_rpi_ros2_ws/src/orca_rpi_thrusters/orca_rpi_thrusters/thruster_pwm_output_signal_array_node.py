@@ -7,7 +7,7 @@ from std_msgs.msg import Int32, Int32MultiArray
 class ThrusterPWMOutputSignalArrayNode(Node):
 
     def __init__(self):
-        super().__init__("thruster_pwm_output_signal_array_node", namespace="orca_auv")
+        super().__init__("thruster_pwm_output_signal_array_node")
 
         self._thruster_count = 8
         initial_pwm_us = int(self.declare_parameter("initial_pwm_output_signal_value_us", 1500).value)

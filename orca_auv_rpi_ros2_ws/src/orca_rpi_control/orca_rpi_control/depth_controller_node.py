@@ -8,7 +8,7 @@ from geometry_msgs.msg import Wrench
 class DepthControllerNode(Node):
 
     def __init__(self):
-        super().__init__('depth_controller_node', namespace="orca_auv")
+        super().__init__('depth_controller_node')
 
         self._pressure_sensor_depth_subscriber = self.create_subscription(
             Float32,

@@ -1,33 +1,39 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription, ExecuteProcess, RegisterEventHandler
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, ExecuteProcess, RegisterEventHandler
 from launch.event_handlers import OnProcessStart
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.substitutions import FindPackageShare
-from launch.substitutions import PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 
 
 def generate_launch_description():
+    namespace = LaunchConfiguration('namespace')
+
     thruster_pkg_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(PathJoinSubstitution([
             FindPackageShare('orca_rpi_thrusters'),
             'launch',
             'thrusters.launch.py'
         ])),
+        launch_arguments={
+            'namespace': namespace,
+        }.items(),
     )
 
     orca_rpi_wrench_sum_node = Node(
         package='orca_rpi_wrench_sum',
         executable='orca_rpi_wrench_sum_node',
+        namespace=namespace,
         name='orca_rpi_wrench_sum',
         parameters=[{
             'input_topics': [
-                '/orca_auv/control/wrench_sources/gui',
-                '/orca_auv/control/wrench_sources/bottom_camera',
-                '/orca_auv/control/wrench_sources/depth',
-                "/orca_auv/control/wrench_sources/velocity",
+                'control/wrench_sources/gui',
+                'control/wrench_sources/bottom_camera',
+                'control/wrench_sources/depth',
+                'control/wrench_sources/velocity',
             ],
-            'output_topic': '/orca_auv/control/wrench_command',
+            'output_topic': 'control/wrench_command',
         }]
     )
 
@@ -40,19 +46,21 @@ def generate_launch_description():
     gui_node = Node(
         package='orca_rpi_gui',
         executable='gui_node',
+        namespace=namespace,
         remappings=[
-            ('/orca_auv/control/wrench_command', '/orca_auv/control/wrench_sources/gui')
+            ('control/wrench_command', 'control/wrench_sources/gui')
         ]
     )
     velocity_node = Node(
         package='orca_rpi_control',
         executable='velocity_controller_node',
+        namespace=namespace,
         name='velocity_controller_node',
         parameters=[{
-            'measured_topic': '/orca_auv/camera/bottom/velocity_mps',
+            'measured_topic': 'camera/bottom/velocity_mps',
             'measured_index': 1,
-            'target_topic': '/orca_auv/control/targets/speed_mps',
-            'output_topic': '/orca_auv/control/wrench_sources/velocity',
+            'target_topic': 'control/targets/speed_mps',
+            'output_topic': 'control/wrench_sources/velocity',
 
             'kp': 8.0,
             'ki': 0.0,
@@ -90,7 +98,10 @@ def generate_launch_description():
                 'launch',
                 'bottom_camera_pid_fbc_launch.py'
             ])
-        )
+        ),
+        launch_arguments={
+            'namespace': namespace,
+        }.items(),
     )
 
     depth_control_launch = IncludeLaunchDescription(
@@ -100,7 +111,10 @@ def generate_launch_description():
                 'launch',
                 'depth_control_launch.py'
             ])
-        )
+        ),
+        launch_arguments={
+            'namespace': namespace,
+        }.items(),
     )
 
     micro_ros_agent = Node(
@@ -134,6 +148,11 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'namespace',
+            default_value='orca_auv',
+            description='Robot namespace',
+        ),
         # bottom_camera_launch,
         bottom_camera_pid_fbc_launch,
         depth_control_launch,

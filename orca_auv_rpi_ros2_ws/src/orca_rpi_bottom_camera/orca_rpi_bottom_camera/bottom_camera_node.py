@@ -10,7 +10,7 @@ import os
 class BottomCameraNode(Node):
 
     def __init__(self):
-        super().__init__('bottom_camera_node', namespace='orca_auv')
+        super().__init__('bottom_camera_node')
 
         self.declare_parameter('camera_device', '/dev/video0')
         self.declare_parameter('frame_rate', 15.0)

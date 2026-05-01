@@ -10,7 +10,7 @@ import numpy as np
 class WrenchToIndividualThrusterOutputForcesNode(Node):
 
     def __init__(self):
-        super().__init__('wrench_to_individual_thrusters_output_forces_node', namespace="orca_auv")
+        super().__init__('wrench_to_individual_thrusters_output_forces_node')
 
         self.__set_output_force_subscribers = \
             self.create_subscription(

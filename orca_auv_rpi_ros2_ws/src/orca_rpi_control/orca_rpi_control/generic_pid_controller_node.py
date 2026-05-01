@@ -9,7 +9,7 @@ from std_msgs.msg import Float64
 class GenericPIDControllerNode(Node):
 
     def __init__(self):
-        super().__init__('generic_pid_controller_node', namespace="orca_auv")
+        super().__init__('generic_pid_controller_node')
 
         self._reference_input_subscriber = self.create_subscription(
             Float64,

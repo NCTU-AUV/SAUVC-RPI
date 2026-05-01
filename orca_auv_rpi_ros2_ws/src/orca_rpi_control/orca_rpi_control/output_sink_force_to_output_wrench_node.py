@@ -11,7 +11,7 @@ from .math_utility.quaternion import Quaternion
 class OutputSinkForceToOutputWrenchNode(Node):
 
     def __init__(self):
-        super().__init__('output_sink_force_to_output_wrench_node', namespace="orca_auv")
+        super().__init__('output_sink_force_to_output_wrench_node')
 
         self._output_sink_force_subscriber = self.create_subscription(
             Float64,
@@ -23,7 +23,7 @@ class OutputSinkForceToOutputWrenchNode(Node):
 
         self._orientation_subscriber = self.create_subscription(
             QuaternionMsg,
-            '/orca_auv/state/orientation',
+            'state/orientation',
             self._orientation_subscription_callback,
             10)
 
