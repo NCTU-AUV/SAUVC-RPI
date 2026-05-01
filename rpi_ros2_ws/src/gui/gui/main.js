@@ -46,6 +46,13 @@ websocket.onmessage = (event) => {
                 }
             }
         }
+        if (msg_json_object.data.topic_name == "thrusters/enabled") {
+            const enabled = msg_json_object.data.msg === true;
+            const element = document.getElementById("thrusters_enabled_status");
+            if (element) {
+                element.innerHTML = enabled ? "on" : "off";
+            }
+        }
         if (msg_json_object.data.topic_name == "actuators/electromagnet/enabled") {
             const enabled = msg_json_object.data.msg === true;
             const checkbox = document.getElementById("electromagnet_set_on_input");
