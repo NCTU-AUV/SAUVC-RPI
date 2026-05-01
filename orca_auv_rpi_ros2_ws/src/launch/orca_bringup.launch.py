@@ -22,12 +22,12 @@ def generate_launch_description():
         name='orca_rpi_wrench_sum',
         parameters=[{
             'input_topics': [
-                '/gui_wrench',
-                '/camera_ctr_wrench',
-                '/depth_ctr_wrench',
-                "/velocity_ctr_wrench",
+                '/orca_auv/control/wrench_sources/gui',
+                '/orca_auv/control/wrench_sources/bottom_camera',
+                '/orca_auv/control/wrench_sources/depth',
+                "/orca_auv/control/wrench_sources/velocity",
             ],
-            'output_topic': '/orca_auv/set_output_wrench_at_center_N_Nm',
+            'output_topic': '/orca_auv/control/wrench_command',
         }]
     )
 
@@ -41,7 +41,7 @@ def generate_launch_description():
         package='orca_rpi_gui',
         executable='gui_node',
         remappings=[
-            ('/orca_auv/set_output_wrench_at_center_N_Nm', '/gui_wrench')
+            ('/orca_auv/control/wrench_command', '/orca_auv/control/wrench_sources/gui')
         ]
     )
     velocity_node = Node(
@@ -52,7 +52,7 @@ def generate_launch_description():
             'measured_topic': '/orca_auv/bottom_camera/velocity_mps',
             'measured_index': 1,
             'target_topic': '/orca_auv/target_speed_mps',
-            'output_topic': '/velocity_ctr_wrench',
+            'output_topic': '/orca_auv/control/wrench_sources/velocity',
 
             'kp': 8.0,
             'ki': 0.0,

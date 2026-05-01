@@ -65,7 +65,7 @@ def generate_launch_description():
         parameters=[{
             'current_topic': '/orca_auv/bottom_camera/total_transform_world',
             'target_topic': '/orca_auv/target_point_px',
-            'output_topic': '/camera_ctr_wrench',
+            'output_topic': '/orca_auv/control/wrench_sources/bottom_camera',
             'yaw_index': 2,
             'x_reference_topic': '/orca_auv/bottom_camera/x_reference_input',
             'y_reference_topic': '/orca_auv/bottom_camera/y_reference_input',

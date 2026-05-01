@@ -92,7 +92,7 @@ class GUINode(Node):
             qos_profile=10
         )
 
-        self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'set_output_wrench_at_center_N_Nm', 10)
+        self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'control/wrench_command', 10)
         self._target_depth_publisher = self.create_publisher(Float64, 'target_depth_m', 10)
         self._process_commands = {
             "bottom_camera_pid_fbc_launch": ["ros2", "launch", "orca_rpi_control", "bottom_camera_pid_fbc_launch.py"],
@@ -170,7 +170,7 @@ class GUINode(Node):
                     self._set_pwm_output_signal_value_publisher.publish(pwm_array_msg)
                     self._pwm_output_signal_value_us = pwm_values
 
-            if topic_name == "set_output_wrench_at_center_N_Nm":
+            if topic_name == "control/wrench_command":
                 try:
                     wrench_msg = msg_data["msg"]
                     msg = Wrench()

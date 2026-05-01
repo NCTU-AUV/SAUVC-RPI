@@ -19,7 +19,7 @@ class OutputSinkForceToOutputWrenchNode(Node):
             self._output_sink_force_subscription_callback,
             10)
 
-        self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'set_output_wrench_at_center_N_Nm', 10)
+        self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'control/wrench_command', 10)
 
         self._orientation_subscriber = self.create_subscription(
             QuaternionMsg,

@@ -23,7 +23,7 @@ class VelocityPIDControllerNode(Node):
         (If you don't publish target_topic, it will use parameter target_speed_mps.)
 
     Publishes:
-      - output_topic (Wrench): default "/velocity_ctr_wrench"
+      - output_topic (Wrench): default "/orca_auv/control/wrench_sources/velocity"
         Only force.y is used by default (forward).
     """
 
@@ -33,7 +33,7 @@ class VelocityPIDControllerNode(Node):
         # ---- Topics ----
         self.declare_parameter("measured_topic", "/orca_auv/bottom_camera/velocity_mps")
         self.declare_parameter("target_topic", "/orca_auv/target_speed_mps")  # optional
-        self.declare_parameter("output_topic", "/velocity_ctr_wrench")
+        self.declare_parameter("output_topic", "/orca_auv/control/wrench_sources/velocity")
 
         # ---- Measured velocity format ----
         self.declare_parameter("measured_index", 1)  # default: vy (forward if your convention is force.y forward)

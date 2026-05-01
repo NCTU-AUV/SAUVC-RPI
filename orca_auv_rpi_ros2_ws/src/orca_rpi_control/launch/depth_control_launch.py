@@ -26,7 +26,7 @@ def generate_launch_description():
             namespace='orca_auv',
             executable='output_sink_force_to_output_wrench_node',
             remappings=[
-                ('/orca_auv/set_output_wrench_at_center_N_Nm', '/depth_ctr_wrench'),
+                ('/orca_auv/control/wrench_command', '/orca_auv/control/wrench_sources/depth'),
             ],
         ),
         Node(

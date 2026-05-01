@@ -87,7 +87,7 @@ function buildWrenchPayload() {
     return JSON.stringify({
         type: "topic",
         data: {
-            topic_name: "set_output_wrench_at_center_N_Nm",
+            topic_name: "control/wrench_command",
             msg: current_wrench,
         },
     });

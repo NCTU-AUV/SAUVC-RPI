@@ -15,7 +15,7 @@ class WrenchToIndividualThrusterOutputForcesNode(Node):
         self.__set_output_force_subscribers = \
             self.create_subscription(
                 msg_type=Wrench,
-                topic="set_output_wrench_at_center_N_Nm",
+                topic="control/wrench_command",
                 callback=self.__set_output_wrench_at_center_subscribers_callback,
                 qos_profile=10
             )

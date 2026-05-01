@@ -232,22 +232,22 @@
         </div>
 
         <div class="panel">
-            set_output_wrench_at_center_N_Nm:
+            control/wrench_command:
             <div class="row" style="align-items: flex-start;">
                 <div class="stack">
                     <div>force:</div>
-                    <div class="inline-field">x: <input type="number" id="set_output_wrench_at_center_N_Nm_force_x"></div>
-                    <div class="inline-field">y: <input type="number" id="set_output_wrench_at_center_N_Nm_force_y"></div>
-                    <div class="inline-field">z: <input type="number" id="set_output_wrench_at_center_N_Nm_force_z"></div>
+                    <div class="inline-field">x: <input type="number" id="control_wrench_command_force_x"></div>
+                    <div class="inline-field">y: <input type="number" id="control_wrench_command_force_y"></div>
+                    <div class="inline-field">z: <input type="number" id="control_wrench_command_force_z"></div>
                 </div>
                 <div class="stack">
                     <div>torque:</div>
-                    <div class="inline-field">x: <input type="number" id="set_output_wrench_at_center_N_Nm_torque_x"></div>
-                    <div class="inline-field">y: <input type="number" id="set_output_wrench_at_center_N_Nm_torque_y"></div>
-                    <div class="inline-field">z: <input type="number" id="set_output_wrench_at_center_N_Nm_torque_z"></div>
+                    <div class="inline-field">x: <input type="number" id="control_wrench_command_torque_x"></div>
+                    <div class="inline-field">y: <input type="number" id="control_wrench_command_torque_y"></div>
+                    <div class="inline-field">z: <input type="number" id="control_wrench_command_torque_z"></div>
                 </div>
             </div>
-            <button onclick="set_output_wrench_at_center_N_Nm_button_onclick()">publish topic</button>
+            <button onclick="set_control_wrench_command_button_onclick()">publish topic</button>
         </div>
 
         <div class="panel">
