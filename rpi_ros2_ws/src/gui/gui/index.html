@@ -219,13 +219,12 @@
         <div>sensors/depth_m: <i id="pressure_sensor_depth_m">none</i></div>
     </div>
 
-    <div class="row" style="margin-bottom: 16px;">
-        <button onclick="flash_stm32_button_onclick()">flash_stm32</button>
-        <div>flash_stm32_status: <i id="flash_stm32_status">idle</i></div>
-    </div>
-
     <div class="layout">
         <div class="panel">
+            <div class="row">
+                <button onclick="flash_stm32_button_onclick()">flash_stm32</button>
+                <div>flash_stm32_status: <i id="flash_stm32_status">idle</i></div>
+            </div>
             <div class="row">
                 <div>diagnostics/stm32/log:</div>
                 <button onclick="clear_stm32_log_button_onclick()">clear</button>
