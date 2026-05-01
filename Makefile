@@ -32,7 +32,9 @@ endif
 XAUTHORITY ?= /tmp/.Xauthority
 XAUTH_FLAGS := $(if $(and $(XAUTH_FILE),$(wildcard $(XAUTH_FILE))),-v $(XAUTH_FILE):/tmp/.Xauthority:ro -e XAUTHORITY=/tmp/.Xauthority,)
 
-.PHONY: compose_up compose_down compose_build compose_shell compose_init compose_launch compose_launch_detached compose_clean clean update_image
+.PHONY: all compose_up compose_down compose_build compose_shell init launch launch_detached compose_init compose_launch compose_launch_detached compose_clean clean update_image
+
+all: init launch
 
 update_image:
 	docker buildx build --pull --platform=linux/arm64,linux/amd64 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
@@ -61,7 +63,7 @@ compose_shell:
 		fi; \
 		exec bash"
 
-compose_init: compose_up
+init: compose_up
 	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
 		source /opt/ros/humble/setup.bash && \
 		cd $(WORKSPACE) && \
@@ -69,7 +71,7 @@ compose_init: compose_up
 		colcon build --symlink-install && \
 		echo \"source $(WORKSPACE)/install/setup.bash\" >> /etc/bash.bashrc"
 
-compose_launch: compose_up
+launch: compose_up
 	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
 		cd $(WORKSPACE) && \
 		source /opt/ros/humble/setup.bash && \
@@ -77,7 +79,7 @@ compose_launch: compose_up
 		source install/setup.bash && \
 		ros2 launch src/launch/orca_bringup.launch.py"
 
-compose_launch_detached: compose_up
+launch_detached: compose_up
 	@echo "Launching ROS stack in detached mode"
 	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec -d orca /bin/bash -lc "\
 		cd $(WORKSPACE) && \
@@ -85,6 +87,12 @@ compose_launch_detached: compose_up
 		source /root/uros_ws/install/local_setup.bash && \
 		source install/setup.bash && \
 		ros2 launch src/launch/orca_bringup.launch.py"
+
+compose_init: init
+
+compose_launch: launch
+
+compose_launch_detached: launch_detached
 
 compose_clean:
 	$(COMPOSE) down -v
