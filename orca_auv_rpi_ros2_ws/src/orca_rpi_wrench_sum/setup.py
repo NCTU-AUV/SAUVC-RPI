@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = 'orca_rpi_wrench_mux'
+package_name = 'orca_rpi_wrench_sum'
 
 setup(
     name=package_name,
@@ -28,7 +28,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'orca_rpi_wrench_mux_node = orca_rpi_wrench_mux.wrench_sum_node:main',
+            'orca_rpi_wrench_sum_node = orca_rpi_wrench_sum.wrench_sum_node:main',
         ],
     },
 )

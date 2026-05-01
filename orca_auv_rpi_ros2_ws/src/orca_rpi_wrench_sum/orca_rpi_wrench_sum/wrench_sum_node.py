@@ -5,7 +5,7 @@ import numpy as np
 
 class WrenchSum(Node):
     def __init__(self):
-        super().__init__('orca_rpi_wrench_mux')
+        super().__init__('orca_rpi_wrench_sum')
 
         # --- 1. Declare parameters ---
         # Default input topic list (modify in launch file)
