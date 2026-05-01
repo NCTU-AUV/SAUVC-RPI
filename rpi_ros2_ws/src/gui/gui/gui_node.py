@@ -75,6 +75,12 @@ class GUINode(Node):
             callback=self._pwm_output_signal_value_subscription_callback,
             qos_profile=10
         )
+        self._thrusters_enabled_subscription = self.create_subscription(
+            msg_type=Bool,
+            topic="thrusters/enabled",
+            callback=self._thrusters_enabled_callback,
+            qos_profile=10
+        )
         self._electromagnet_set_on_subscription = self.create_subscription(
             msg_type=Bool,
             topic="actuators/electromagnet/enabled",
@@ -138,6 +144,9 @@ class GUINode(Node):
             values += [self._initial_pwm_output_signal_value_us] * (self._thruster_count - len(values))
         self._pwm_output_signal_value_us = values[:self._thruster_count]
         self.aiohttp_server.send_topic("thrusters/pwm_us", list(self._pwm_output_signal_value_us))
+
+    def _thrusters_enabled_callback(self, msg: Bool):
+        self.aiohttp_server.send_topic("thrusters/enabled", msg.data)
 
     def _electromagnet_set_on_callback(self, msg: Bool):
         self.aiohttp_server.send_topic("actuators/electromagnet/enabled", msg.data)
