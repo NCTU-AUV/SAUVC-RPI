@@ -75,7 +75,7 @@ compose_launch: compose_up
 		source /opt/ros/humble/setup.bash && \
 		source /root/uros_ws/install/local_setup.bash && \
 		source install/setup.bash && \
-		ros2 launch src/launch/test_launch.py"
+		ros2 launch src/launch/orca_bringup.launch.py"
 
 compose_launch_detached: compose_up
 	@echo "Launching ROS stack in detached mode"
@@ -84,7 +84,7 @@ compose_launch_detached: compose_up
 		source /opt/ros/humble/setup.bash && \
 		source /root/uros_ws/install/local_setup.bash && \
 		source install/setup.bash && \
-		ros2 launch src/launch/test_launch.py"
+		ros2 launch src/launch/orca_bringup.launch.py"
 
 compose_clean:
 	$(COMPOSE) down -v

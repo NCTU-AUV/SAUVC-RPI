@@ -12,7 +12,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(PathJoinSubstitution([
             FindPackageShare('orca_rpi_thrusters'),
             'launch',
-            'start_all_nodes_launch.py'
+            'thrusters.launch.py'
         ])),
     )
 
