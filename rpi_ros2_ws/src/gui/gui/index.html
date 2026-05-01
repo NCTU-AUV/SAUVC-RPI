@@ -220,7 +220,6 @@
     </div>
 
     <div class="row" style="margin-bottom: 16px;">
-        <button onclick="initialize_all_thrusters_button_onclick()">initialize_all_thrusters</button>
         <button onclick="flash_stm32_button_onclick()">flash_stm32</button>
         <div>flash_stm32_status: <i id="flash_stm32_status">idle</i></div>
     </div>
@@ -274,7 +273,10 @@
 
         <div class="panel thruster-pwm-panel">
             <div>thrusters/pwm_us / received_pwm_output_signal_value_us:</div>
-            <div>thrusters/enabled: <i id="thrusters_enabled_status">none</i></div>
+            <div class="row">
+                <div>thrusters/enabled: <i id="thrusters_enabled_status">none</i></div>
+                <button onclick="initialize_all_thrusters_button_onclick()">initialize_all_thrusters</button>
+            </div>
             <div class="thruster-pwm-grid">
                 <div class="thruster-pwm-row thruster-pwm-4">
                     <div>thruster 4</div>
