@@ -11,7 +11,7 @@ from std_msgs.msg import Float64MultiArray
 class FrameTransformNode(Node):
 
     def __init__(self):
-        super().__init__('bottom_camera_frame_transform_node')
+        super().__init__('frame_transform_node')
 
         self.declare_parameter('image_topic', 'camera/bottom/image_raw')
         self.declare_parameter('resize_width_px', 320)

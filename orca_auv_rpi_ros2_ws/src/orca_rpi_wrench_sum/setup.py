@@ -28,7 +28,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'orca_rpi_wrench_sum_node = orca_rpi_wrench_sum.wrench_sum_node:main',
+            'wrench_sum_node = orca_rpi_wrench_sum.wrench_sum_node:main',
         ],
     },
 )

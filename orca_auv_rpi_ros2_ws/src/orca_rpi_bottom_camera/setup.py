@@ -24,8 +24,8 @@ setup(
         'console_scripts': [
             'bottom_camera_node = orca_rpi_bottom_camera.bottom_camera_node:main',
             'lk_total_transform_node = orca_rpi_bottom_camera.lk_total_transform_node:main',
-            # 'frame_transform_node = orca_rpi_bottom_camera.frame_transform_node:main',
-            # 'total_transform_node = orca_rpi_bottom_camera.total_transform_node:main',
+            'frame_transform_node = orca_rpi_bottom_camera.frame_transform_node:main',
+            'total_transform_node = orca_rpi_bottom_camera.total_transform_node:main',
             'pixel_to_meter_node = orca_rpi_bottom_camera.pixel_to_meter_node:main',
             'delta_to_velocity_node = orca_rpi_bottom_camera.delta_to_velocity_node:main',
         ],

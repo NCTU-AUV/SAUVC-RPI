@@ -29,7 +29,7 @@ from std_msgs.msg import Float64MultiArray
 
 class DeltaToVelocityNode(Node):
     def __init__(self):
-        super().__init__('bottom_camera_delta_to_velocity_node')
+        super().__init__('delta_to_velocity_node')
 
         # ---- Parameters (topics) ----
         self.declare_parameter('in_delta_topic', 'camera/bottom/delta_transform_m')

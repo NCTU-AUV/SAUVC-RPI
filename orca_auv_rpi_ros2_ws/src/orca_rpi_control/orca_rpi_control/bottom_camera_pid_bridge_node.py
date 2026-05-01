@@ -20,7 +20,7 @@ class BottomCameraPIDBridgeNode(Node):
     """
 
     def __init__(self):
-        super().__init__("bottom_camera_pid_bridge")
+        super().__init__("bottom_camera_pid_bridge_node")
 
         # Input/output topics
         self.declare_parameter("current_topic", "camera/bottom/pose_px")

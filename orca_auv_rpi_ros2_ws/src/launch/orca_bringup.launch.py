@@ -21,11 +21,11 @@ def generate_launch_description():
         }.items(),
     )
 
-    orca_rpi_wrench_sum_node = Node(
+    wrench_sum_node = Node(
         package='orca_rpi_wrench_sum',
-        executable='orca_rpi_wrench_sum_node',
+        executable='wrench_sum_node',
         namespace=namespace,
-        name='orca_rpi_wrench_sum',
+        name='wrench_sum_node',
         parameters=[{
             'input_topics': [
                 'control/wrench_sources/gui',
@@ -158,7 +158,7 @@ def generate_launch_description():
         bottom_camera_pid_fbc_launch,
         depth_control_launch,
         thruster_pkg_launch,
-        orca_rpi_wrench_sum_node,
+        wrench_sum_node,
         # velocity_node,
         # mavros,
         gui_node,
