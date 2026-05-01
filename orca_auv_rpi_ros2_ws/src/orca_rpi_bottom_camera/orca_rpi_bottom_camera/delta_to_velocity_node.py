@@ -3,11 +3,11 @@
 delta_to_velocity_node.py
 
 Subscribe:
-- /orca_auv/camera/bottom/delta_transform_m (std_msgs/Float64MultiArray)
+- camera/bottom/delta_transform_m (std_msgs/Float64MultiArray)
   Format: [dx_m, dy_m, dyaw_rad, scale]
 
 Publish:
-- /orca_auv/camera/bottom/velocity_mps (std_msgs/Float64MultiArray)
+- camera/bottom/velocity_mps (std_msgs/Float64MultiArray)
   Format: [vx_mps, vy_mps, wz_radps, scale]
   where:
     vx_mps = dx_m / dt
@@ -29,7 +29,7 @@ from std_msgs.msg import Float64MultiArray
 
 class DeltaToVelocityNode(Node):
     def __init__(self):
-        super().__init__('bottom_camera_delta_to_velocity_node', namespace='orca_auv')
+        super().__init__('bottom_camera_delta_to_velocity_node')
 
         # ---- Parameters (topics) ----
         self.declare_parameter('in_delta_topic', 'camera/bottom/delta_transform_m')
@@ -72,7 +72,7 @@ class DeltaToVelocityNode(Node):
         self._pub_vel = self.create_publisher(Float64MultiArray, self._out_vel_topic, 10)
         self.create_subscription(Float64MultiArray, self._in_delta_topic, self._on_delta, 10)
 
-        self.get_logger().info("DeltaToVelocityNode started (namespace='orca_auv').")
+        self.get_logger().info("DeltaToVelocityNode started.")
         self.get_logger().info(f"  Subscribe delta: {self._in_delta_topic}  ([dx,dy,dyaw,scale])")
         self.get_logger().info(f"  Publish  vel:   {self._out_vel_topic}  ([vx,vy,wz,scale])")
 

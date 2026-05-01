@@ -9,7 +9,7 @@ from geometry_msgs.msg import Quaternion
 class IMUToOrientationNode(Node):
 
     def __init__(self):
-        super().__init__('imu_to_orientation_node', namespace="orca_auv")
+        super().__init__('imu_to_orientation_node')
 
         self._imu_subscriber = self.create_subscription(
             Imu,

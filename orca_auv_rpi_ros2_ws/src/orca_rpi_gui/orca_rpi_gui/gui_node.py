@@ -37,7 +37,7 @@ class _AsyncParameterClient:
 class GUINode(Node):
 
     def __init__(self):
-        super().__init__('gui_node', namespace="orca_auv")
+        super().__init__('gui_node')
 
         self._thruster_count = 8
         self._initial_pwm_output_signal_value_us = 1500
@@ -45,6 +45,7 @@ class GUINode(Node):
 
         self.aiohttp_server = AIOHTTPServer(self._msg_callback)
         self.aiohttp_server.start_threading()
+        self._robot_namespace = self.get_namespace().strip('/')
 
         self._is_kill_switch_closed_subscribers = self.create_subscription(
                 msg_type=Bool,
@@ -65,7 +66,7 @@ class GUINode(Node):
                 qos_profile=10
             )
 
-        self._initialize_all_thrusters_client = self.create_client(Trigger, '/orca_auv/thrusters/initialize_all')
+        self._initialize_all_thrusters_client = self.create_client(Trigger, 'thrusters/initialize_all')
         self._flash_stm32_client = self.create_client(Trigger, '/flash_stm32')
 
         self._pwm_output_signal_value_subscription = self.create_subscription(
@@ -95,19 +96,28 @@ class GUINode(Node):
         self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'control/wrench_command', 10)
         self._target_depth_publisher = self.create_publisher(Float64, 'control/targets/depth_m', 10)
         self._process_commands = {
-            "bottom_camera_pid_fbc_launch": ["ros2", "launch", "orca_rpi_control", "bottom_camera_pid_fbc_launch.py"],
-            "depth_control_launch": ["ros2", "launch", "orca_rpi_control", "depth_control_launch.py"],
-            "waypoint_target_publisher": ["ros2", "run", "orca_rpi_control", "waypoint_target_publisher"],
+            "bottom_camera_pid_fbc_launch": [
+                "ros2", "launch", "orca_rpi_control", "bottom_camera_pid_fbc_launch.py",
+                f"namespace:={self._robot_namespace}",
+            ],
+            "depth_control_launch": [
+                "ros2", "launch", "orca_rpi_control", "depth_control_launch.py",
+                f"namespace:={self._robot_namespace}",
+            ],
+            "waypoint_target_publisher": [
+                "ros2", "run", "orca_rpi_control", "waypoint_target_publisher",
+                "--ros-args", "-r", f"__ns:=/{self._robot_namespace}",
+            ],
         }
         self._processes = {}
 
         self._controller_groups = {
             "bottom_camera_pid_fbc": [
-                "/orca_auv/x_coordinate_pid_controller_node",
-                "/orca_auv/y_coordinate_pid_controller_node",
+                "x_coordinate_pid_controller_node",
+                "y_coordinate_pid_controller_node",
             ],
             "depth_control": [
-                "/orca_auv/depth_pid_controller_node",
+                "depth_pid_controller_node",
             ],
         }
         self._param_clients = {}

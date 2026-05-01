@@ -9,7 +9,7 @@ Convert the *cumulative* bottom-camera pose in pixels into:
   2) *cumulative (integrated)* motion in meters.
 
 Why delta?
-- /orca_auv/camera/bottom/pose_px is a cumulative pose [tx_px, ty_px, yaw, scale].
+- camera/bottom/pose_px is a cumulative pose [tx_px, ty_px, yaw, scale].
 - If altitude (h) changes over time, converting the cumulative tx_px using the *current* h would be wrong.
 - Therefore we compute per-update deltas:
     dtx_px = tx_now - tx_prev
@@ -46,7 +46,7 @@ Publish:
 
 Notes
 -----
-- This node uses namespace='orca_auv', so relative topic names are prefixed with /orca_auv/.
+- Relative topic names are prefixed by the namespace selected in launch.
 - dyaw is computed as yaw_now - yaw_prev. If wrap_dyaw is enabled, dyaw is wrapped to [-pi, pi].
 - The meter-domain cumulative pose integrates dx_m/dy_m; yaw is taken from the incoming cumulative yaw.
 """
@@ -61,7 +61,7 @@ from std_msgs.msg import Float32, Float64MultiArray
 
 class PixelToMeterDeltaNode(Node):
     def __init__(self):
-        super().__init__('bottom_camera_pixel_to_meter_delta_node', namespace='orca_auv')
+        super().__init__('bottom_camera_pixel_to_meter_delta_node')
 
         # ---- Parameters (topics) ----
         self.declare_parameter('in_total_topic', 'camera/bottom/pose_px')
@@ -118,7 +118,7 @@ class PixelToMeterDeltaNode(Node):
         self.create_subscription(Float32, self._depth_topic, self._on_depth, 10)
         self.create_subscription(Float64MultiArray, self._in_total_topic, self._on_total_px, 10)
 
-        self.get_logger().info("PixelToMeterDeltaNode started (namespace='orca_auv').")
+        self.get_logger().info("PixelToMeterDeltaNode started.")
         self.get_logger().info(f"  Subscribe total(px): {self._in_total_topic}")
         self.get_logger().info(f"  Subscribe depth(m):  {self._depth_topic} (positive downward)")
         self.get_logger().info(f"  Publish delta(m):    {self._out_delta_topic}")

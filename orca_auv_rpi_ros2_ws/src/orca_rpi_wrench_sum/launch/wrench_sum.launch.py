@@ -1,22 +1,32 @@
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 def generate_launch_description():
+    namespace = LaunchConfiguration('namespace')
+
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'namespace',
+            default_value='orca_auv',
+            description='Robot namespace',
+        ),
         Node(
             package='orca_rpi_wrench_sum',
             executable='orca_rpi_wrench_sum_node',
+            namespace=namespace,
             name='orca_rpi_wrench_sum',
             output='screen',
             parameters=[{
                 # 在這裡列出你所有需要整合的 topic
                 'input_topics': [
-                    '/orca_auv/control/wrench_sources/gui',
-                    '/orca_auv/control/wrench_sources/bottom_camera',
-                    '/orca_auv/control/wrench_sources/depth',
-                    '/orca_auv/control/wrench_sources/velocity',
+                    'control/wrench_sources/gui',
+                    'control/wrench_sources/bottom_camera',
+                    'control/wrench_sources/depth',
+                    'control/wrench_sources/velocity',
                 ],
-                'output_topic': '/orca_auv/control/wrench_command',
+                'output_topic': 'control/wrench_command',
                 'publish_rate': 30.0
             }]
         )

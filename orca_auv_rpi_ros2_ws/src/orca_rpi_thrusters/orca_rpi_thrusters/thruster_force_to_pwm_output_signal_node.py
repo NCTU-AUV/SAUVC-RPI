@@ -16,7 +16,7 @@ class ThrusterForceToPWMOutputSignalNode(Node):
     DEFAULT_MAX_OUTPUT_FORCE_N = 5.25 * 9.80665  # match thruster_lookup_table_16V.csv max
 
     def __init__(self):
-        super().__init__("thruster_force_to_pwm_output_signal_node", namespace="orca_auv")
+        super().__init__("thruster_force_to_pwm_output_signal_node")
 
         self._thruster_count = 8
         self._initial_pwm_output_signal_value_us = int(
