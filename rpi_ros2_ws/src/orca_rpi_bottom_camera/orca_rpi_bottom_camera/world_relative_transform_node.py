@@ -5,7 +5,7 @@ from std_msgs.msg import Float64MultiArray
 
 class WorldRelativeTransformNode(Node):
     def __init__(self):
-        super().__init__('bottom_camera_world_relative_transform_node')
+        super().__init__('world_relative_transform_node')
 
         self.declare_parameter('input_topic', 'camera/bottom/total_transform_px')
         self.declare_parameter('output_topic', 'camera/bottom/pose_px')

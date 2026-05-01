@@ -1,7 +1,7 @@
 # Define variables
 IMAGE_NAME := orca-auv-rpi-ros2-image
 CONTAINER_NAME := orca-auv-rpi-ros2-container
-WORKSPACE := orca_auv_rpi_ros2_ws
+WORKSPACE := rpi_ros2_ws
 IMAGE_OWNER_NAME := dianyueguo
 PWD := $(shell pwd)
 # Prefer Docker Compose v2 (docker compose) but fall back to v1 (docker-compose); allow override via env/CLI

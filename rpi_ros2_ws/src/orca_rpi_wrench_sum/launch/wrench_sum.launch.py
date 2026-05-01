@@ -14,9 +14,9 @@ def generate_launch_description():
         ),
         Node(
             package='orca_rpi_wrench_sum',
-            executable='orca_rpi_wrench_sum_node',
+            executable='wrench_sum_node',
             namespace=namespace,
-            name='orca_rpi_wrench_sum',
+            name='wrench_sum_node',
             output='screen',
             parameters=[{
                 # 在這裡列出你所有需要整合的 topic

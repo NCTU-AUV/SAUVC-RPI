@@ -61,7 +61,7 @@ from std_msgs.msg import Float32, Float64MultiArray
 
 class PixelToMeterDeltaNode(Node):
     def __init__(self):
-        super().__init__('bottom_camera_pixel_to_meter_delta_node')
+        super().__init__('pixel_to_meter_node')
 
         # ---- Parameters (topics) ----
         self.declare_parameter('in_total_topic', 'camera/bottom/pose_px')

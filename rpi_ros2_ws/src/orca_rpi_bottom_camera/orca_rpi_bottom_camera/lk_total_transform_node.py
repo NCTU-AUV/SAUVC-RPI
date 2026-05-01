@@ -44,7 +44,7 @@ class LkTotalTransformNode(Node):
     """
 
     def __init__(self):
-        super().__init__('bottom_camera_lk_total_transform_node')
+        super().__init__('lk_total_transform_node')
 
         # ---- Params (topics) ----
         self.declare_parameter('image_topic', 'camera/bottom/image_raw')

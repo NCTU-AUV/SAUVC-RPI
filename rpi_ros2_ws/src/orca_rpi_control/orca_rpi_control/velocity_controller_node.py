@@ -28,7 +28,7 @@ class VelocityPIDControllerNode(Node):
     """
 
     def __init__(self):
-        super().__init__("velocity_pid_controller_node")
+        super().__init__("velocity_controller_node")
 
         # ---- Topics ----
         self.declare_parameter("measured_topic", "camera/bottom/velocity_mps")
