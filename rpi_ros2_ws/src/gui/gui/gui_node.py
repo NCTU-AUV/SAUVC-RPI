@@ -97,7 +97,7 @@ class GUINode(Node):
         self._target_depth_publisher = self.create_publisher(Float64, 'control/targets/depth_m', 10)
         self._process_commands = {
             "bottom_camera_pid_fbc_launch": [
-                "ros2", "launch", "control", "bottom_camera_pid_fbc_launch.py",
+                "ros2", "launch", "xy_translation_control", "bottom_camera_pid_fbc_launch.py",
                 f"namespace:={self._robot_namespace}",
             ],
             "depth_control_launch": [
