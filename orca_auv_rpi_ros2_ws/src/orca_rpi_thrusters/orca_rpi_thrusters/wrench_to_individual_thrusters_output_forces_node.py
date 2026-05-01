@@ -23,7 +23,7 @@ class WrenchToIndividualThrusterOutputForcesNode(Node):
         self.__set_output_force_publishers = [
             self.create_publisher(
                 msg_type=Float64,
-                topic=f"thruster_{thruster_number}/set_output_force_N",
+                topic=f"thrusters/{thruster_number}/force_N",
                 qos_profile=10
             )
             for thruster_number in range(8)

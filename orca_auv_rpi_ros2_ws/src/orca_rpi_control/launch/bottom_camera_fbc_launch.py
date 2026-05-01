@@ -24,8 +24,8 @@ def generate_launch_description():
         package="orca_rpi_control",
         executable="on_off_controller",
         parameters=[
-            {"current_topic": "/orca_auv/bottom_camera/total_transform_world"},
-            {"target_topic": "/orca_auv/target_point_px"},
+            {"current_topic": "/orca_auv/camera/bottom/pose_px"},
+            {"target_topic": "/orca_auv/control/targets/bottom_camera_point_px"},
             {"output_topic": "/orca_auv/control/wrench_sources/bottom_camera"},
             {"tol_x": 5.0},
             {"tol_y": 5.0},

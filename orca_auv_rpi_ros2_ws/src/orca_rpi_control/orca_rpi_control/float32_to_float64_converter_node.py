@@ -12,11 +12,11 @@ class Float32ToFloat64ConverterNode(Node):
 
         self._float32_topic_subscriber = self.create_subscription(
             Float32,
-            'float32_topic',
+            'converters/float32_input',
             self._float32_topic_subscription_callback,
             10)
 
-        self._float64_topic_publisher = self.create_publisher(Float64, 'float64_topic', 10)
+        self._float64_topic_publisher = self.create_publisher(Float64, 'converters/float64_output', 10)
 
     def _float32_topic_subscription_callback(self, msg):
         output_msg = Float64()

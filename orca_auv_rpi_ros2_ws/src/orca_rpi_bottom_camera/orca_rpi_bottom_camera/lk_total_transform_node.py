@@ -47,21 +47,21 @@ class LkTotalTransformNode(Node):
         super().__init__('bottom_camera_lk_total_transform_node', namespace='orca_auv')
 
         # ---- Params (topics) ----
-        self.declare_parameter('image_topic', 'bottom_camera/image_raw')
-        self.declare_parameter('output_topic', 'bottom_camera/total_transform_world')
+        self.declare_parameter('image_topic', 'camera/bottom/image_raw')
+        self.declare_parameter('output_topic', 'camera/bottom/pose_px')
 
         # raw output (debug / diagnostics)
         self.declare_parameter('publish_raw_output', True)
-        self.declare_parameter('output_topic_raw', 'bottom_camera/total_transform_world_raw')
+        self.declare_parameter('output_topic_raw', 'camera/bottom/pose_raw_px')
 
         # debug image overlay
         self.declare_parameter('publish_debug_image', False)
-        self.declare_parameter('debug_image_topic', 'bottom_camera/debug/lk_tracks')
+        self.declare_parameter('debug_image_topic', 'camera/bottom/debug/lk_tracks')
 
         # ---- Params (rotation center) ----
         # 'image_center' or 'principal_point'
         self.declare_parameter('rotation_center_mode', 'image_center')
-        self.declare_parameter('camera_info_topic', 'bottom_camera/camera_info')
+        self.declare_parameter('camera_info_topic', 'camera/bottom/camera_info')
 
         # ---- Params (image -> body mapping) ----
         self.declare_parameter('image_to_body_yaw_deg', 90.0)

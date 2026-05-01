@@ -10,9 +10,9 @@ def generate_launch_description():
             executable='generic_pid_controller_node',
             name='depth_pid_controller_node',
             remappings=[
-                ('/orca_auv/reference_input', '/orca_auv/target_depth_m'),
-                ('/orca_auv/output_feedback', '/orca_auv/pressure_sensor_depth_float64_m'),
-                ('/orca_auv/manipulated_variable', '/orca_auv/output_sink_force_N'),
+                ('/orca_auv/control/pid/reference', '/orca_auv/control/targets/depth_m'),
+                ('/orca_auv/control/pid/feedback', '/orca_auv/state/depth_m'),
+                ('/orca_auv/control/pid/output', '/orca_auv/control/pid/depth/sink_force_N'),
             ],
             parameters=[{
                 'proportional_gain': 30.0,
@@ -34,8 +34,8 @@ def generate_launch_description():
             namespace='orca_auv',
             executable='float32_to_float64_converter_node',
             remappings=[
-                ('/orca_auv/float32_topic', '/orca_auv/pressure_sensor_depth_m'),
-                ('/orca_auv/float64_topic', '/orca_auv/pressure_sensor_depth_float64_m'),
+                ('/orca_auv/converters/float32_input', '/orca_auv/sensors/depth_m'),
+                ('/orca_auv/converters/float64_output', '/orca_auv/state/depth_m'),
             ],
         ),
         Node(

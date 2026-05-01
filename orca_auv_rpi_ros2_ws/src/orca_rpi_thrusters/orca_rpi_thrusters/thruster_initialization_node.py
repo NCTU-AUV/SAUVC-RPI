@@ -21,25 +21,25 @@ class ThrusterInitializationNode(Node):
 
         self.__set_pwm_output_on_publisher = self.create_publisher(
             msg_type=Bool,
-            topic="thrusters/set_pwm_output_on",
+            topic="thrusters/enabled",
             qos_profile=10
         )
 
         self.__is_initializing_publisher = self.create_publisher(
             msg_type=Bool,
-            topic="thrusters/is_initializing",
+            topic="thrusters/initializing",
             qos_profile=10
         )
 
         self.__set_pwm_output_signal_value_publisher = self.create_publisher(
             msg_type=Int32MultiArray,
-            topic="thrusters/set_pwm_output_signal_value_us",
+            topic="thrusters/pwm_us",
             qos_profile=10
         )
 
         self.__pwm_output_signal_value_subscriber = self.create_subscription(
             msg_type=Int32MultiArray,
-            topic="thrusters/set_pwm_output_signal_value_us",
+            topic="thrusters/pwm_us",
             callback=self.__pwm_output_signal_value_subscription_callback,
             qos_profile=10
         )
@@ -47,7 +47,7 @@ class ThrusterInitializationNode(Node):
         self.__initialize_thruster_services = [
             self.create_service(
                 Trigger,
-                f"thruster_{thruster_number}/initialize_thruster",
+                f"thrusters/{thruster_number}/initialize",
                 lambda request, response, thruster_number=thruster_number: self.__initialize_thruster_service_callback_with_thruster_number(request, response, thruster_number)
             )
             for thruster_number in range(self._thruster_count)
@@ -55,7 +55,7 @@ class ThrusterInitializationNode(Node):
 
         self.__initialize_all_thrusters_service = self.create_service(
             Trigger,
-            "initialize_all_thrusters",
+            "thrusters/initialize_all",
             self.__initialize_all_thrusters_service_callback
         )
 
@@ -66,7 +66,7 @@ class ThrusterInitializationNode(Node):
         self._pwm_output_signal_value_us = received_values[:self._thruster_count]
 
     def __initialize_thruster_service_callback_with_thruster_number(self, request, response, thruster_number):
-        self.get_logger().info(f"Execute thruster_{thruster_number}/initialize_thruster service")
+        self.get_logger().info(f"Execute thrusters/{thruster_number}/initialize service")
 
         self.__publish_is_initializing(True)
         self.__publish_set_pwm_output_on(False)

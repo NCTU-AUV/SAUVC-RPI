@@ -15,14 +15,14 @@ class ThrusterPWMOutputSignalArrayNode(Node):
 
         self._publisher = self.create_publisher(
             msg_type=Int32MultiArray,
-            topic="thrusters/set_pwm_output_signal_value_us",
+            topic="thrusters/pwm_us",
             qos_profile=10
         )
 
         self._subscriptions = [
             self.create_subscription(
                 msg_type=Int32,
-                topic=f"thruster_{thruster_number}/set_pwm_output_signal_value_us",
+                topic=f"thrusters/{thruster_number}/pwm_us",
                 callback=lambda msg, thruster_number=thruster_number: self._set_pwm_output_signal_value_callback(msg, thruster_number),
                 qos_profile=10
             )

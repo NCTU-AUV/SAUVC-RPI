@@ -13,11 +13,11 @@ class IMUToOrientationNode(Node):
 
         self._imu_subscriber = self.create_subscription(
             Imu,
-            'imu',
+            'sensors/imu',
             self._imu_subscription_callback,
             10)
 
-        self._orientation_publisher = self.create_publisher(Quaternion, 'orientation', 10)
+        self._orientation_publisher = self.create_publisher(Quaternion, 'state/orientation', 10)
 
     def _imu_subscription_callback(self, msg):
         output_msg = Quaternion()

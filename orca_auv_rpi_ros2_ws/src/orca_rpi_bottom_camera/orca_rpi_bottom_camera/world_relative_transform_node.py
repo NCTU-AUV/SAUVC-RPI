@@ -7,8 +7,8 @@ class WorldRelativeTransformNode(Node):
     def __init__(self):
         super().__init__('bottom_camera_world_relative_transform_node', namespace='orca_auv')
 
-        self.declare_parameter('input_topic', 'bottom_camera/total_transform_px')
-        self.declare_parameter('output_topic', 'bottom_camera/total_transform_world')
+        self.declare_parameter('input_topic', 'camera/bottom/total_transform_px')
+        self.declare_parameter('output_topic', 'camera/bottom/pose_px')
 
         input_topic = self.get_parameter('input_topic').value
         output_topic = self.get_parameter('output_topic').value

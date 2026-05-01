@@ -9,7 +9,7 @@ Convert the *cumulative* bottom-camera pose in pixels into:
   2) *cumulative (integrated)* motion in meters.
 
 Why delta?
-- /orca_auv/bottom_camera/total_transform_world is a cumulative pose [tx_px, ty_px, yaw, scale].
+- /orca_auv/camera/bottom/pose_px is a cumulative pose [tx_px, ty_px, yaw, scale].
 - If altitude (h) changes over time, converting the cumulative tx_px using the *current* h would be wrong.
 - Therefore we compute per-update deltas:
     dtx_px = tx_now - tx_prev
@@ -22,9 +22,9 @@ Why delta?
 Inputs
 ------
 Subscribe:
-- bottom_camera/total_transform_world   (std_msgs/Float64MultiArray)
+- camera/bottom/pose_px                (std_msgs/Float64MultiArray)
   Format: [tx_px, ty_px, yaw, scale]
-- pressure_sensor_depth_m              (std_msgs/Float32)
+- sensors/depth_m                      (std_msgs/Float32)
   Depth convention: positive downward, meters from water surface.
 
 Height to bottom (altitude)
@@ -38,9 +38,9 @@ Clamp:
 Outputs
 -------
 Publish:
-- bottom_camera/delta_transform_m      (std_msgs/Float64MultiArray)
+- camera/bottom/delta_transform_m      (std_msgs/Float64MultiArray)
   Format: [dx_m, dy_m, dyaw_rad, scale]
-- bottom_camera/total_transform_world_m (std_msgs/Float64MultiArray)
+- camera/bottom/pose_m                 (std_msgs/Float64MultiArray)
   Format: [x_m, y_m, yaw_rad, scale]
   where x_m/y_m are the integrated meter-domain displacement since startup (first received pose).
 
@@ -64,11 +64,11 @@ class PixelToMeterDeltaNode(Node):
         super().__init__('bottom_camera_pixel_to_meter_delta_node', namespace='orca_auv')
 
         # ---- Parameters (topics) ----
-        self.declare_parameter('in_total_topic', 'bottom_camera/total_transform_world')
-        self.declare_parameter('depth_topic', 'pressure_sensor_depth_m')
+        self.declare_parameter('in_total_topic', 'camera/bottom/pose_px')
+        self.declare_parameter('depth_topic', 'sensors/depth_m')
 
-        self.declare_parameter('out_delta_topic', 'bottom_camera/delta_transform_m')
-        self.declare_parameter('out_total_m_topic', 'bottom_camera/total_transform_world_m')
+        self.declare_parameter('out_delta_topic', 'camera/bottom/delta_transform_m')
+        self.declare_parameter('out_total_m_topic', 'camera/bottom/pose_m')
 
         # ---- Parameters (geometry) ----
         self.declare_parameter('water_depth_m', 2.2)

@@ -29,9 +29,9 @@ def generate_launch_description():
         executable='generic_pid_controller_node',
         name='x_coordinate_pid_controller_node',
         remappings=[
-            ('/orca_auv/reference_input', '/orca_auv/bottom_camera/x_reference_input'),
-            ('/orca_auv/output_feedback', '/orca_auv/bottom_camera/x_output_feedback'),
-            ('/orca_auv/manipulated_variable', '/orca_auv/bottom_camera/x_force_world_N'),
+            ('/orca_auv/control/pid/reference', '/orca_auv/control/pid/bottom_camera/x/reference_px'),
+            ('/orca_auv/control/pid/feedback', '/orca_auv/control/pid/bottom_camera/x/feedback_px'),
+            ('/orca_auv/control/pid/output', '/orca_auv/control/pid/bottom_camera/x/force_world_N'),
         ],
         parameters=[{
             'proportional_gain': 0.03,
@@ -47,9 +47,9 @@ def generate_launch_description():
         executable='generic_pid_controller_node',
         name='y_coordinate_pid_controller_node',
         remappings=[
-            ('/orca_auv/reference_input', '/orca_auv/bottom_camera/y_reference_input'),
-            ('/orca_auv/output_feedback', '/orca_auv/bottom_camera/y_output_feedback'),
-            ('/orca_auv/manipulated_variable', '/orca_auv/bottom_camera/y_force_world_N'),
+            ('/orca_auv/control/pid/reference', '/orca_auv/control/pid/bottom_camera/y/reference_px'),
+            ('/orca_auv/control/pid/feedback', '/orca_auv/control/pid/bottom_camera/y/feedback_px'),
+            ('/orca_auv/control/pid/output', '/orca_auv/control/pid/bottom_camera/y/force_world_N'),
         ],
         parameters=[{
             'proportional_gain': 0.03,
@@ -63,16 +63,16 @@ def generate_launch_description():
         package='orca_rpi_control',
         executable='bottom_camera_pid_bridge_node',
         parameters=[{
-            'current_topic': '/orca_auv/bottom_camera/total_transform_world',
-            'target_topic': '/orca_auv/target_point_px',
+            'current_topic': '/orca_auv/camera/bottom/pose_px',
+            'target_topic': '/orca_auv/control/targets/bottom_camera_point_px',
             'output_topic': '/orca_auv/control/wrench_sources/bottom_camera',
             'yaw_index': 2,
-            'x_reference_topic': '/orca_auv/bottom_camera/x_reference_input',
-            'y_reference_topic': '/orca_auv/bottom_camera/y_reference_input',
-            'x_feedback_topic': '/orca_auv/bottom_camera/x_output_feedback',
-            'y_feedback_topic': '/orca_auv/bottom_camera/y_output_feedback',
-            'x_manipulated_topic': '/orca_auv/bottom_camera/x_force_world_N',
-            'y_manipulated_topic': '/orca_auv/bottom_camera/y_force_world_N',
+            'x_reference_topic': '/orca_auv/control/pid/bottom_camera/x/reference_px',
+            'y_reference_topic': '/orca_auv/control/pid/bottom_camera/y/reference_px',
+            'x_feedback_topic': '/orca_auv/control/pid/bottom_camera/x/feedback_px',
+            'y_feedback_topic': '/orca_auv/control/pid/bottom_camera/y/feedback_px',
+            'x_manipulated_topic': '/orca_auv/control/pid/bottom_camera/x/force_world_N',
+            'y_manipulated_topic': '/orca_auv/control/pid/bottom_camera/y/force_world_N',
         }],
     )
 

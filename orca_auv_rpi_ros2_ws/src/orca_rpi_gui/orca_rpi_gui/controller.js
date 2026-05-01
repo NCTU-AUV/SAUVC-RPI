@@ -40,7 +40,7 @@ function initializeCameraFeed() {
         return;
     }
 
-    const bottomCameraTopic = "/orca_auv/bottom_camera/image_raw";
+    const bottomCameraTopic = "/orca_auv/camera/bottom/image_raw";
     const streamUrl = "http://" + window.location.hostname + ":8080/stream?topic="
         + bottomCameraTopic
         + "&type=ros_compressed";
@@ -282,7 +282,7 @@ websocket.onmessage = (event) => {
 
     const topicName = msgJsonObject.data && msgJsonObject.data.topic_name;
     const topicMsg = msgJsonObject.data && msgJsonObject.data.msg;
-    if (topicName !== "set_pwm_output_signal_value_us" || !Array.isArray(topicMsg)) {
+    if (topicName !== "thrusters/pwm_us" || !Array.isArray(topicMsg)) {
         return;
     }
 

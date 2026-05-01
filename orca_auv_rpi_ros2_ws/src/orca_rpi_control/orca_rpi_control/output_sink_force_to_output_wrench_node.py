@@ -15,7 +15,7 @@ class OutputSinkForceToOutputWrenchNode(Node):
 
         self._output_sink_force_subscriber = self.create_subscription(
             Float64,
-            'output_sink_force_N',
+            'control/pid/depth/sink_force_N',
             self._output_sink_force_subscription_callback,
             10)
 
@@ -23,7 +23,7 @@ class OutputSinkForceToOutputWrenchNode(Node):
 
         self._orientation_subscriber = self.create_subscription(
             QuaternionMsg,
-            '/orca_auv/orientation',
+            '/orca_auv/state/orientation',
             self._orientation_subscription_callback,
             10)
 

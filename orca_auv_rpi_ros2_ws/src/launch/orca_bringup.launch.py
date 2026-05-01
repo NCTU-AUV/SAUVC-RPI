@@ -49,9 +49,9 @@ def generate_launch_description():
         executable='velocity_controller_node',
         name='velocity_controller_node',
         parameters=[{
-            'measured_topic': '/orca_auv/bottom_camera/velocity_mps',
+            'measured_topic': '/orca_auv/camera/bottom/velocity_mps',
             'measured_index': 1,
-            'target_topic': '/orca_auv/target_speed_mps',
+            'target_topic': '/orca_auv/control/targets/speed_mps',
             'output_topic': '/orca_auv/control/wrench_sources/velocity',
 
             'kp': 8.0,

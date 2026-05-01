@@ -13,17 +13,17 @@ class GenericPIDControllerNode(Node):
 
         self._reference_input_subscriber = self.create_subscription(
             Float64,
-            'reference_input',
+            'control/pid/reference',
             self._reference_input_subscription_callback,
             10)
 
         self._output_feedback_subscriber = self.create_subscription(
             Float64,
-            'output_feedback',
+            'control/pid/feedback',
             self._output_feedback_subscription_callback,
             10)
 
-        self._manipulated_variable_publisher = self.create_publisher(Float64, 'manipulated_variable', 10)
+        self._manipulated_variable_publisher = self.create_publisher(Float64, 'control/pid/output', 10)
 
         self.declare_parameter('controller_loop_timer_period_s', 1 / 100)
         self._controller_loop_timer_period_s = self.get_parameter('controller_loop_timer_period_s').get_parameter_value().double_value

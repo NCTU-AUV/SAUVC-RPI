@@ -48,52 +48,52 @@ class GUINode(Node):
 
         self._is_kill_switch_closed_subscribers = self.create_subscription(
                 msg_type=Bool,
-                topic="is_kill_switch_closed",
+                topic="sensors/kill_switch_closed",
                 callback=self._is_kill_switch_closed_callback,
                 qos_profile=10
             )
         self._pressure_sensor_depth_subscriber = self.create_subscription(
                 msg_type=Float32,
-                topic="pressure_sensor_depth_m",
+                topic="sensors/depth_m",
                 callback=self._pressure_sensor_depth_callback,
                 qos_profile=10
             )
         self._stm32_log_subscriber = self.create_subscription(
                 msg_type=String,
-                topic="stm32_debug_log",
+                topic="/diagnostics/stm32/log",
                 callback=self._stm32_log_callback,
                 qos_profile=10
             )
 
-        self._initialize_all_thrusters_client = self.create_client(Trigger, '/orca_auv/initialize_all_thrusters')
+        self._initialize_all_thrusters_client = self.create_client(Trigger, '/orca_auv/thrusters/initialize_all')
         self._flash_stm32_client = self.create_client(Trigger, '/flash_stm32')
 
         self._pwm_output_signal_value_subscription = self.create_subscription(
             msg_type=Int32MultiArray,
-            topic="thrusters/set_pwm_output_signal_value_us",
+            topic="thrusters/pwm_us",
             callback=self._pwm_output_signal_value_subscription_callback,
             qos_profile=10
         )
         self._electromagnet_set_on_subscription = self.create_subscription(
             msg_type=Bool,
-            topic="electromagnet/set_on",
+            topic="actuators/electromagnet/enabled",
             callback=self._electromagnet_set_on_callback,
             qos_profile=10
         )
 
         self._set_pwm_output_signal_value_publisher = self.create_publisher(
             msg_type=Int32MultiArray,
-            topic="thrusters/set_pwm_output_signal_value_us",
+            topic="thrusters/pwm_us",
             qos_profile=10
         )
         self._electromagnet_set_on_publisher = self.create_publisher(
             msg_type=Bool,
-            topic="electromagnet/set_on",
+            topic="actuators/electromagnet/enabled",
             qos_profile=10
         )
 
         self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'control/wrench_command', 10)
-        self._target_depth_publisher = self.create_publisher(Float64, 'target_depth_m', 10)
+        self._target_depth_publisher = self.create_publisher(Float64, 'control/targets/depth_m', 10)
         self._process_commands = {
             "bottom_camera_pid_fbc_launch": ["ros2", "launch", "orca_rpi_control", "bottom_camera_pid_fbc_launch.py"],
             "depth_control_launch": ["ros2", "launch", "orca_rpi_control", "depth_control_launch.py"],
@@ -114,23 +114,23 @@ class GUINode(Node):
         self._reset_clients = {}
 
     def _is_kill_switch_closed_callback(self, msg):
-        self.aiohttp_server.send_topic("is_kill_switch_closed", msg.data)
+        self.aiohttp_server.send_topic("sensors/kill_switch_closed", msg.data)
 
     def _pressure_sensor_depth_callback(self, msg: Float32):
-        self.aiohttp_server.send_topic("pressure_sensor_depth_m", msg.data)
+        self.aiohttp_server.send_topic("sensors/depth_m", msg.data)
 
     def _stm32_log_callback(self, msg: String):
-        self.aiohttp_server.send_topic("stm32_debug_log", msg.data)
+        self.aiohttp_server.send_topic("diagnostics/stm32/log", msg.data)
 
     def _pwm_output_signal_value_subscription_callback(self, msg: Int32MultiArray):
         values = list(msg.data)
         if len(values) < self._thruster_count:
             values += [self._initial_pwm_output_signal_value_us] * (self._thruster_count - len(values))
         self._pwm_output_signal_value_us = values[:self._thruster_count]
-        self.aiohttp_server.send_topic("set_pwm_output_signal_value_us", list(self._pwm_output_signal_value_us))
+        self.aiohttp_server.send_topic("thrusters/pwm_us", list(self._pwm_output_signal_value_us))
 
     def _electromagnet_set_on_callback(self, msg: Bool):
-        self.aiohttp_server.send_topic("electromagnet_set_on", msg.data)
+        self.aiohttp_server.send_topic("actuators/electromagnet/enabled", msg.data)
 
     def _msg_callback(self, msg):
         try:
@@ -153,7 +153,7 @@ class GUINode(Node):
 
         if msg_type == "topic":
             topic_name = msg_data.get("topic_name")
-            if topic_name == "set_pwm_output_signal_value_us":
+            if topic_name == "thrusters/pwm_us":
                 try:
                     raw_values = msg_data["msg"]["data"]
                     if not isinstance(raw_values, list):
@@ -186,7 +186,7 @@ class GUINode(Node):
                 else:
                     self._set_output_wrench_at_center_publisher.publish(msg)
 
-            if topic_name == "set_target_depth_m":
+            if topic_name == "control/targets/depth_m":
                 try:
                     target_depth = float(msg_data["msg"]["data"])
                 except (KeyError, TypeError, ValueError):
@@ -196,7 +196,7 @@ class GUINode(Node):
                     msg.data = target_depth
                     self._target_depth_publisher.publish(msg)
 
-            if topic_name == "electromagnet_set_on":
+            if topic_name == "actuators/electromagnet/enabled":
                 try:
                     electromagnet_set_on = bool(msg_data["msg"]["data"])
                 except (KeyError, TypeError):
