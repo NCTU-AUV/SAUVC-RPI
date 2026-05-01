@@ -17,9 +17,9 @@ class WaypointTargetPublisher(Node):
         super().__init__("waypoint_target_publisher")
 
         # --- Parameters (keep topics/tolerance configurable) ---
-        self.declare_parameter("current_topic", "/orca_auv/bottom_camera/total_transform_world")
-        self.declare_parameter("target_topic", "/orca_auv/target_point_px")
-        self.declare_parameter("done_topic", "/orca_auv/target_done")
+        self.declare_parameter("current_topic", "/orca_auv/camera/bottom/pose_px")
+        self.declare_parameter("target_topic", "/orca_auv/control/targets/bottom_camera_point_px")
+        self.declare_parameter("done_topic", "/orca_auv/control/targets/done")
 
         # Desired speed for interpolated setpoints (units/sec, same units as waypoints)
         self.declare_parameter("setpoint_speed", 20.0)

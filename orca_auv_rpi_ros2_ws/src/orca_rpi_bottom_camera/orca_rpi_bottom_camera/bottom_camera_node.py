@@ -31,7 +31,7 @@ class BottomCameraNode(Node):
         self._open_camera_with_fallback(camera_device, image_width, image_height)
 
         period_seconds = 1.0 / frame_rate if frame_rate > 0 else 1.0 / 15.0
-        self._publisher = self.create_publisher(Image, 'bottom_camera/image_raw', 10)
+        self._publisher = self.create_publisher(Image, 'camera/bottom/image_raw', 10)
         self._timer = self.create_timer(period_seconds, self._publish_frame)
 
     def _open_camera_with_fallback(self, requested_device, image_width, image_height):

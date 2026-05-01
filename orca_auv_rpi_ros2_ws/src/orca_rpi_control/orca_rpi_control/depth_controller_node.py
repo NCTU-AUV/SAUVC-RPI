@@ -12,17 +12,17 @@ class DepthControllerNode(Node):
 
         self._pressure_sensor_depth_subscriber = self.create_subscription(
             Float32,
-            'pressure_sensor_depth_m',
+            'sensors/depth_m',
             self._pressure_sensor_depth_subscription_callback,
             10)
 
         self._target_depth_subscriber = self.create_subscription(
             Float32,
-            'target_depth_m',
+            'control/targets/depth_m',
             self._target_depth_subscription_callback,
             10)
 
-        self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'set_output_wrench_at_center_N_Nm', 10)
+        self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'control/wrench_command', 10)
 
         integral_controller_loop_timer_period_s = 1 / 100
         self._integral_controller_loop_timer = self.create_timer(integral_controller_loop_timer_period_s, self._integral_controller_loop_timer_callback)

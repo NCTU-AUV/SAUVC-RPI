@@ -13,7 +13,7 @@ class FrameTransformNode(Node):
     def __init__(self):
         super().__init__('bottom_camera_frame_transform_node', namespace='orca_auv')
 
-        self.declare_parameter('image_topic', 'bottom_camera/image_raw')
+        self.declare_parameter('image_topic', 'camera/bottom/image_raw')
         self.declare_parameter('resize_width_px', 320)
         self.declare_parameter('max_features', 500)
         self.declare_parameter('ransac_reproj_threshold_px', 3.0)
@@ -42,9 +42,9 @@ class FrameTransformNode(Node):
         self._orb = cv2.ORB_create(nfeatures=max_features)
         self._resize_width = resize_width
 
-        self._transform_pub = self.create_publisher(Float64MultiArray, 'bottom_camera/frame_transform_px', 10)
+        self._transform_pub = self.create_publisher(Float64MultiArray, 'camera/bottom/frame_transform_px', 10)
         self._image_sub = self.create_subscription(Image, image_topic, self._image_callback, 10)
-        self._debug_image_pub = self.create_publisher(Image, 'bottom_camera/debug/keypoints', 10)
+        self._debug_image_pub = self.create_publisher(Image, 'camera/bottom/debug/keypoints', 10)
 
     def _downscale(self, gray_image):
         if self._resize_width <= 0 or gray_image.shape[1] <= self._resize_width:

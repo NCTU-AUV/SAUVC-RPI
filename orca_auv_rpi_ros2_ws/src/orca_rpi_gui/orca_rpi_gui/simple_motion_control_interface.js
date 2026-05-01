@@ -21,7 +21,7 @@ function update_motion_motion_control_wrench() {
 
     console.log("push_auv", msg);
 
-    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "set_output_wrench_at_center_N_Nm", msg: msg}}));
+    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "control/wrench_command", msg: msg}}));
 }
 
 function set_constant_sink_force_button_onclick() {

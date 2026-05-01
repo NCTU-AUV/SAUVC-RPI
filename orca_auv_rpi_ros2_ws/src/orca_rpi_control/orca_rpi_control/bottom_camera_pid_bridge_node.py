@@ -23,9 +23,9 @@ class BottomCameraPIDBridgeNode(Node):
         super().__init__("bottom_camera_pid_bridge")
 
         # Input/output topics
-        self.declare_parameter("current_topic", "/orca_auv/bottom_camera/total_transform_world")
-        self.declare_parameter("target_topic", "/orca_auv/target_point_px")
-        self.declare_parameter("output_topic", "/orca_auv/set_output_wrench_at_center_N_Nm")
+        self.declare_parameter("current_topic", "/orca_auv/camera/bottom/pose_px")
+        self.declare_parameter("target_topic", "/orca_auv/control/targets/bottom_camera_point_px")
+        self.declare_parameter("output_topic", "/orca_auv/control/wrench_command")
         self.declare_parameter("yaw_index", 2)
 
         # Optional initial target
@@ -33,12 +33,12 @@ class BottomCameraPIDBridgeNode(Node):
         self.declare_parameter("target_y", 0.0)
 
         # PID wiring topics
-        self.declare_parameter("x_reference_topic", "/orca_auv/bottom_camera/x_reference_input")
-        self.declare_parameter("y_reference_topic", "/orca_auv/bottom_camera/y_reference_input")
-        self.declare_parameter("x_feedback_topic", "/orca_auv/bottom_camera/x_output_feedback")
-        self.declare_parameter("y_feedback_topic", "/orca_auv/bottom_camera/y_output_feedback")
-        self.declare_parameter("x_manipulated_topic", "/orca_auv/bottom_camera/x_force_world_N")
-        self.declare_parameter("y_manipulated_topic", "/orca_auv/bottom_camera/y_force_world_N")
+        self.declare_parameter("x_reference_topic", "/orca_auv/control/pid/bottom_camera/x/reference_px")
+        self.declare_parameter("y_reference_topic", "/orca_auv/control/pid/bottom_camera/y/reference_px")
+        self.declare_parameter("x_feedback_topic", "/orca_auv/control/pid/bottom_camera/x/feedback_px")
+        self.declare_parameter("y_feedback_topic", "/orca_auv/control/pid/bottom_camera/y/feedback_px")
+        self.declare_parameter("x_manipulated_topic", "/orca_auv/control/pid/bottom_camera/x/force_world_N")
+        self.declare_parameter("y_manipulated_topic", "/orca_auv/control/pid/bottom_camera/y/force_world_N")
 
         self.current_topic = self.get_parameter("current_topic").value
         self.target_topic = self.get_parameter("target_topic").value

@@ -30,13 +30,13 @@ websocket.onmessage = (event) => {
     msg_json_object = JSON.parse(event.data);
 
     if (msg_json_object.type == "topic") {
-        if (msg_json_object.data.topic_name == "is_kill_switch_closed") {
+        if (msg_json_object.data.topic_name == "sensors/kill_switch_closed") {
             document.getElementById("is_kill_switch_closed").innerHTML = msg_json_object.data.msg;
         }
-        if (msg_json_object.data.topic_name == "pressure_sensor_depth_m") {
+        if (msg_json_object.data.topic_name == "sensors/depth_m") {
             document.getElementById("pressure_sensor_depth_m").innerHTML = msg_json_object.data.msg;
         }
-        if (msg_json_object.data.topic_name == "set_pwm_output_signal_value_us") {
+        if (msg_json_object.data.topic_name == "thrusters/pwm_us") {
             const pwmValues = msg_json_object.data.msg || [];
             for (let i = 0; i < 8; i += 1) {
                 const value = pwmValues[i] ?? "";
@@ -46,7 +46,7 @@ websocket.onmessage = (event) => {
                 }
             }
         }
-        if (msg_json_object.data.topic_name == "electromagnet_set_on") {
+        if (msg_json_object.data.topic_name == "actuators/electromagnet/enabled") {
             const enabled = msg_json_object.data.msg === true;
             const checkbox = document.getElementById("electromagnet_set_on_input");
             const status = document.getElementById("electromagnet_set_on_status");
@@ -66,7 +66,7 @@ websocket.onmessage = (event) => {
                 element.innerHTML = message ? `${successText}: ${message}` : successText;
             }
         }
-        if (msg_json_object.data.topic_name == "stm32_debug_log") {
+        if (msg_json_object.data.topic_name == "diagnostics/stm32/log") {
             const element = document.getElementById("stm32_debug_log");
             if (element) {
                 const line = msg_json_object.data.msg || "";
@@ -123,11 +123,11 @@ function reset_depth_control() {
 
 function set_target_depth_m_button_onclick() {
     const target_depth_m = document.getElementById("target_depth_m_input").value;
-    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "set_target_depth_m", msg: {data: target_depth_m}}}));
+    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "control/targets/depth_m", msg: {data: target_depth_m}}}));
 }
 
 function set_electromagnet_on(enabled) {
-    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "electromagnet_set_on", msg: {data: enabled}}}));
+    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "actuators/electromagnet/enabled", msg: {data: enabled}}}));
 }
 
 function electromagnet_set_on_input_onchange() {
@@ -206,27 +206,27 @@ function set_pwm_output_signal_value_us_button_onclick() {
     websocket.send(JSON.stringify({
         type: "topic",
         data: {
-            topic_name: "set_pwm_output_signal_value_us",
+            topic_name: "thrusters/pwm_us",
             msg: {data: pwm_values}
         }
     }));
 }
 
-function set_output_wrench_at_center_N_Nm_button_onclick() {
+function set_control_wrench_command_button_onclick() {
     var msg = {
         force: {
-            x: document.getElementById("set_output_wrench_at_center_N_Nm_force_x").value,
-            y: document.getElementById("set_output_wrench_at_center_N_Nm_force_y").value,
-            z: document.getElementById("set_output_wrench_at_center_N_Nm_force_z").value,
+            x: document.getElementById("control_wrench_command_force_x").value,
+            y: document.getElementById("control_wrench_command_force_y").value,
+            z: document.getElementById("control_wrench_command_force_z").value,
         },
         torque: {
-            x: document.getElementById("set_output_wrench_at_center_N_Nm_torque_x").value,
-            y: document.getElementById("set_output_wrench_at_center_N_Nm_torque_y").value,
-            z: document.getElementById("set_output_wrench_at_center_N_Nm_torque_z").value,
+            x: document.getElementById("control_wrench_command_torque_x").value,
+            y: document.getElementById("control_wrench_command_torque_y").value,
+            z: document.getElementById("control_wrench_command_torque_z").value,
         }
     }
 
-    console.log("set_output_wrench_at_center_N_Nm_button_onclick", msg);
+    console.log("set_control_wrench_command_button_onclick", msg);
 
-    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "set_output_wrench_at_center_N_Nm", msg: msg}}));
+    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "control/wrench_command", msg: msg}}));
 }

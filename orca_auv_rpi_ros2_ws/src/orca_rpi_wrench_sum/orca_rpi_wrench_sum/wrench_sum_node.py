@@ -9,9 +9,12 @@ class WrenchSum(Node):
 
         # --- 1. Declare parameters ---
         # Default input topic list (modify in launch file)
-        self.declare_parameter('input_topics', ['/thruster_front/wrench', '/thruster_back/wrench'])
+        self.declare_parameter('input_topics', [
+            '/orca_auv/control/wrench_sources/gui',
+            '/orca_auv/control/wrench_sources/bottom_camera',
+        ])
         # Output topic name
-        self.declare_parameter('output_topic', '/auv/net_wrench')
+        self.declare_parameter('output_topic', '/orca_auv/control/wrench_command')
 
         # Get parameter values
         self.input_topics = self.get_parameter('input_topics').get_parameter_value().string_array_value

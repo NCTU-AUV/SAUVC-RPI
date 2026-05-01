@@ -3,11 +3,11 @@
 delta_to_velocity_node.py
 
 Subscribe:
-- /orca_auv/bottom_camera/delta_transform_m (std_msgs/Float64MultiArray)
+- /orca_auv/camera/bottom/delta_transform_m (std_msgs/Float64MultiArray)
   Format: [dx_m, dy_m, dyaw_rad, scale]
 
 Publish:
-- /orca_auv/bottom_camera/velocity_mps (std_msgs/Float64MultiArray)
+- /orca_auv/camera/bottom/velocity_mps (std_msgs/Float64MultiArray)
   Format: [vx_mps, vy_mps, wz_radps, scale]
   where:
     vx_mps = dx_m / dt
@@ -32,8 +32,8 @@ class DeltaToVelocityNode(Node):
         super().__init__('bottom_camera_delta_to_velocity_node', namespace='orca_auv')
 
         # ---- Parameters (topics) ----
-        self.declare_parameter('in_delta_topic', 'bottom_camera/delta_transform_m')
-        self.declare_parameter('out_vel_topic', 'bottom_camera/velocity_mps')
+        self.declare_parameter('in_delta_topic', 'camera/bottom/delta_transform_m')
+        self.declare_parameter('out_vel_topic', 'camera/bottom/velocity_mps')
 
         # ---- Parameters (timing / safety) ----
         self.declare_parameter('min_dt_sec', 1e-3)     # ignore unrealistically small dt

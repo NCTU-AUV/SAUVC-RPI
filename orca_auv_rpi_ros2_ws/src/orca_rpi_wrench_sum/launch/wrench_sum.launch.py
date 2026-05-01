@@ -11,11 +11,12 @@ def generate_launch_description():
             parameters=[{
                 # 在這裡列出你所有需要整合的 topic
                 'input_topics': [
-                    '/auv/thruster_1/wrench',
-                    '/auv/thruster_2/wrench',
-                    '/auv/external_force/wrench'
+                    '/orca_auv/control/wrench_sources/gui',
+                    '/orca_auv/control/wrench_sources/bottom_camera',
+                    '/orca_auv/control/wrench_sources/depth',
+                    '/orca_auv/control/wrench_sources/velocity',
                 ],
-                'output_topic': '/auv/total_wrench',
+                'output_topic': '/orca_auv/control/wrench_command',
                 'publish_rate': 30.0
             }]
         )

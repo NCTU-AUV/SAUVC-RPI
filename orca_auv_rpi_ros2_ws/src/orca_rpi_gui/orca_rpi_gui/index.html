@@ -132,8 +132,8 @@
 </head>
 <body>
     <div class="status-bar">
-        <div>is_kill_switch_closed: <i id="is_kill_switch_closed">none</i></div>
-        <div>pressure_sensor_depth_m: <i id="pressure_sensor_depth_m">none</i></div>
+        <div>sensors/kill_switch_closed: <i id="is_kill_switch_closed">none</i></div>
+        <div>sensors/depth_m: <i id="pressure_sensor_depth_m">none</i></div>
     </div>
 
     <div class="row" style="margin-bottom: 16px;">
@@ -145,7 +145,7 @@
     <div class="layout">
         <div class="panel">
             <div class="row">
-                <div>stm32_debug_log:</div>
+                <div>diagnostics/stm32/log:</div>
                 <button onclick="clear_stm32_log_button_onclick()">clear</button>
             </div>
             <pre id="stm32_debug_log" style="max-height: 220px; overflow: auto; margin: 8px 0 0;"></pre>
@@ -178,7 +178,7 @@
                 </div>
             </div>
             <div class="row">
-                <div>target_depth_m:</div>
+                <div>control/targets/depth_m:</div>
                 <input type="number" id="target_depth_m_input">
                 <button onclick="set_target_depth_m_button_onclick()">set</button>
             </div>
@@ -190,7 +190,7 @@
         </div>
 
         <div class="panel">
-            <div>set_pwm_output_signal_value_us:</div>
+            <div>thrusters/pwm_us:</div>
             <div class="grid-4">
                 <div class="inline-field">thruster 4: <input type="number" id="set_pwm_output_signal_value_us_4" min="0" max="3000" value="1500"></div>
                 <div class="inline-field">thruster 5: <input type="number" id="set_pwm_output_signal_value_us_5" min="0" max="3000" value="1500"></div>
@@ -205,7 +205,7 @@
         </div>
 
         <div class="panel">
-            <div>electromagnet:</div>
+            <div>actuators/electromagnet/enabled:</div>
             <div class="row">
                 <label class="inline-field">
                     <input type="checkbox" id="electromagnet_set_on_input" onchange="electromagnet_set_on_input_onchange()">
@@ -232,22 +232,22 @@
         </div>
 
         <div class="panel">
-            set_output_wrench_at_center_N_Nm:
+            control/wrench_command:
             <div class="row" style="align-items: flex-start;">
                 <div class="stack">
                     <div>force:</div>
-                    <div class="inline-field">x: <input type="number" id="set_output_wrench_at_center_N_Nm_force_x"></div>
-                    <div class="inline-field">y: <input type="number" id="set_output_wrench_at_center_N_Nm_force_y"></div>
-                    <div class="inline-field">z: <input type="number" id="set_output_wrench_at_center_N_Nm_force_z"></div>
+                    <div class="inline-field">x: <input type="number" id="control_wrench_command_force_x"></div>
+                    <div class="inline-field">y: <input type="number" id="control_wrench_command_force_y"></div>
+                    <div class="inline-field">z: <input type="number" id="control_wrench_command_force_z"></div>
                 </div>
                 <div class="stack">
                     <div>torque:</div>
-                    <div class="inline-field">x: <input type="number" id="set_output_wrench_at_center_N_Nm_torque_x"></div>
-                    <div class="inline-field">y: <input type="number" id="set_output_wrench_at_center_N_Nm_torque_y"></div>
-                    <div class="inline-field">z: <input type="number" id="set_output_wrench_at_center_N_Nm_torque_z"></div>
+                    <div class="inline-field">x: <input type="number" id="control_wrench_command_torque_x"></div>
+                    <div class="inline-field">y: <input type="number" id="control_wrench_command_torque_y"></div>
+                    <div class="inline-field">z: <input type="number" id="control_wrench_command_torque_z"></div>
                 </div>
             </div>
-            <button onclick="set_output_wrench_at_center_N_Nm_button_onclick()">publish topic</button>
+            <button onclick="set_control_wrench_command_button_onclick()">publish topic</button>
         </div>
 
         <div class="panel">

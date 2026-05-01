@@ -15,7 +15,7 @@ class WrenchToIndividualThrusterOutputForcesNode(Node):
         self.__set_output_force_subscribers = \
             self.create_subscription(
                 msg_type=Wrench,
-                topic="set_output_wrench_at_center_N_Nm",
+                topic="control/wrench_command",
                 callback=self.__set_output_wrench_at_center_subscribers_callback,
                 qos_profile=10
             )
@@ -23,13 +23,16 @@ class WrenchToIndividualThrusterOutputForcesNode(Node):
         self.__set_output_force_publishers = [
             self.create_publisher(
                 msg_type=Float64,
-                topic=f"thruster_{thruster_number}/set_output_force_N",
+                topic=f"thrusters/{self.__get_thruster_name(thruster_number)}/force_N",
                 qos_profile=10
             )
             for thruster_number in range(8)
         ]
 
         self.__output_force_allocation_matrix = self.__create_output_force_allocation_matrix()
+
+    def __get_thruster_name(self, thruster_number):
+        return f"thruster_{thruster_number}"
 
     def __create_output_force_allocation_matrix(self):
         # Referencing https://hackmd.io/@NCTU-auv/HkBgyB4a3
