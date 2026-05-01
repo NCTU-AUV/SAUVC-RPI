@@ -240,11 +240,6 @@
                 <button onclick="reset_bottom_camera_pid_fbc()">reset</button>
             </div>
             <div class="row">
-                <div>control/targets/depth_m:</div>
-                <input type="number" id="target_depth_m_input">
-                <button onclick="set_target_depth_m_button_onclick()">set</button>
-            </div>
-            <div class="row">
                 <div>waypoint_target_publisher</div>
                 <button onclick="start_waypoint_target_publisher()">start</button>
                 <button onclick="stop_waypoint_target_publisher()">kill</button>
@@ -253,6 +248,11 @@
 
         <div class="panel">
             <div>sensors/depth_m: <i id="pressure_sensor_depth_m">none</i></div>
+            <div class="row">
+                <div>control/targets/depth_m:</div>
+                <input type="number" id="target_depth_m_input">
+                <button onclick="set_target_depth_m_button_onclick()">set</button>
+            </div>
             <div class="row">
                 <div>depth_control_launch.py</div>
                 <button onclick="enable_depth_control()">on</button>
