@@ -12,7 +12,7 @@ def generate_launch_description():
 
     thruster_pkg_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(PathJoinSubstitution([
-            FindPackageShare('orca_rpi_thrusters'),
+            FindPackageShare('thrusters'),
             'launch',
             'thrusters.launch.py'
         ])),
@@ -22,7 +22,7 @@ def generate_launch_description():
     )
 
     wrench_sum_node = Node(
-        package='orca_rpi_wrench_sum',
+        package='wrench_sum',
         executable='wrench_sum_node',
         namespace=namespace,
         name='wrench_sum_node',
@@ -44,7 +44,7 @@ def generate_launch_description():
     )
 
     gui_node = Node(
-        package='orca_rpi_gui',
+        package='gui',
         executable='gui_node',
         namespace=namespace,
         remappings=[
@@ -52,7 +52,7 @@ def generate_launch_description():
         ]
     )
     velocity_node = Node(
-        package='orca_rpi_control',
+        package='control',
         executable='velocity_controller_node',
         namespace=namespace,
         name='velocity_controller_node',
@@ -81,7 +81,7 @@ def generate_launch_description():
     # bottom_camera_launch = IncludeLaunchDescription(
     #     PythonLaunchDescriptionSource(
     #         PathJoinSubstitution([
-    #             FindPackageShare('orca_rpi_bottom_camera'),
+    #             FindPackageShare('bottom_camera'),
     #             'launch',
     #             'bottom_camera_optical_flow.launch.py'
     #         ])
@@ -94,7 +94,7 @@ def generate_launch_description():
     bottom_camera_pid_fbc_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
-                FindPackageShare('orca_rpi_control'),
+                FindPackageShare('control'),
                 'launch',
                 'bottom_camera_pid_fbc_launch.py'
             ])
@@ -107,7 +107,7 @@ def generate_launch_description():
     depth_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
-                FindPackageShare('orca_rpi_control'),
+                FindPackageShare('control'),
                 'launch',
                 'depth_control_launch.py'
             ])
@@ -130,7 +130,7 @@ def generate_launch_description():
     )
 
     stm32_flasher_node = Node(
-        package='orca_rpi_stm32_bridge',
+        package='stm32_bridge',
         executable='stm32_flasher_node',
         namespace=namespace,
         name='stm32_flasher_node',
