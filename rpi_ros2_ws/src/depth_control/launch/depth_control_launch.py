@@ -39,7 +39,7 @@ def generate_launch_description():
             ],
         ),
         Node(
-            package='control',
+            package='depth_control',
             namespace=namespace,
             executable='float32_to_float64_converter_node',
             remappings=[
