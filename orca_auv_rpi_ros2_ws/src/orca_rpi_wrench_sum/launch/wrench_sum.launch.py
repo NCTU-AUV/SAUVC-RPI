@@ -4,9 +4,9 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription([
         Node(
-            package='orca_rpi_wrench_mux',
-            executable='orca_rpi_wrench_mux_node',
-            name='orca_rpi_wrench_mux',
+            package='orca_rpi_wrench_sum',
+            executable='orca_rpi_wrench_sum_node',
+            name='orca_rpi_wrench_sum',
             output='screen',
             parameters=[{
                 # 在這裡列出你所有需要整合的 topic
