@@ -73,9 +73,10 @@
         }
         .thruster-pwm-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            grid-template-columns: minmax(250px, 1fr) minmax(180px, 0.8fr) minmax(250px, 1fr);
             gap: 8px 12px;
             margin-bottom: 12px;
+            align-items: center;
         }
         .thruster-pwm-grid div,
         .thruster-pwm-grid label {
@@ -96,6 +97,33 @@
         }
         .thruster-pwm-label {
             color: var(--muted);
+        }
+        .thruster-numbering {
+            grid-row: 1 / span 4;
+            grid-column: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100%;
+        }
+        .thruster-numbering img {
+            display: block;
+            width: 100%;
+            max-width: 260px;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-alt);
+        }
+        @media (max-width: 920px) {
+            .thruster-pwm-grid {
+                grid-template-columns: 1fr;
+            }
+            .thruster-numbering {
+                grid-row: auto;
+                grid-column: auto;
+                order: 5;
+            }
         }
         .layout {
             display: grid;
@@ -219,6 +247,19 @@
             <div>thrusters/pwm_us / received_pwm_output_signal_value_us:</div>
             <div class="thruster-pwm-grid">
                 <div class="thruster-pwm-row">
+                    <div>thruster 4</div>
+                    <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_4" min="0" max="3000" value="1500"></label>
+                    <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_4">none</i></div>
+                </div>
+                <div class="thruster-pwm-row">
+                    <div>thruster 5</div>
+                    <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_5" min="0" max="3000" value="1500"></label>
+                    <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_5">none</i></div>
+                </div>
+                <div class="thruster-numbering">
+                    <img src="/static/thruster_numbering.png" alt="Thruster numbering">
+                </div>
+                <div class="thruster-pwm-row">
                     <div>thruster 0</div>
                     <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_0" min="0" max="3000" value="1500"></label>
                     <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_0">none</i></div>
@@ -237,16 +278,6 @@
                     <div>thruster 3</div>
                     <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_3" min="0" max="3000" value="1500"></label>
                     <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_3">none</i></div>
-                </div>
-                <div class="thruster-pwm-row">
-                    <div>thruster 4</div>
-                    <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_4" min="0" max="3000" value="1500"></label>
-                    <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_4">none</i></div>
-                </div>
-                <div class="thruster-pwm-row">
-                    <div>thruster 5</div>
-                    <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_5" min="0" max="3000" value="1500"></label>
-                    <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_5">none</i></div>
                 </div>
                 <div class="thruster-pwm-row">
                     <div>thruster 6</div>
@@ -358,10 +389,6 @@
                 <button id="twist_leftward_button">twist leftward</button>
                 <button id="twist_rightward_button" onup>twist rightward</button>
             </div>
-        </div>
-
-        <div class="panel">
-            <img src="/static/thruster_numbering.png" height="400">
         </div>
     </div>
 
