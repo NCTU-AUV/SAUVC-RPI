@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'stm32_bridge'
+package_name = 'stm32_manager'
 
 setup(
     name=package_name,
@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'stm32_flasher_node = stm32_bridge.stm32_flasher_node:main',
+            'stm32_flasher_node = stm32_manager.stm32_flasher_node:main',
         ],
     },
 )
