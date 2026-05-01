@@ -17,7 +17,7 @@ class Stm32FlasherNode(Node):
         self.declare_parameter('flash_address', '0x08000000')
         self.declare_parameter('st_flash_cmd', 'st-flash')
 
-        self._service = self.create_service(Trigger, 'flash_stm32', self._handle_flash)
+        self._service = self.create_service(Trigger, '/flash_stm32', self._handle_flash)
         self._log_publisher = self.create_publisher(String, 'diagnostics/stm32/log', 10)
         self.get_logger().info('STM32 flasher node ready. Service: /flash_stm32')
 

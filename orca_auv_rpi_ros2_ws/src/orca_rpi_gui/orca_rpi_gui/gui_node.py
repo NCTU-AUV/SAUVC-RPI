@@ -61,7 +61,7 @@ class GUINode(Node):
             )
         self._stm32_log_subscriber = self.create_subscription(
                 msg_type=String,
-                topic="/diagnostics/stm32/log",
+                topic="diagnostics/stm32/log",
                 callback=self._stm32_log_callback,
                 qos_profile=10
             )
