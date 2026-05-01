@@ -71,6 +71,89 @@
             gap: 8px 10px;
             align-items: center;
         }
+        .thruster-pwm-grid {
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) minmax(150px, 220px) minmax(220px, 1fr);
+            grid-template-areas:
+                "thruster-4 numbering thruster-5"
+                "thruster-0 numbering thruster-1"
+                "thruster-2 numbering thruster-3"
+                "thruster-6 numbering thruster-7";
+            gap: 10px 18px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+        .thruster-pwm-grid div,
+        .thruster-pwm-grid label {
+            margin: 0;
+        }
+        .thruster-pwm-row {
+            display: grid;
+            grid-template-columns: minmax(68px, auto) minmax(90px, 1fr) minmax(78px, auto);
+            gap: 8px;
+            align-items: center;
+            min-width: 0;
+            padding: 8px 10px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .thruster-pwm-row .inline-field {
+            flex-wrap: nowrap;
+            min-width: 0;
+        }
+        .thruster-pwm-row input[type="number"] {
+            min-width: 0;
+            width: 100%;
+        }
+        .thruster-pwm-0 { grid-area: thruster-0; }
+        .thruster-pwm-1 { grid-area: thruster-1; }
+        .thruster-pwm-2 { grid-area: thruster-2; }
+        .thruster-pwm-3 { grid-area: thruster-3; }
+        .thruster-pwm-4 { grid-area: thruster-4; }
+        .thruster-pwm-5 { grid-area: thruster-5; }
+        .thruster-pwm-6 { grid-area: thruster-6; }
+        .thruster-pwm-7 { grid-area: thruster-7; }
+        .thruster-pwm-label {
+            color: var(--muted);
+        }
+        .thruster-pwm-panel {
+            grid-column: 1 / -1;
+        }
+        .thruster-numbering {
+            grid-area: numbering;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100%;
+        }
+        .thruster-numbering img {
+            display: block;
+            width: 100%;
+            max-width: 260px;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-alt);
+        }
+        @media (max-width: 920px) {
+            .thruster-pwm-grid {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "numbering"
+                    "thruster-4"
+                    "thruster-5"
+                    "thruster-0"
+                    "thruster-1"
+                    "thruster-2"
+                    "thruster-3"
+                    "thruster-6"
+                    "thruster-7";
+            }
+            .thruster-numbering {
+                min-height: auto;
+            }
+        }
         .layout {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
@@ -189,17 +272,52 @@
             </div>
         </div>
 
-        <div class="panel">
-            <div>thrusters/pwm_us:</div>
-            <div class="grid-4">
-                <div class="inline-field">thruster 4: <input type="number" id="set_pwm_output_signal_value_us_4" min="0" max="3000" value="1500"></div>
-                <div class="inline-field">thruster 5: <input type="number" id="set_pwm_output_signal_value_us_5" min="0" max="3000" value="1500"></div>
-                <div class="inline-field">thruster 0: <input type="number" id="set_pwm_output_signal_value_us_0" min="0" max="3000" value="1500"></div>
-                <div class="inline-field">thruster 1: <input type="number" id="set_pwm_output_signal_value_us_1" min="0" max="3000" value="1500"></div>
-                <div class="inline-field">thruster 2: <input type="number" id="set_pwm_output_signal_value_us_2" min="0" max="3000" value="1500"></div>
-                <div class="inline-field">thruster 3: <input type="number" id="set_pwm_output_signal_value_us_3" min="0" max="3000" value="1500"></div>
-                <div class="inline-field">thruster 6: <input type="number" id="set_pwm_output_signal_value_us_6" min="0" max="3000" value="1500"></div>
-                <div class="inline-field">thruster 7: <input type="number" id="set_pwm_output_signal_value_us_7" min="0" max="3000" value="1500"></div>
+        <div class="panel thruster-pwm-panel">
+            <div>thrusters/pwm_us / received_pwm_output_signal_value_us:</div>
+            <div class="thruster-pwm-grid">
+                <div class="thruster-pwm-row thruster-pwm-4">
+                    <div>thruster 4</div>
+                    <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_4" min="0" max="3000" value="1500"></label>
+                    <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_4">none</i></div>
+                </div>
+                <div class="thruster-pwm-row thruster-pwm-5">
+                    <div>thruster 5</div>
+                    <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_5" min="0" max="3000" value="1500"></label>
+                    <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_5">none</i></div>
+                </div>
+                <div class="thruster-numbering">
+                    <img src="/static/thruster_numbering.png" alt="Thruster numbering">
+                </div>
+                <div class="thruster-pwm-row thruster-pwm-0">
+                    <div>thruster 0</div>
+                    <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_0" min="0" max="3000" value="1500"></label>
+                    <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_0">none</i></div>
+                </div>
+                <div class="thruster-pwm-row thruster-pwm-1">
+                    <div>thruster 1</div>
+                    <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_1" min="0" max="3000" value="1500"></label>
+                    <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_1">none</i></div>
+                </div>
+                <div class="thruster-pwm-row thruster-pwm-2">
+                    <div>thruster 2</div>
+                    <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_2" min="0" max="3000" value="1500"></label>
+                    <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_2">none</i></div>
+                </div>
+                <div class="thruster-pwm-row thruster-pwm-3">
+                    <div>thruster 3</div>
+                    <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_3" min="0" max="3000" value="1500"></label>
+                    <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_3">none</i></div>
+                </div>
+                <div class="thruster-pwm-row thruster-pwm-6">
+                    <div>thruster 6</div>
+                    <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_6" min="0" max="3000" value="1500"></label>
+                    <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_6">none</i></div>
+                </div>
+                <div class="thruster-pwm-row thruster-pwm-7">
+                    <div>thruster 7</div>
+                    <label class="inline-field">set <input type="number" id="set_pwm_output_signal_value_us_7" min="0" max="3000" value="1500"></label>
+                    <div class="thruster-pwm-label">received: <i id="pwm_output_signal_value_us_7">none</i></div>
+                </div>
             </div>
             <button onclick="set_pwm_output_signal_value_us_button_onclick()">publish topic</button>
         </div>
@@ -214,20 +332,6 @@
                 <button onclick="set_electromagnet_on(true)">on</button>
                 <button onclick="set_electromagnet_on(false)">off</button>
                 <div>status: <i id="electromagnet_set_on_status">off</i></div>
-            </div>
-        </div>
-
-        <div class="panel">
-            <div>received_pwm_output_signal_value_us:</div>
-            <div class="grid-4">
-                <div>thruster 4: <i id="pwm_output_signal_value_us_4">none</i></div>
-                <div>thruster 5: <i id="pwm_output_signal_value_us_5">none</i></div>
-                <div>thruster 0: <i id="pwm_output_signal_value_us_0">none</i></div>
-                <div>thruster 1: <i id="pwm_output_signal_value_us_1">none</i></div>
-                <div>thruster 2: <i id="pwm_output_signal_value_us_2">none</i></div>
-                <div>thruster 3: <i id="pwm_output_signal_value_us_3">none</i></div>
-                <div>thruster 6: <i id="pwm_output_signal_value_us_6">none</i></div>
-                <div>thruster 7: <i id="pwm_output_signal_value_us_7">none</i></div>
             </div>
         </div>
 
@@ -314,10 +418,6 @@
                 <button id="twist_leftward_button">twist leftward</button>
                 <button id="twist_rightward_button" onup>twist rightward</button>
             </div>
-        </div>
-
-        <div class="panel">
-            <img src="/static/thruster_numbering.png" height="400">
         </div>
     </div>
 
