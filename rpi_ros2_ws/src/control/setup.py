@@ -26,8 +26,6 @@ setup(
         'console_scripts': [
             "generic_pid_controller_node = control.generic_pid_controller_node:main",
             "imu_to_orientation_node = control.imu_to_orientation_node:main",
-            "on_off_controller = control.on_off_controller:main",
-            "velocity_controller_node = control.velocity_controller_node:main",
         ],
     },
 )

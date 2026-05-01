@@ -27,7 +27,6 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            "depth_controller_node = depth_control.depth_controller_node:main",
             "float32_to_float64_converter_node = depth_control.float32_to_float64_converter_node:main",
             "output_sink_force_to_output_wrench_node = depth_control.output_sink_force_to_output_wrench_node:main",
         ],

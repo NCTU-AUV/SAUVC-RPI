@@ -31,7 +31,6 @@ def generate_launch_description():
                 'control/wrench_sources/gui',
                 'control/wrench_sources/bottom_camera',
                 'control/wrench_sources/depth',
-                'control/wrench_sources/velocity',
             ],
             'output_topic': 'control/wrench_command',
         }]
@@ -51,46 +50,6 @@ def generate_launch_description():
             ('control/wrench_command', 'control/wrench_sources/gui')
         ]
     )
-    velocity_node = Node(
-        package='control',
-        executable='velocity_controller_node',
-        namespace=namespace,
-        name='velocity_controller_node',
-        parameters=[{
-            'measured_topic': 'camera/bottom/velocity_mps',
-            'measured_index': 1,
-            'target_topic': 'control/targets/speed_mps',
-            'output_topic': 'control/wrench_sources/velocity',
-
-            'kp': 8.0,
-            'ki': 0.0,
-            'kd': 0.0,
-            'd_cutoff_hz': 5.0,
-
-            'max_force_N': 25.0,
-            'min_force_N': -25.0,
-            'i_limit': 10.0,
-            'deadband_mps': 0.01,
-            'control_rate_hz': 30.0,
-            'measurement_timeout_s': 0.5,
-        }]
-    )
-
-    # Keep this launch block for reference, but disable it to avoid starting
-    # bottom_camera twice. bottom_camera_pid_fbc_launch already includes it.
-    # bottom_camera_launch = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource(
-    #         PathJoinSubstitution([
-    #             FindPackageShare('bottom_camera'),
-    #             'launch',
-    #             'bottom_camera_optical_flow.launch.py'
-    #         ])
-    #     ),
-    #     launch_arguments={
-    #         'publish_debug_image': 'true'
-    #     }.items()
-    # )
-
     bottom_camera_pid_fbc_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
@@ -154,12 +113,10 @@ def generate_launch_description():
             default_value='orca_auv',
             description='Robot namespace',
         ),
-        # bottom_camera_launch,
         bottom_camera_pid_fbc_launch,
         depth_control_launch,
         thruster_pkg_launch,
         wrench_sum_node,
-        # velocity_node,
         # mavros,
         gui_node,
         stm32_flasher_node,
