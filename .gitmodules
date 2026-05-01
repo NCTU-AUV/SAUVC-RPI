@@ -2,3 +2,6 @@
 	path = SAUVC-STM32
 	url = git@github.com:NCTU-AUV/SAUVC-STM32.git
 	branch = main
+[submodule "SAUVC-Simulation"]
+	path = SAUVC-Simulation
+	url = https://github.com/NCTU-AUV/SAUVC-Simulation.git
