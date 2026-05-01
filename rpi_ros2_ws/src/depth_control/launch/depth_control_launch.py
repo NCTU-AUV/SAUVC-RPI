@@ -48,7 +48,7 @@ def generate_launch_description():
             ],
         ),
         Node(
-            package='control',
+            package='depth_control',
             namespace=namespace,
             executable='imu_to_orientation_node',
         ),
