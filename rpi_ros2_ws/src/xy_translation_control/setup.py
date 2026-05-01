@@ -2,7 +2,7 @@ import os
 from glob import glob
 from setuptools import find_packages, setup
 
-package_name = 'control'
+package_name = 'xy_translation_control'
 
 setup(
     name=package_name,
@@ -12,7 +12,6 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        # Only install launch scripts, avoid copying __pycache__ directories
         (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
     ],
     install_requires=['setuptools'],
@@ -21,13 +20,15 @@ setup(
     maintainer_email='root@todo.todo',
     description='TODO: Package description',
     license='TODO: License declaration',
-    tests_require=['pytest'],
+    extras_require={
+        'test': [
+            'pytest',
+        ],
+    },
     entry_points={
         'console_scripts': [
-            "generic_pid_controller_node = control.generic_pid_controller_node:main",
-            "imu_to_orientation_node = control.imu_to_orientation_node:main",
-            "on_off_controller = control.on_off_controller:main",
-            "velocity_controller_node = control.velocity_controller_node:main",
+            'bottom_camera_pid_bridge_node = xy_translation_control.bottom_camera_pid_bridge_node:main',
+            'waypoint_target_publisher = xy_translation_control.waypoint_target_publisher:main',
         ],
     },
 )

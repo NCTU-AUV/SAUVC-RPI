@@ -63,7 +63,7 @@ def generate_launch_description():
     )
 
     bridge_node = Node(
-        package='control',
+        package='xy_translation_control',
         executable='bottom_camera_pid_bridge_node',
         namespace=namespace,
         parameters=[{

@@ -94,7 +94,7 @@ def generate_launch_description():
     bottom_camera_pid_fbc_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
-                FindPackageShare('control'),
+                FindPackageShare('xy_translation_control'),
                 'launch',
                 'bottom_camera_pid_fbc_launch.py'
             ])
