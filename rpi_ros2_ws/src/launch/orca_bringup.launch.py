@@ -130,7 +130,7 @@ def generate_launch_description():
     )
 
     stm32_flasher_node = Node(
-        package='stm32_bridge',
+        package='stm32_manager',
         executable='stm32_flasher_node',
         namespace=namespace,
         name='stm32_flasher_node',
