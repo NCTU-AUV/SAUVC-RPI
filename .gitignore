@@ -1,7 +1,7 @@
 rpi_ros2_ws/build/
 rpi_ros2_ws/install/
 rpi_ros2_ws/log/
-rpi_ros2_ws/src/orca_rpi_thrusters/orca_rpi_thrusters/__pycache__/
+rpi_ros2_ws/src/thrusters/thrusters/__pycache__/
 .vscode/
 *.pyc
 *.DS_Store
