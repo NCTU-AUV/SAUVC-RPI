@@ -105,7 +105,7 @@ class GUINode(Node):
                 f"namespace:={self._robot_namespace}",
             ],
             "waypoint_target_publisher": [
-                "ros2", "run", "control", "waypoint_target_publisher",
+                "ros2", "run", "xy_translation_control", "waypoint_target_publisher",
                 "--ros-args", "-r", f"__ns:=/{self._robot_namespace}",
             ],
         }

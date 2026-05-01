@@ -27,7 +27,6 @@ setup(
             "generic_pid_controller_node = control.generic_pid_controller_node:main",
             "imu_to_orientation_node = control.imu_to_orientation_node:main",
             "on_off_controller = control.on_off_controller:main",
-            "waypoint_target_publisher = control.waypoint_target_publisher:main",
             "velocity_controller_node = control.velocity_controller_node:main",
         ],
     },
