@@ -24,10 +24,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "depth_controller_node = control.depth_controller_node:main",
             "generic_pid_controller_node = control.generic_pid_controller_node:main",
             "float32_to_float64_converter_node = control.float32_to_float64_converter_node:main",
-            "output_sink_force_to_output_wrench_node = control.output_sink_force_to_output_wrench_node:main",
             "imu_to_orientation_node = control.imu_to_orientation_node:main",
             "on_off_controller = control.on_off_controller:main",
             "bottom_camera_pid_bridge_node = control.bottom_camera_pid_bridge_node:main",

@@ -31,7 +31,7 @@ def generate_launch_description():
             }],
         ),
         Node(
-            package='control',
+            package='depth_control',
             namespace=namespace,
             executable='output_sink_force_to_output_wrench_node',
             remappings=[

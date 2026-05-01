@@ -101,7 +101,7 @@ class GUINode(Node):
                 f"namespace:={self._robot_namespace}",
             ],
             "depth_control_launch": [
-                "ros2", "launch", "control", "depth_control_launch.py",
+                "ros2", "launch", "depth_control", "depth_control_launch.py",
                 f"namespace:={self._robot_namespace}",
             ],
             "waypoint_target_publisher": [

@@ -107,7 +107,7 @@ def generate_launch_description():
     depth_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
-                FindPackageShare('control'),
+                FindPackageShare('depth_control'),
                 'launch',
                 'depth_control_launch.py'
             ])
