@@ -22,12 +22,15 @@ class ThrusterPWMOutputSignalArrayNode(Node):
         self._subscriptions = [
             self.create_subscription(
                 msg_type=Int32,
-                topic=f"thrusters/{thruster_number}/pwm_us",
+                topic=f"thrusters/{self._get_thruster_name(thruster_number)}/pwm_us",
                 callback=lambda msg, thruster_number=thruster_number: self._set_pwm_output_signal_value_callback(msg, thruster_number),
                 qos_profile=10
             )
             for thruster_number in range(self._thruster_count)
         ]
+
+    def _get_thruster_name(self, thruster_number):
+        return f"thruster_{thruster_number}"
 
     def _set_pwm_output_signal_value_callback(self, msg, thruster_number):
         self._pwm_output_signal_value_us[thruster_number] = msg.data

@@ -55,7 +55,7 @@ class ThrusterForceToPWMOutputSignalNode(Node):
         self.__set_output_force_subscribers = [
             self.create_subscription(
                 msg_type=Float64,
-                topic=f"thrusters/{thruster_number}/force_N",
+                topic=f"thrusters/{self._get_thruster_name(thruster_number)}/force_N",
                 callback=lambda msg, thruster_number=thruster_number: self.__set_output_force_subscribers_callback(msg, thruster_number),
                 qos_profile=10
             )
@@ -68,6 +68,9 @@ class ThrusterForceToPWMOutputSignalNode(Node):
             callback=self._set_is_initializing_callback,
             qos_profile=10
         )
+
+    def _get_thruster_name(self, thruster_number):
+        return f"thruster_{thruster_number}"
 
     def _set_is_initializing_callback(self, msg: Bool):
         self._is_initializing = bool(msg.data)
