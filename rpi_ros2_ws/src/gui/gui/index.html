@@ -216,7 +216,6 @@
 <body>
     <div class="status-bar">
         <div>sensors/kill_switch_closed: <i id="is_kill_switch_closed">none</i></div>
-        <div>sensors/depth_m: <i id="pressure_sensor_depth_m">none</i></div>
     </div>
 
     <div class="layout">
@@ -241,6 +240,20 @@
                 <button onclick="reset_bottom_camera_pid_fbc()">reset</button>
             </div>
             <div class="row">
+                <div>control/targets/depth_m:</div>
+                <input type="number" id="target_depth_m_input">
+                <button onclick="set_target_depth_m_button_onclick()">set</button>
+            </div>
+            <div class="row">
+                <div>waypoint_target_publisher</div>
+                <button onclick="start_waypoint_target_publisher()">start</button>
+                <button onclick="stop_waypoint_target_publisher()">kill</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div>sensors/depth_m: <i id="pressure_sensor_depth_m">none</i></div>
+            <div class="row">
                 <div>depth_control_launch.py</div>
                 <button onclick="enable_depth_control()">on</button>
                 <button onclick="disable_depth_control()">off</button>
@@ -258,15 +271,10 @@
                     <button onclick="set_depth_pid_params_button_onclick()">set PID params</button>
                 </div>
             </div>
-            <div class="row">
-                <div>control/targets/depth_m:</div>
-                <input type="number" id="target_depth_m_input">
-                <button onclick="set_target_depth_m_button_onclick()">set</button>
-            </div>
-            <div class="row">
-                <div>waypoint_target_publisher</div>
-                <button onclick="start_waypoint_target_publisher()">start</button>
-                <button onclick="stop_waypoint_target_publisher()">kill</button>
+            <div class="inline-field">
+                constant sink force (N):
+                <input type="number" id="constant_sink_force_N_input">
+                <button onclick="set_constant_sink_force_button_onclick()">set</button>
             </div>
         </div>
 
@@ -391,12 +399,6 @@
         <div class="panel">
             simple motion control interface:
             <div class="grid-3">
-                <div class="inline-field">
-                    constant sink force (N):
-                    <input type="number" id="constant_sink_force_N_input">
-                    <button onclick="set_constant_sink_force_button_onclick()">set</button>
-                </div>
-
                 <div class="inline-field">
                     translational push force (N):
                     <input type="number" id="translational_push_force_N_input">
