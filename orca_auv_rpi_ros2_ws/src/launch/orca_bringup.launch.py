@@ -132,6 +132,7 @@ def generate_launch_description():
     stm32_flasher_node = Node(
         package='orca_rpi_stm32_bridge',
         executable='stm32_flasher_node',
+        namespace=namespace,
         name='stm32_flasher_node',
     )
 
