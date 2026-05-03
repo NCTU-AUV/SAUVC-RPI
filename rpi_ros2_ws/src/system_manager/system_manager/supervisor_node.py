@@ -63,6 +63,9 @@ class SupervisorNode(Node):
         self.declare_parameter("depth_sensor_timeout_s", 1.0)
         self.declare_parameter("bottom_camera_timeout_s", 1.0)
         self.declare_parameter("publish_zero_wrench_on_disable", True)
+        self.declare_parameter("auto_flash_stm32_on_startup", True)
+        self.declare_parameter("stm32_flash_service", "/flash_stm32")
+        self.declare_parameter("stm32_flash_service_timeout_s", 15.0)
 
         self._controller_groups = {
             "depth_control": [
@@ -86,6 +89,13 @@ class SupervisorNode(Node):
 
         self._lifecycle_clients = {}
         self._reset_clients = {}
+        self._stm32_flash_client = self.create_client(
+            Trigger,
+            self.get_parameter("stm32_flash_service").value,
+        )
+        self._stm32_auto_flash_started = False
+        self._stm32_auto_flash_finished = False
+        self._stm32_auto_flash_start_stamp = self.get_clock().now()
 
         self._mode_publisher = self.create_publisher(String, "system_manager/mode", 10)
         self._status_publisher = self.create_publisher(String, "system_manager/status", 10)
@@ -128,6 +138,7 @@ class SupervisorNode(Node):
 
         self.create_timer(0.2, self._publish_state)
         self.create_timer(0.2, self._check_active_mode_safety)
+        self._stm32_auto_flash_timer = self.create_timer(0.5, self._maybe_auto_flash_stm32)
 
     def _on_kill_switch(self, msg: Bool):
         self._kill_switch_closed = bool(msg.data)
@@ -318,6 +329,54 @@ class SupervisorNode(Node):
             ok, reason = self._bottom_camera_ready()
             if not ok:
                 self._enter_fault(reason)
+
+    def _maybe_auto_flash_stm32(self):
+        if not self.get_parameter("auto_flash_stm32_on_startup").value:
+            self._stm32_auto_flash_finished = True
+            self._stm32_auto_flash_timer.cancel()
+            return
+
+        if self._stm32_auto_flash_started or self._stm32_auto_flash_finished:
+            return
+
+        if self._stm32_flash_client.service_is_ready():
+            self._stm32_auto_flash_started = True
+            self._status = "STM32 auto-flash started"
+            self.get_logger().info(self._status)
+            future = self._stm32_flash_client.call_async(Trigger.Request())
+            future.add_done_callback(self._on_stm32_auto_flash_result)
+            return
+
+        timeout_s = float(self.get_parameter("stm32_flash_service_timeout_s").value)
+        if self._age_s(self._stm32_auto_flash_start_stamp) > timeout_s:
+            self._stm32_auto_flash_finished = True
+            self._stm32_auto_flash_timer.cancel()
+            service_name = self.get_parameter("stm32_flash_service").value
+            self._status = f"STM32 auto-flash skipped: {service_name} service not ready"
+            self.get_logger().warning(self._status)
+
+    def _on_stm32_auto_flash_result(self, future):
+        self._stm32_auto_flash_finished = True
+        self._stm32_auto_flash_timer.cancel()
+
+        try:
+            response = future.result()
+        except Exception as exc:  # noqa: BLE001
+            self._status = f"STM32 auto-flash failed: {exc}"
+            self.get_logger().warning(self._status)
+            return
+
+        if response.success:
+            self._status = "STM32 auto-flash succeeded"
+            if response.message:
+                self._status = f"{self._status}: {response.message}"
+            self.get_logger().info(self._status)
+            return
+
+        self._status = "STM32 auto-flash failed"
+        if response.message:
+            self._status = f"{self._status}: {response.message}"
+        self.get_logger().warning(self._status)
 
     def _age_s(self, stamp):
         return (self.get_clock().now() - stamp).nanoseconds / 1e9

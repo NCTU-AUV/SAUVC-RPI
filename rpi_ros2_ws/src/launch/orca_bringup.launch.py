@@ -1,7 +1,6 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, ExecuteProcess, RegisterEventHandler
-from launch.event_handlers import OnProcessStart
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.substitutions import FindPackageShare
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -103,18 +102,6 @@ def generate_launch_description():
         name='stm32_flasher_node',
     )
 
-    flash_stm32 = ExecuteProcess(
-        cmd=['ros2', 'service', 'call', '/flash_stm32', 'std_srvs/srv/Trigger', '{}'],
-        shell=True,
-    )
-
-    event = RegisterEventHandler(
-        OnProcessStart(
-            target_action=micro_ros_agent,
-            on_start=[flash_stm32]
-        )
-    )
-
     return LaunchDescription([
         DeclareLaunchArgument(
             'namespace',
@@ -131,5 +118,4 @@ def generate_launch_description():
         stm32_flasher_node,
         micro_ros_agent,
         web_video_server,
-        event,
     ])
