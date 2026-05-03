@@ -33,6 +33,7 @@ class ControlMode(Enum):
     MANUAL = "MANUAL"
     DEPTH_HOLD = "DEPTH_HOLD"
     BOTTOM_CAMERA_HOLD = "BOTTOM_CAMERA_HOLD"
+    DEPTH_AND_BOTTOM_CAMERA_HOLD = "DEPTH_AND_BOTTOM_CAMERA_HOLD"
     FAULT = "FAULT"
 
 
@@ -46,7 +47,6 @@ class SupervisorNode(Node):
         self.declare_parameter("require_thrusters_enabled", True)
         self.declare_parameter("depth_sensor_timeout_s", 1.0)
         self.declare_parameter("bottom_camera_timeout_s", 1.0)
-        self.declare_parameter("bottom_camera_hold_enable_depth", False)
         self.declare_parameter("publish_zero_wrench_on_disable", True)
 
         self._controller_groups = {
@@ -61,6 +61,7 @@ class SupervisorNode(Node):
 
         self._mode = ControlMode.SAFE_DISABLED
         self._status = "Initialized in SAFE_DISABLED"
+        self._active_controller_groups = set()
         self._kill_switch_closed = False
         self._have_kill_switch = False
         self._thrusters_enabled = False
@@ -95,8 +96,18 @@ class SupervisorNode(Node):
         self.create_service(Trigger, "system_manager/set_mode/depth_hold", self._set_depth_hold)
         self.create_service(
             Trigger,
+            "system_manager/disable/depth_hold",
+            self._disable_depth_hold,
+        )
+        self.create_service(
+            Trigger,
             "system_manager/set_mode/bottom_camera_hold",
             self._set_bottom_camera_hold,
+        )
+        self.create_service(
+            Trigger,
+            "system_manager/disable/bottom_camera_hold",
+            self._disable_bottom_camera_hold,
         )
         self.create_service(Trigger, "system_manager/reset_controllers", self._reset_controllers)
 
@@ -112,10 +123,7 @@ class SupervisorNode(Node):
     def _on_thrusters_enabled(self, msg: Bool):
         self._thrusters_enabled = bool(msg.data)
         self._have_thrusters_enabled = True
-        if not self._thrusters_enabled and self._mode in (
-            ControlMode.DEPTH_HOLD,
-            ControlMode.BOTTOM_CAMERA_HOLD,
-        ):
+        if not self._thrusters_enabled and self._active_controller_groups:
             self._enter_fault("Thrusters are disabled")
 
     def _on_depth_float32(self, msg: Float32):
@@ -157,11 +165,18 @@ class SupervisorNode(Node):
             response.message = reason
             return response
 
-        self._disable_group("bottom_camera_pid_fbc")
         self._reset_group("depth_control")
         self._enable_group("depth_control")
-        self._mode = ControlMode.DEPTH_HOLD
-        self._status = "Depth hold active"
+        self._active_controller_groups.add("depth_control")
+        self._refresh_mode_from_active_groups()
+        response.success = True
+        response.message = self._status
+        return response
+
+    def _disable_depth_hold(self, request, response):
+        self._disable_group("depth_control")
+        self._active_controller_groups.discard("depth_control")
+        self._refresh_mode_from_active_groups()
         response.success = True
         response.message = self._status
         return response
@@ -176,16 +191,18 @@ class SupervisorNode(Node):
             response.message = reason
             return response
 
-        if self.get_parameter("bottom_camera_hold_enable_depth").value:
-            self._reset_group("depth_control")
-            self._enable_group("depth_control")
-        else:
-            self._disable_group("depth_control")
-
         self._reset_group("bottom_camera_pid_fbc")
         self._enable_group("bottom_camera_pid_fbc")
-        self._mode = ControlMode.BOTTOM_CAMERA_HOLD
-        self._status = "Bottom camera hold active"
+        self._active_controller_groups.add("bottom_camera_pid_fbc")
+        self._refresh_mode_from_active_groups()
+        response.success = True
+        response.message = self._status
+        return response
+
+    def _disable_bottom_camera_hold(self, request, response):
+        self._disable_group("bottom_camera_pid_fbc")
+        self._active_controller_groups.discard("bottom_camera_pid_fbc")
+        self._refresh_mode_from_active_groups()
         response.success = True
         response.message = self._status
         return response
@@ -201,6 +218,7 @@ class SupervisorNode(Node):
         self._mode = mode
         self._status = status
         if mode in (ControlMode.SAFE_DISABLED, ControlMode.MANUAL, ControlMode.FAULT):
+            self._active_controller_groups.clear()
             self._disable_all_controllers()
         if mode in (ControlMode.SAFE_DISABLED, ControlMode.FAULT):
             self._publish_zero_wrench()
@@ -210,9 +228,28 @@ class SupervisorNode(Node):
             return
         self._mode = ControlMode.FAULT
         self._status = reason
+        self._active_controller_groups.clear()
         self.get_logger().warning(f"Entering FAULT: {reason}")
         self._disable_all_controllers()
         self._publish_zero_wrench()
+
+    def _refresh_mode_from_active_groups(self):
+        depth_active = "depth_control" in self._active_controller_groups
+        bottom_camera_active = "bottom_camera_pid_fbc" in self._active_controller_groups
+
+        if depth_active and bottom_camera_active:
+            self._mode = ControlMode.DEPTH_AND_BOTTOM_CAMERA_HOLD
+            self._status = "Depth hold and bottom camera hold active"
+        elif depth_active:
+            self._mode = ControlMode.DEPTH_HOLD
+            self._status = "Depth hold active"
+        elif bottom_camera_active:
+            self._mode = ControlMode.BOTTOM_CAMERA_HOLD
+            self._status = "Bottom camera hold active"
+        else:
+            self._mode = ControlMode.SAFE_DISABLED
+            self._status = "No controller groups active"
+            self._publish_zero_wrench()
 
     def _safety_ready(self):
         if self.get_parameter("require_kill_switch_closed").value:
@@ -246,7 +283,7 @@ class SupervisorNode(Node):
         return True, ""
 
     def _check_active_mode_safety(self):
-        if self._mode not in (ControlMode.DEPTH_HOLD, ControlMode.BOTTOM_CAMERA_HOLD):
+        if not self._active_controller_groups:
             return
 
         ok, reason = self._safety_ready()
@@ -254,11 +291,13 @@ class SupervisorNode(Node):
             self._enter_fault(reason)
             return
 
-        if self._mode == ControlMode.DEPTH_HOLD:
+        if "depth_control" in self._active_controller_groups:
             ok, reason = self._depth_ready()
             if not ok:
                 self._enter_fault(reason)
-        elif self._mode == ControlMode.BOTTOM_CAMERA_HOLD:
+                return
+
+        if "bottom_camera_pid_fbc" in self._active_controller_groups:
             ok, reason = self._bottom_camera_ready()
             if not ok:
                 self._enter_fault(reason)

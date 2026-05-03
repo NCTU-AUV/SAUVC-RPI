@@ -114,6 +114,14 @@ class GUINode(Node):
                 Trigger,
                 "system_manager/reset_controllers",
             ),
+            "disable_depth_hold": self.create_client(
+                Trigger,
+                "system_manager/disable/depth_hold",
+            ),
+            "disable_bottom_camera_hold": self.create_client(
+                Trigger,
+                "system_manager/disable/bottom_camera_hold",
+            ),
         }
 
         self._pwm_output_signal_value_subscription = self.create_subscription(
@@ -176,10 +184,10 @@ class GUINode(Node):
         self._param_clients = {}
         self._controller_supervisor_actions = {
             ("bottom_camera_pid_fbc", "enable"): "bottom_camera_hold",
-            ("bottom_camera_pid_fbc", "disable"): "safe_disabled",
+            ("bottom_camera_pid_fbc", "disable"): "disable_bottom_camera_hold",
             ("bottom_camera_pid_fbc", "reset"): "reset_controllers",
             ("depth_control", "enable"): "depth_hold",
-            ("depth_control", "disable"): "safe_disabled",
+            ("depth_control", "disable"): "disable_depth_hold",
             ("depth_control", "reset"): "reset_controllers",
         }
 
