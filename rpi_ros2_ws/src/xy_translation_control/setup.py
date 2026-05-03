@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'bottom_camera_pid_bridge_node = xy_translation_control.bottom_camera_pid_bridge_node:main',
+            'lk_total_transform_node = xy_translation_control.lk_total_transform_node:main',
             'waypoint_target_publisher = xy_translation_control.waypoint_target_publisher:main',
         ],
     },

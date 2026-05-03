@@ -23,7 +23,6 @@ setup(
     entry_points={
         'console_scripts': [
             'bottom_camera_node = bottom_camera.bottom_camera_node:main',
-            'lk_total_transform_node = bottom_camera.lk_total_transform_node:main',
         ],
     },
 )

@@ -21,7 +21,6 @@ def generate_launch_description():
         ),
         launch_arguments={
             "namespace": namespace,
-            "publish_debug_image": "false",
         }.items(),
     )
 

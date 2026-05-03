@@ -8,6 +8,7 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 
 def generate_launch_description():
     namespace = LaunchConfiguration('namespace')
+    publish_debug_image = LaunchConfiguration('publish_debug_image')
 
     thruster_pkg_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(PathJoinSubstitution([
@@ -70,6 +71,14 @@ def generate_launch_description():
         }.items(),
     )
 
+    lk_total_transform_node = Node(
+        package='xy_translation_control',
+        executable='lk_total_transform_node',
+        namespace=namespace,
+        name='lk_total_transform_node',
+        parameters=[{'publish_debug_image': publish_debug_image}],
+    )
+
     depth_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
@@ -108,7 +117,13 @@ def generate_launch_description():
             default_value='orca_auv',
             description='Robot namespace',
         ),
+        DeclareLaunchArgument(
+            'publish_debug_image',
+            default_value='false',
+            description='Whether to publish debug keypoint overlay images',
+        ),
         bottom_camera_pid_fbc_launch,
+        lk_total_transform_node,
         depth_control_launch,
         thruster_pkg_launch,
         wrench_sum_node,
