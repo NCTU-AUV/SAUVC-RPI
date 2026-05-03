@@ -7,13 +7,18 @@ from pathlib import Path
 import gui
 from . import protocol
 
+PACKAGE_DIR = Path(gui.__file__).parent
+STATIC_DIR = PACKAGE_DIR / "static"
+DASHBOARD_DIR = STATIC_DIR / "dashboard"
+CONTROLLER_DIR = STATIC_DIR / "controller"
+
 
 class AIOHTTPServer:
     async def respond_index(request):
-        return web.FileResponse(path=Path(gui.__file__).parent/"index.html")
+        return web.FileResponse(path=DASHBOARD_DIR / "index.html")
 
     async def respond_controller(request):
-        return web.FileResponse(path=Path(gui.__file__).parent/"controller.html")
+        return web.FileResponse(path=CONTROLLER_DIR / "controller.html")
 
     def send_topic(self, topic_name, msg):
         payload = json.dumps(protocol.topic_payload(topic_name, msg))
@@ -79,7 +84,7 @@ class AIOHTTPServer:
         app.router.add_get('/', AIOHTTPServer.respond_index)
         app.router.add_get('/controller', AIOHTTPServer.respond_controller)
         app.router.add_get('/play', AIOHTTPServer.respond_controller)
-        app.router.add_static('/static/', Path(gui.__file__).parent)
+        app.router.add_static('/static/', STATIC_DIR)
 
         self.runner = web.AppRunner(app)
         self.websocket_response = None

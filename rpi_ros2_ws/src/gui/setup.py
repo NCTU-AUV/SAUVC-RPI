@@ -7,7 +7,14 @@ setup(
     version='0.0.0',
     packages=find_packages(exclude=['test']),
     package_data={
-        package_name: ['*.html', '*.js', '*.png'],
+        package_name: [
+            'static/controller/*.html',
+            'static/controller/*.js',
+            'static/dashboard/*.html',
+            'static/dashboard/*.js',
+            'static/shared/*.js',
+            'static/shared/*.png',
+        ],
     },
     data_files=[
         ('share/ament_index/resource_index/packages',

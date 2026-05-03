@@ -15,8 +15,8 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Wrench
 from std_srvs.srv import Trigger
 
-from .aiohttp_server import AIOHTTPServer
-from . import protocol
+from .backend import protocol
+from .backend.aiohttp_server import AIOHTTPServer
 
 
 class _AsyncParameterClient:
