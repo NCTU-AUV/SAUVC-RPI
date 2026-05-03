@@ -8,7 +8,7 @@ import rclpy
 from cv_bridge import CvBridge
 from rclpy.node import Node
 from sensor_msgs.msg import CameraInfo, Image
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float64, Float64MultiArray
 
 
 def _T(tx: float, ty: float) -> np.ndarray:
@@ -28,6 +28,7 @@ class LkTotalTransformNode(Node):
 
     Publish:
       - output_topic (std_msgs/Float64MultiArray): vehicle pose in world frame [x, y, yaw, scale]
+      - scalar compensated pose topics for direct PID/controller consumers
       - (optional) output_topic_raw              : raw pose (no center compensation) [x, y, yaw, scale]
 
     Notes:
@@ -49,6 +50,10 @@ class LkTotalTransformNode(Node):
         # ---- Params (topics) ----
         self.declare_parameter('image_topic', 'camera/bottom/image_raw')
         self.declare_parameter('output_topic', 'camera/bottom/pose_px')
+        self.declare_parameter('output_x_topic', 'control/pid/bottom_camera/x/feedback_px')
+        self.declare_parameter('output_y_topic', 'control/pid/bottom_camera/y/feedback_px')
+        self.declare_parameter('output_yaw_topic', 'state/bottom_camera/yaw_rad')
+        self.declare_parameter('output_scale_topic', 'state/bottom_camera/scale')
 
         # raw output (debug / diagnostics)
         self.declare_parameter('publish_raw_output', True)
@@ -94,6 +99,10 @@ class LkTotalTransformNode(Node):
         self._bridge = CvBridge()
         self._image_topic = self.get_parameter('image_topic').value
         self._output_topic = self.get_parameter('output_topic').value
+        self._output_x_topic = self.get_parameter('output_x_topic').value
+        self._output_y_topic = self.get_parameter('output_y_topic').value
+        self._output_yaw_topic = self.get_parameter('output_yaw_topic').value
+        self._output_scale_topic = self.get_parameter('output_scale_topic').value
 
         self._publish_raw_output = bool(self.get_parameter('publish_raw_output').value)
         self._output_topic_raw = self.get_parameter('output_topic_raw').value
@@ -148,6 +157,10 @@ class LkTotalTransformNode(Node):
 
         # ---- Pub/Sub ----
         self._pub_comp = self.create_publisher(Float64MultiArray, self._output_topic, 10)
+        self._pub_x = self.create_publisher(Float64, self._output_x_topic, 10)
+        self._pub_y = self.create_publisher(Float64, self._output_y_topic, 10)
+        self._pub_yaw = self.create_publisher(Float64, self._output_yaw_topic, 10)
+        self._pub_scale = self.create_publisher(Float64, self._output_scale_topic, 10)
         self._pub_raw = None
         if self._publish_raw_output:
             self._pub_raw = self.create_publisher(Float64MultiArray, self._output_topic_raw, 10)
@@ -163,7 +176,9 @@ class LkTotalTransformNode(Node):
 
         self.get_logger().info(
             f'LK total transform node started. image_topic={self._image_topic}, output_topic={self._output_topic}, '
-            f'rotation_center_mode={self._rotation_center_mode}, publish_raw={self._publish_raw_output}'
+            f'rotation_center_mode={self._rotation_center_mode}, publish_raw={self._publish_raw_output}\n'
+            f'scalar outputs: x={self._output_x_topic}, y={self._output_y_topic}, '
+            f'yaw={self._output_yaw_topic}, scale={self._output_scale_topic}'
         )
 
     def _on_camerainfo(self, msg: CameraInfo):
@@ -222,6 +237,10 @@ class LkTotalTransformNode(Node):
         msg = Float64MultiArray()
         msg.data = [float(tx), float(ty), float(rot), float(scale)]
         self._pub_comp.publish(msg)
+        self._publish_float(self._pub_x, tx)
+        self._publish_float(self._pub_y, ty)
+        self._publish_float(self._pub_yaw, rot)
+        self._publish_float(self._pub_scale, scale)
 
         # raw output (optional diagnostics)
         if self._pub_raw is not None:
@@ -229,6 +248,12 @@ class LkTotalTransformNode(Node):
             msg2 = Float64MultiArray()
             msg2.data = [float(tx2), float(ty2), float(rot2), float(scale2)]
             self._pub_raw.publish(msg2)
+
+    @staticmethod
+    def _publish_float(pub, value: float):
+        msg = Float64()
+        msg.data = float(value)
+        pub.publish(msg)
 
     def _publish_debug(self, frame_bgr: np.ndarray, pts_small: np.ndarray, scale_factor: float):
         if self._debug_pub is None or frame_bgr is None or pts_small is None:

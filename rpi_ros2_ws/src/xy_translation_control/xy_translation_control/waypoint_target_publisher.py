@@ -4,7 +4,7 @@ from typing import List, Tuple
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float64MultiArray, Bool
+from std_msgs.msg import Bool, Float64, Float64MultiArray
 
 
 class WaypointTargetPublisher(Node):
@@ -19,6 +19,8 @@ class WaypointTargetPublisher(Node):
         # --- Parameters (keep topics/tolerance configurable) ---
         self.declare_parameter("current_topic", "camera/bottom/pose_px")
         self.declare_parameter("target_topic", "control/targets/bottom_camera_point_px")
+        self.declare_parameter("target_x_topic", "control/pid/bottom_camera/x/reference_px")
+        self.declare_parameter("target_y_topic", "control/pid/bottom_camera/y/reference_px")
         self.declare_parameter("done_topic", "control/targets/done")
 
         # Desired speed for interpolated setpoints (units/sec, same units as waypoints)
@@ -31,6 +33,8 @@ class WaypointTargetPublisher(Node):
 
         self.current_topic = self.get_parameter("current_topic").value
         self.target_topic = self.get_parameter("target_topic").value
+        self.target_x_topic = self.get_parameter("target_x_topic").value
+        self.target_y_topic = self.get_parameter("target_y_topic").value
         self.done_topic = self.get_parameter("done_topic").value
 
         self.setpoint_speed = float(self.get_parameter("setpoint_speed").value)
@@ -60,6 +64,8 @@ class WaypointTargetPublisher(Node):
 
         # --- Publishers/Subscribers ---
         self.pub_target = self.create_publisher(Float64MultiArray, self.target_topic, 10)
+        self.pub_target_x = self.create_publisher(Float64, self.target_x_topic, 10)
+        self.pub_target_y = self.create_publisher(Float64, self.target_y_topic, 10)
         self.pub_done = self.create_publisher(Bool, self.done_topic, 10)
 
         if self.publish_period > 0.0:
@@ -79,6 +85,8 @@ class WaypointTargetPublisher(Node):
         self.get_logger().info(
             f"current: {self.current_topic}\n"
             f"target : {self.target_topic}\n"
+            f"target_x: {self.target_x_topic}\n"
+            f"target_y: {self.target_y_topic}\n"
             f"done   : {self.done_topic}\n"
             f"targets({len(self.targets)}): {self.targets}"
         )
@@ -101,8 +109,16 @@ class WaypointTargetPublisher(Node):
         msg = Float64MultiArray()
         msg.data = [float(tx), float(ty)]
         self.pub_target.publish(msg)
+        self._publish_float(self.pub_target_x, tx)
+        self._publish_float(self.pub_target_y, ty)
         if log:
             self.get_logger().info(f"[target] idx={self.idx} -> ({tx:.3f}, {ty:.3f})")
+
+    @staticmethod
+    def _publish_float(pub, value: float):
+        msg = Float64()
+        msg.data = float(value)
+        pub.publish(msg)
 
     def _advance_target(self):
         """Advance to the next waypoint, or mark done if finished."""
