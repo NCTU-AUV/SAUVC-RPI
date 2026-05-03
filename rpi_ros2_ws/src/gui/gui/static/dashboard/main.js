@@ -267,13 +267,21 @@ function move_to_point_button_onclick() {
     )));
 }
 
-function set_bottom_camera_yaw_target_button_onclick() {
-    const yaw_rad = document.getElementById("bottom_camera_yaw_target_rad_input").value;
-
+function publish_bottom_camera_yaw_target_rad(yaw_rad) {
     websocket.send(JSON.stringify(protocol.makeTopicMessage(
         protocol.topics.bottomCameraPidYawReferenceRad,
         {data: yaw_rad}
     )));
+}
+
+function set_bottom_camera_yaw_target_rad_button_onclick() {
+    const yaw_rad = document.getElementById("bottom_camera_yaw_target_rad_input").value;
+    publish_bottom_camera_yaw_target_rad(yaw_rad);
+}
+
+function set_bottom_camera_yaw_target_deg_button_onclick() {
+    const yaw_deg = document.getElementById("bottom_camera_yaw_target_deg_input").value;
+    publish_bottom_camera_yaw_target_rad(Number(yaw_deg) * Math.PI / 180.0);
 }
 
 function cancel_move_to_point_button_onclick() {
