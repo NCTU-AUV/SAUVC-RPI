@@ -1,11 +1,5 @@
-from enum import Enum
-
 import rclpy
 from geometry_msgs.msg import Wrench
-from lifecycle_msgs.msg import State
-from lifecycle_msgs.msg import Transition
-from lifecycle_msgs.srv import ChangeState
-from lifecycle_msgs.srv import GetState
 from rclpy.node import Node
 from std_msgs.msg import Bool
 from std_msgs.msg import Float32
@@ -14,42 +8,10 @@ from std_msgs.msg import Float64MultiArray
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
-
-class _AsyncLifecycleClient:
-    """Minimal async lifecycle client for ROS 2 Humble."""
-
-    def __init__(self, node: Node, node_name: str):
-        self._change_state_client = node.create_client(
-            ChangeState,
-            f"{node_name}/change_state",
-        )
-        self._get_state_client = node.create_client(
-            GetState,
-            f"{node_name}/get_state",
-        )
-
-    def service_is_ready(self) -> bool:
-        return (
-            self._change_state_client.service_is_ready()
-            and self._get_state_client.service_is_ready()
-        )
-
-    def get_state(self):
-        return self._get_state_client.call_async(GetState.Request())
-
-    def change_state(self, transition_id: int):
-        request = ChangeState.Request()
-        request.transition.id = transition_id
-        return self._change_state_client.call_async(request)
-
-
-class ControlMode(Enum):
-    SAFE_DISABLED = "SAFE_DISABLED"
-    MANUAL = "MANUAL"
-    DEPTH_HOLD = "DEPTH_HOLD"
-    BOTTOM_CAMERA_HOLD = "BOTTOM_CAMERA_HOLD"
-    DEPTH_AND_BOTTOM_CAMERA_HOLD = "DEPTH_AND_BOTTOM_CAMERA_HOLD"
-    FAULT = "FAULT"
+from system_manager.control_mode import ControlMode
+from system_manager.controller_groups import ControllerGroupManager
+from system_manager.safety_monitor import SafetyMonitor
+from system_manager.stm32_auto_flasher import Stm32AutoFlasher
 
 
 class SupervisorNode(Node):
@@ -80,22 +42,11 @@ class SupervisorNode(Node):
         self._mode = ControlMode.SAFE_DISABLED
         self._status = "Initialized in SAFE_DISABLED"
         self._active_controller_groups = set()
-        self._killed = False
-        self._have_killed_state = False
-        self._thrusters_enabled = False
-        self._have_thrusters_enabled = False
-        self._last_depth_stamp = None
-        self._last_bottom_camera_stamp = None
-
-        self._lifecycle_clients = {}
-        self._reset_clients = {}
-        self._stm32_flash_client = self.create_client(
-            Trigger,
-            self.get_parameter("stm32_flash_service").value,
+        self._safety = SafetyMonitor(self)
+        self._controllers = ControllerGroupManager(
+            self,
+            self._controller_groups,
         )
-        self._stm32_auto_flash_started = False
-        self._stm32_auto_flash_finished = False
-        self._stm32_auto_flash_start_stamp = self.get_clock().now()
 
         self._mode_publisher = self.create_publisher(String, "system_manager/mode", 10)
         self._status_publisher = self.create_publisher(String, "system_manager/status", 10)
@@ -138,29 +89,28 @@ class SupervisorNode(Node):
 
         self.create_timer(0.2, self._publish_state)
         self.create_timer(0.2, self._check_active_mode_safety)
-        self._stm32_auto_flash_timer = self.create_timer(0.5, self._maybe_auto_flash_stm32)
+        self._stm32_auto_flasher = Stm32AutoFlasher(self, self._set_status)
 
     def _on_killed(self, msg: Bool):
-        self._killed = bool(msg.data)
-        self._have_killed_state = True
-        if self._require_not_killed() and self._killed:
+        killed = bool(msg.data)
+        self._safety.update_killed(killed)
+        if self._safety.require_not_killed() and killed:
             self._enter_fault("Killed")
 
     def _on_thrusters_enabled(self, msg: Bool):
-        self._thrusters_enabled = bool(msg.data)
-        self._have_thrusters_enabled = True
-        if not self._thrusters_enabled and self._active_controller_groups:
+        thrusters_enabled = bool(msg.data)
+        self._safety.update_thrusters_enabled(thrusters_enabled)
+        if not thrusters_enabled and self._active_controller_groups:
             self._enter_fault("Thrusters are disabled")
 
     def _on_depth_float32(self, msg: Float32):
-        self._last_depth_stamp = self.get_clock().now()
+        self._safety.update_depth()
 
     def _on_depth_float64(self, msg: Float64):
-        self._last_depth_stamp = self.get_clock().now()
+        self._safety.update_depth()
 
     def _on_bottom_camera_pose(self, msg: Float64MultiArray):
-        if msg.data and len(msg.data) >= 2:
-            self._last_bottom_camera_stamp = self.get_clock().now()
+        self._safety.update_bottom_camera_pose(msg.data)
 
     def _set_safe_disabled(self, request, response):
         self._set_mode(ControlMode.SAFE_DISABLED, "Operator requested SAFE_DISABLED")
@@ -236,18 +186,20 @@ class SupervisorNode(Node):
         return response
 
     def _reset_controllers(self, request, response):
-        for group in self._controller_groups:
-            self._reset_group(group)
+        self._controllers.reset_all()
         response.success = True
         response.message = "Controller reset requests sent"
         return response
+
+    def _set_status(self, status: str):
+        self._status = status
 
     def _set_mode(self, mode: ControlMode, status: str):
         self._mode = mode
         self._status = status
         if mode in (ControlMode.SAFE_DISABLED, ControlMode.MANUAL, ControlMode.FAULT):
             self._active_controller_groups.clear()
-            self._disable_all_controllers()
+            self._controllers.disable_all()
         if mode in (ControlMode.SAFE_DISABLED, ControlMode.FAULT):
             self._publish_zero_wrench()
 
@@ -258,7 +210,7 @@ class SupervisorNode(Node):
         self._status = reason
         self._active_controller_groups.clear()
         self.get_logger().warning(f"Entering FAULT: {reason}")
-        self._disable_all_controllers()
+        self._controllers.disable_all()
         self._publish_zero_wrench()
 
     def _refresh_mode_from_active_groups(self):
@@ -280,38 +232,13 @@ class SupervisorNode(Node):
             self._publish_zero_wrench()
 
     def _safety_ready(self):
-        if self._require_not_killed():
-            if not self._have_killed_state:
-                return False, "Killed state is unknown"
-            if self._killed:
-                return False, "Killed"
-
-        if self.get_parameter("require_thrusters_enabled").value:
-            if not self._have_thrusters_enabled:
-                return False, "Thruster enabled state is unknown"
-            if not self._thrusters_enabled:
-                return False, "Thrusters are disabled"
-
-        return True, ""
-
-    def _require_not_killed(self):
-        return self.get_parameter("require_not_killed").value
+        return self._safety.safety_ready()
 
     def _depth_ready(self):
-        timeout_s = float(self.get_parameter("depth_sensor_timeout_s").value)
-        if self._last_depth_stamp is None:
-            return False, "Depth sensor data has not been received"
-        if self._age_s(self._last_depth_stamp) > timeout_s:
-            return False, "Depth sensor data is stale"
-        return True, ""
+        return self._safety.depth_ready()
 
     def _bottom_camera_ready(self):
-        timeout_s = float(self.get_parameter("bottom_camera_timeout_s").value)
-        if self._last_bottom_camera_stamp is None:
-            return False, "Bottom camera pose has not been received"
-        if self._age_s(self._last_bottom_camera_stamp) > timeout_s:
-            return False, "Bottom camera pose is stale"
-        return True, ""
+        return self._safety.bottom_camera_ready()
 
     def _check_active_mode_safety(self):
         if not self._active_controller_groups:
@@ -333,212 +260,14 @@ class SupervisorNode(Node):
             if not ok:
                 self._enter_fault(reason)
 
-    def _maybe_auto_flash_stm32(self):
-        if not self.get_parameter("auto_flash_stm32_on_startup").value:
-            self._stm32_auto_flash_finished = True
-            self._stm32_auto_flash_timer.cancel()
-            return
-
-        if self._stm32_auto_flash_started or self._stm32_auto_flash_finished:
-            return
-
-        if self._stm32_flash_client.service_is_ready():
-            self._stm32_auto_flash_started = True
-            self._status = "STM32 auto-flash started"
-            self.get_logger().info(self._status)
-            future = self._stm32_flash_client.call_async(Trigger.Request())
-            future.add_done_callback(self._on_stm32_auto_flash_result)
-            return
-
-        timeout_s = float(self.get_parameter("stm32_flash_service_timeout_s").value)
-        if self._age_s(self._stm32_auto_flash_start_stamp) > timeout_s:
-            self._stm32_auto_flash_finished = True
-            self._stm32_auto_flash_timer.cancel()
-            service_name = self.get_parameter("stm32_flash_service").value
-            self._status = f"STM32 auto-flash skipped: {service_name} service not ready"
-            self.get_logger().warning(self._status)
-
-    def _on_stm32_auto_flash_result(self, future):
-        self._stm32_auto_flash_finished = True
-        self._stm32_auto_flash_timer.cancel()
-
-        try:
-            response = future.result()
-        except Exception as exc:  # noqa: BLE001
-            self._status = f"STM32 auto-flash failed: {exc}"
-            self.get_logger().warning(self._status)
-            return
-
-        if response.success:
-            self._status = "STM32 auto-flash succeeded"
-            if response.message:
-                self._status = f"{self._status}: {response.message}"
-            self.get_logger().info(self._status)
-            return
-
-        self._status = "STM32 auto-flash failed"
-        if response.message:
-            self._status = f"{self._status}: {response.message}"
-        self.get_logger().warning(self._status)
-
-    def _age_s(self, stamp):
-        return (self.get_clock().now() - stamp).nanoseconds / 1e9
-
     def _enable_group(self, group: str):
-        for node_name in self._controller_groups.get(group, []):
-            self._request_lifecycle_active(node_name)
+        self._controllers.enable_group(group)
 
     def _disable_group(self, group: str):
-        for node_name in self._controller_groups.get(group, []):
-            self._request_lifecycle_inactive(node_name)
-
-    def _disable_all_controllers(self):
-        for group in self._controller_groups:
-            self._disable_group(group)
-
-    def _get_lifecycle_client(self, node_name: str):
-        client = self._lifecycle_clients.get(node_name)
-        if client is None:
-            client = _AsyncLifecycleClient(self, node_name)
-            self._lifecycle_clients[node_name] = client
-        return client
-
-    def _request_lifecycle_active(self, node_name: str):
-        client = self._get_lifecycle_client(node_name)
-        if not client.service_is_ready():
-            self.get_logger().warning(f"Lifecycle services not ready for {node_name}")
-            return
-
-        future = client.get_state()
-        future.add_done_callback(lambda f, n=node_name: self._activate_from_state(n, f))
-
-    def _activate_from_state(self, node_name: str, future):
-        try:
-            state_id = future.result().current_state.id
-        except Exception as exc:  # noqa: BLE001
-            self.get_logger().warning(f"Failed to get lifecycle state for {node_name}: {exc}")
-            return
-
-        if state_id == State.PRIMARY_STATE_ACTIVE:
-            return
-        if state_id == State.PRIMARY_STATE_INACTIVE:
-            self._change_lifecycle_state(node_name, Transition.TRANSITION_ACTIVATE)
-            return
-        if state_id == State.PRIMARY_STATE_UNCONFIGURED:
-            future = self._change_lifecycle_state(
-                node_name,
-                Transition.TRANSITION_CONFIGURE,
-                log_result=False,
-            )
-            if future is not None:
-                future.add_done_callback(
-                    lambda f, n=node_name: self._activate_after_configure(n, f)
-                )
-            return
-
-        self.get_logger().warning(
-            f"Cannot activate {node_name} from lifecycle state id {state_id}"
-        )
-
-    def _activate_after_configure(self, node_name: str, future):
-        if not self._lifecycle_transition_succeeded(
-            node_name,
-            "configure",
-            future,
-        ):
-            return
-        self._change_lifecycle_state(node_name, Transition.TRANSITION_ACTIVATE)
-
-    def _request_lifecycle_inactive(self, node_name: str):
-        client = self._get_lifecycle_client(node_name)
-        if not client.service_is_ready():
-            self.get_logger().warning(f"Lifecycle services not ready for {node_name}")
-            return
-
-        future = client.get_state()
-        future.add_done_callback(lambda f, n=node_name: self._deactivate_from_state(n, f))
-
-    def _deactivate_from_state(self, node_name: str, future):
-        try:
-            state_id = future.result().current_state.id
-        except Exception as exc:  # noqa: BLE001
-            self.get_logger().warning(f"Failed to get lifecycle state for {node_name}: {exc}")
-            return
-
-        if state_id == State.PRIMARY_STATE_ACTIVE:
-            self._change_lifecycle_state(node_name, Transition.TRANSITION_DEACTIVATE)
-            return
-        if state_id in (
-            State.PRIMARY_STATE_UNCONFIGURED,
-            State.PRIMARY_STATE_INACTIVE,
-            State.PRIMARY_STATE_FINALIZED,
-        ):
-            return
-
-        self.get_logger().warning(
-            f"Cannot deactivate {node_name} from lifecycle state id {state_id}"
-        )
-
-    def _change_lifecycle_state(
-        self,
-        node_name: str,
-        transition_id: int,
-        log_result: bool = True,
-    ):
-        client = self._get_lifecycle_client(node_name)
-        if not client.service_is_ready():
-            self.get_logger().warning(f"Lifecycle services not ready for {node_name}")
-            return None
-
-        future = client.change_state(transition_id)
-        if log_result:
-            future.add_done_callback(
-                lambda f, n=node_name, t=transition_id: self._log_lifecycle_result(n, t, f)
-            )
-        return future
+        self._controllers.disable_group(group)
 
     def _reset_group(self, group: str):
-        for node_name in self._controller_groups.get(group, []):
-            client = self._get_reset_client(node_name)
-            if not client.service_is_ready():
-                self.get_logger().warning(f"Reset service not ready for {node_name}")
-                continue
-            future = client.call_async(Trigger.Request())
-            future.add_done_callback(lambda f, n=node_name: self._log_reset_result(n, f))
-
-    def _get_reset_client(self, node_name: str):
-        client = self._reset_clients.get(node_name)
-        if client is None:
-            client = self.create_client(Trigger, f"{node_name}/reset")
-            self._reset_clients[node_name] = client
-        return client
-
-    def _log_lifecycle_result(self, node_name: str, transition_id: int, future):
-        self._lifecycle_transition_succeeded(node_name, str(transition_id), future)
-
-    def _lifecycle_transition_succeeded(self, node_name: str, label: str, future) -> bool:
-        try:
-            response = future.result()
-        except Exception as exc:  # noqa: BLE001
-            self.get_logger().warning(
-                f"Lifecycle transition {label} failed on {node_name}: {exc}"
-            )
-            return False
-        if not response.success:
-            self.get_logger().warning(
-                f"Lifecycle transition {label} rejected by {node_name}"
-            )
-            return False
-        return True
-
-    def _log_reset_result(self, node_name: str, future):
-        try:
-            response = future.result()
-        except Exception as exc:  # noqa: BLE001
-            self.get_logger().warning(f"Reset call failed on {node_name}: {exc}")
-            return
-        if not response.success:
-            self.get_logger().warning(f"Reset failed on {node_name}: {response.message}")
+        self._controllers.reset_group(group)
 
     def _publish_zero_wrench(self):
         if not self.get_parameter("publish_zero_wrench_on_disable").value:
