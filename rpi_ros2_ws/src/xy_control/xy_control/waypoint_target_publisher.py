@@ -78,7 +78,11 @@ class WaypointTargetPublisher(Node):
         )
 
     def _goal_callback(self, goal_request: MoveToPoint.Goal):
-        values = (goal_request.x_px, goal_request.y_px, goal_request.speed_px_s)
+        values = (
+            goal_request.x_px,
+            goal_request.y_px,
+            goal_request.speed_px_s,
+        )
         if not all(math.isfinite(float(value)) for value in values):
             self.get_logger().warn("Rejected move_to_point goal with non-finite value.")
             return GoalResponse.REJECT

@@ -43,8 +43,38 @@ def generate_launch_description():
         }],
     )
 
+    yaw_angle_pid_controller_node = Node(
+        package='control',
+        namespace=namespace,
+        executable='generic_pid_controller_node',
+        name='yaw_angle_pid_controller_node',
+        remappings=[
+            ('control/pid/reference', 'control/pid/bottom_camera/yaw/reference_rad'),
+            ('control/pid/feedback', 'state/bottom_camera/yaw_rad'),
+            ('control/pid/output', 'control/pid/bottom_camera/yaw/torque_Nm'),
+        ],
+        parameters=[{
+            'proportional_gain': 0.5,
+            'integral_gain': 0.0,
+            'derivative_gain': 0.02,
+            'derivative_smoothing_factor': 0.2,
+        }],
+    )
+
+    yaw_reference_unwrapper_node = Node(
+        package='xy_control',
+        namespace=namespace,
+        executable='yaw_reference_unwrapper_node',
+        name='yaw_reference_unwrapper_node',
+        parameters=[{
+            'target_topic': 'control/targets/bottom_camera/yaw_rad',
+            'feedback_topic': 'state/bottom_camera/yaw_rad',
+            'output_topic': 'control/pid/bottom_camera/yaw/reference_rad',
+        }],
+    )
+
     bridge_node = Node(
-        package='xy_translation_control',
+        package='xy_control',
         executable='bottom_camera_pid_bridge_node',
         namespace=namespace,
         parameters=[{
@@ -52,11 +82,12 @@ def generate_launch_description():
             'output_topic': 'control/wrench_sources/bottom_camera',
             'x_manipulated_topic': 'control/pid/bottom_camera/x/force_world_N',
             'y_manipulated_topic': 'control/pid/bottom_camera/y/force_world_N',
+            'yaw_manipulated_topic': 'control/pid/bottom_camera/yaw/torque_Nm',
         }],
     )
 
     waypoint_target_publisher = Node(
-        package='xy_translation_control',
+        package='xy_control',
         executable='waypoint_target_publisher',
         namespace=namespace,
         name='waypoint_target_publisher',
@@ -71,6 +102,8 @@ def generate_launch_description():
             ),
             x_coordinate_pid_controller_node,
             y_coordinate_pid_controller_node,
+            yaw_reference_unwrapper_node,
+            yaw_angle_pid_controller_node,
             bridge_node,
             waypoint_target_publisher,
         ]

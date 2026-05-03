@@ -95,8 +95,11 @@ class GUINode(Node):
             for topic in (
                 protocol.TOPIC_BOTTOM_CAMERA_PID_X_REFERENCE_PX,
                 protocol.TOPIC_BOTTOM_CAMERA_PID_Y_REFERENCE_PX,
+                protocol.TOPIC_BOTTOM_CAMERA_YAW_TARGET_RAD,
+                protocol.TOPIC_BOTTOM_CAMERA_PID_YAW_REFERENCE_RAD,
                 protocol.TOPIC_BOTTOM_CAMERA_PID_X_FEEDBACK_PX,
                 protocol.TOPIC_BOTTOM_CAMERA_PID_Y_FEEDBACK_PX,
+                protocol.TOPIC_BOTTOM_CAMERA_PID_YAW_FEEDBACK_RAD,
             )
         ]
 
@@ -176,6 +179,11 @@ class GUINode(Node):
             protocol.TOPIC_TARGET_DEPTH_M,
             10,
         )
+        self._target_yaw_publisher = self.create_publisher(
+            Float64,
+            protocol.TOPIC_BOTTOM_CAMERA_YAW_TARGET_RAD,
+            10,
+        )
         self._move_to_point_action_client = ActionClient(
             self,
             MoveToPoint,
@@ -184,7 +192,7 @@ class GUINode(Node):
         self._move_to_point_goal_handle = None
         self._process_commands = {
             protocol.PROCESS_BOTTOM_CAMERA_PID_FBC_LAUNCH: [
-                "ros2", "launch", "xy_translation_control", "bottom_camera_pid_fbc_launch.py",
+                "ros2", "launch", "xy_control", "bottom_camera_pid_fbc_launch.py",
                 f"namespace:={self._robot_namespace}",
             ],
             protocol.PROCESS_DEPTH_CONTROL_LAUNCH: [
@@ -198,6 +206,7 @@ class GUINode(Node):
             protocol.CONTROLLER_GROUP_BOTTOM_CAMERA_PID_FBC: [
                 "x_coordinate_pid_controller_node",
                 "y_coordinate_pid_controller_node",
+                "yaw_angle_pid_controller_node",
             ],
             protocol.CONTROLLER_GROUP_DEPTH_CONTROL: [
                 "depth_pid_controller_node",
@@ -338,6 +347,16 @@ class GUINode(Node):
                     msg = Float64()
                     msg.data = target_depth
                     self._target_depth_publisher.publish(msg)
+
+            if topic_name == protocol.TOPIC_BOTTOM_CAMERA_YAW_TARGET_RAD:
+                try:
+                    target_yaw = float(msg_data[protocol.FIELD_MSG]["data"])
+                except (KeyError, TypeError, ValueError):
+                    self.get_logger().warning(f"Invalid target yaw message: {msg_json_object}")
+                else:
+                    msg = Float64()
+                    msg.data = target_yaw
+                    self._target_yaw_publisher.publish(msg)
 
             if topic_name == protocol.TOPIC_ELECTROMAGNET_ENABLED:
                 try:
