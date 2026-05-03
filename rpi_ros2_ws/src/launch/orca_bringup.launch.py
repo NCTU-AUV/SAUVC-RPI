@@ -50,6 +50,14 @@ def generate_launch_description():
             ('control/wrench_command', 'control/wrench_sources/gui')
         ]
     )
+
+    supervisor_node = Node(
+        package='system_manager',
+        executable='supervisor_node',
+        namespace=namespace,
+        name='supervisor_node',
+    )
+
     bottom_camera_pid_fbc_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
@@ -118,6 +126,7 @@ def generate_launch_description():
         thruster_pkg_launch,
         wrench_sum_node,
         # mavros,
+        supervisor_node,
         gui_node,
         stm32_flasher_node,
         micro_ros_agent,

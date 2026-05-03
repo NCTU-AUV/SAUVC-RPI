@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'supervisor_node = system_manager.supervisor_node:main',
         ],
     },
 )
