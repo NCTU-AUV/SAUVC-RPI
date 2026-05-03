@@ -53,6 +53,18 @@ websocket.onmessage = (event) => {
                 element.innerHTML = enabled ? "on" : "off";
             }
         }
+        if (msg_json_object.data.topic_name == "system_manager/mode") {
+            const element = document.getElementById("system_manager_mode");
+            if (element) {
+                element.innerHTML = msg_json_object.data.msg;
+            }
+        }
+        if (msg_json_object.data.topic_name == "system_manager/status") {
+            const element = document.getElementById("system_manager_status");
+            if (element) {
+                element.innerHTML = msg_json_object.data.msg;
+            }
+        }
         if (msg_json_object.data.topic_name == "actuators/electromagnet/enabled") {
             const enabled = msg_json_object.data.msg === true;
             const checkbox = document.getElementById("electromagnet_set_on_input");
