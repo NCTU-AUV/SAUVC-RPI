@@ -12,6 +12,9 @@ services:
     environment:
       DISPLAY: ${HOST_DISPLAY:-host.docker.internal:0}
       XAUTHORITY: ${XAUTHORITY:-/tmp/.Xauthority}
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
     volumes:
       - /dev:/dev
       - ./rpi_ros2_ws:/root/rpi_ros2_ws
