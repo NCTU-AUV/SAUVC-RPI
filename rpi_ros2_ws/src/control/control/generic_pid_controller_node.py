@@ -1,12 +1,13 @@
 import rclpy
-from rclpy.node import Node
 from rcl_interfaces.msg import SetParametersResult
+from rclpy.lifecycle import LifecycleNode
+from rclpy.lifecycle import TransitionCallbackReturn
 from std_srvs.srv import Trigger
 
 from std_msgs.msg import Float64
 
 
-class GenericPIDControllerNode(Node):
+class GenericPIDControllerNode(LifecycleNode):
 
     def __init__(self):
         super().__init__('generic_pid_controller_node')
@@ -29,8 +30,7 @@ class GenericPIDControllerNode(Node):
         self._controller_loop_timer_period_s = self.get_parameter('controller_loop_timer_period_s').get_parameter_value().double_value
         self._controller_loop_timer = self.create_timer(self._controller_loop_timer_period_s, self._controller_loop_timer_callback)
 
-        self.declare_parameter('enabled', False)
-        self._enabled = bool(self.get_parameter('enabled').value)
+        self._active = False
 
         self.declare_parameter('proportional_gain', 0.0)
         self.declare_parameter('integral_gain', 0.0)
@@ -52,6 +52,33 @@ class GenericPIDControllerNode(Node):
 
         self.add_on_set_parameters_callback(self._on_params)
 
+    def on_configure(self, state) -> TransitionCallbackReturn:
+        self._reset_state()
+        return TransitionCallbackReturn.SUCCESS
+
+    def on_activate(self, state) -> TransitionCallbackReturn:
+        self._reset_state()
+        self._active = True
+        return TransitionCallbackReturn.SUCCESS
+
+    def on_deactivate(self, state) -> TransitionCallbackReturn:
+        self._active = False
+        self._reset_state()
+        self._publish_output(0.0)
+        return TransitionCallbackReturn.SUCCESS
+
+    def on_cleanup(self, state) -> TransitionCallbackReturn:
+        self._active = False
+        self._reset_state()
+        self._publish_output(0.0)
+        return TransitionCallbackReturn.SUCCESS
+
+    def on_shutdown(self, state) -> TransitionCallbackReturn:
+        self._active = False
+        self._reset_state()
+        self._publish_output(0.0)
+        return TransitionCallbackReturn.SUCCESS
+
     def _reference_input_subscription_callback(self, msg):
         self._reference_input = msg.data
 
@@ -59,12 +86,6 @@ class GenericPIDControllerNode(Node):
         self._output_feedback = msg.data
 
     def _on_params(self, params):
-        for p in params:
-            if p.name == "enabled":
-                self._enabled = bool(p.value)
-                if not self._enabled:
-                    self._reset_state()
-                    self._publish_output(0.0)
         return SetParametersResult(successful=True)
 
     def _on_reset(self, request, response):
@@ -84,7 +105,7 @@ class GenericPIDControllerNode(Node):
         self._manipulated_variable_publisher.publish(output_msg)
 
     def _controller_loop_timer_callback(self):
-        if not self._enabled:
+        if not self._active:
             return
 
         error = self._reference_input - self._output_feedback

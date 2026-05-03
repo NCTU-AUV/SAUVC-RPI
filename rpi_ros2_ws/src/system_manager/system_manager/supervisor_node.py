@@ -2,9 +2,11 @@ from enum import Enum
 
 import rclpy
 from geometry_msgs.msg import Wrench
-from rcl_interfaces.srv import SetParameters
+from lifecycle_msgs.msg import State
+from lifecycle_msgs.msg import Transition
+from lifecycle_msgs.srv import ChangeState
+from lifecycle_msgs.srv import GetState
 from rclpy.node import Node
-from rclpy.parameter import Parameter
 from std_msgs.msg import Bool
 from std_msgs.msg import Float32
 from std_msgs.msg import Float64
@@ -13,19 +15,32 @@ from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
 
-class _AsyncParameterClient:
-    """Minimal async parameter client for ROS 2 Humble."""
+class _AsyncLifecycleClient:
+    """Minimal async lifecycle client for ROS 2 Humble."""
 
     def __init__(self, node: Node, node_name: str):
-        self._client = node.create_client(SetParameters, f"{node_name}/set_parameters")
+        self._change_state_client = node.create_client(
+            ChangeState,
+            f"{node_name}/change_state",
+        )
+        self._get_state_client = node.create_client(
+            GetState,
+            f"{node_name}/get_state",
+        )
 
     def service_is_ready(self) -> bool:
-        return self._client.service_is_ready()
+        return (
+            self._change_state_client.service_is_ready()
+            and self._get_state_client.service_is_ready()
+        )
 
-    def set_parameters(self, params):
-        request = SetParameters.Request()
-        request.parameters = [p.to_parameter_msg() for p in params]
-        return self._client.call_async(request)
+    def get_state(self):
+        return self._get_state_client.call_async(GetState.Request())
+
+    def change_state(self, transition_id: int):
+        request = ChangeState.Request()
+        request.transition.id = transition_id
+        return self._change_state_client.call_async(request)
 
 
 class ControlMode(Enum):
@@ -69,7 +84,7 @@ class SupervisorNode(Node):
         self._last_depth_stamp = None
         self._last_bottom_camera_stamp = None
 
-        self._param_clients = {}
+        self._lifecycle_clients = {}
         self._reset_clients = {}
 
         self._mode_publisher = self.create_publisher(String, "system_manager/mode", 10)
@@ -308,31 +323,117 @@ class SupervisorNode(Node):
         return (self.get_clock().now() - stamp).nanoseconds / 1e9
 
     def _enable_group(self, group: str):
-        self._set_group_enabled(group, True)
+        for node_name in self._controller_groups.get(group, []):
+            self._request_lifecycle_active(node_name)
 
     def _disable_group(self, group: str):
-        self._set_group_enabled(group, False)
+        for node_name in self._controller_groups.get(group, []):
+            self._request_lifecycle_inactive(node_name)
 
     def _disable_all_controllers(self):
         for group in self._controller_groups:
             self._disable_group(group)
 
-    def _set_group_enabled(self, group: str, enabled: bool):
-        for node_name in self._controller_groups.get(group, []):
-            client = self._get_param_client(node_name)
-            if not client.service_is_ready():
-                self.get_logger().warning(f"Parameter service not ready for {node_name}")
-                continue
-            param = Parameter("enabled", Parameter.Type.BOOL, enabled)
-            future = client.set_parameters([param])
-            future.add_done_callback(lambda f, n=node_name: self._log_param_result(n, f))
-
-    def _get_param_client(self, node_name: str):
-        client = self._param_clients.get(node_name)
+    def _get_lifecycle_client(self, node_name: str):
+        client = self._lifecycle_clients.get(node_name)
         if client is None:
-            client = _AsyncParameterClient(self, node_name)
-            self._param_clients[node_name] = client
+            client = _AsyncLifecycleClient(self, node_name)
+            self._lifecycle_clients[node_name] = client
         return client
+
+    def _request_lifecycle_active(self, node_name: str):
+        client = self._get_lifecycle_client(node_name)
+        if not client.service_is_ready():
+            self.get_logger().warning(f"Lifecycle services not ready for {node_name}")
+            return
+
+        future = client.get_state()
+        future.add_done_callback(lambda f, n=node_name: self._activate_from_state(n, f))
+
+    def _activate_from_state(self, node_name: str, future):
+        try:
+            state_id = future.result().current_state.id
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().warning(f"Failed to get lifecycle state for {node_name}: {exc}")
+            return
+
+        if state_id == State.PRIMARY_STATE_ACTIVE:
+            return
+        if state_id == State.PRIMARY_STATE_INACTIVE:
+            self._change_lifecycle_state(node_name, Transition.TRANSITION_ACTIVATE)
+            return
+        if state_id == State.PRIMARY_STATE_UNCONFIGURED:
+            future = self._change_lifecycle_state(
+                node_name,
+                Transition.TRANSITION_CONFIGURE,
+                log_result=False,
+            )
+            if future is not None:
+                future.add_done_callback(
+                    lambda f, n=node_name: self._activate_after_configure(n, f)
+                )
+            return
+
+        self.get_logger().warning(
+            f"Cannot activate {node_name} from lifecycle state id {state_id}"
+        )
+
+    def _activate_after_configure(self, node_name: str, future):
+        if not self._lifecycle_transition_succeeded(
+            node_name,
+            "configure",
+            future,
+        ):
+            return
+        self._change_lifecycle_state(node_name, Transition.TRANSITION_ACTIVATE)
+
+    def _request_lifecycle_inactive(self, node_name: str):
+        client = self._get_lifecycle_client(node_name)
+        if not client.service_is_ready():
+            self.get_logger().warning(f"Lifecycle services not ready for {node_name}")
+            return
+
+        future = client.get_state()
+        future.add_done_callback(lambda f, n=node_name: self._deactivate_from_state(n, f))
+
+    def _deactivate_from_state(self, node_name: str, future):
+        try:
+            state_id = future.result().current_state.id
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().warning(f"Failed to get lifecycle state for {node_name}: {exc}")
+            return
+
+        if state_id == State.PRIMARY_STATE_ACTIVE:
+            self._change_lifecycle_state(node_name, Transition.TRANSITION_DEACTIVATE)
+            return
+        if state_id in (
+            State.PRIMARY_STATE_UNCONFIGURED,
+            State.PRIMARY_STATE_INACTIVE,
+            State.PRIMARY_STATE_FINALIZED,
+        ):
+            return
+
+        self.get_logger().warning(
+            f"Cannot deactivate {node_name} from lifecycle state id {state_id}"
+        )
+
+    def _change_lifecycle_state(
+        self,
+        node_name: str,
+        transition_id: int,
+        log_result: bool = True,
+    ):
+        client = self._get_lifecycle_client(node_name)
+        if not client.service_is_ready():
+            self.get_logger().warning(f"Lifecycle services not ready for {node_name}")
+            return None
+
+        future = client.change_state(transition_id)
+        if log_result:
+            future.add_done_callback(
+                lambda f, n=node_name, t=transition_id: self._log_lifecycle_result(n, t, f)
+            )
+        return future
 
     def _reset_group(self, group: str):
         for node_name in self._controller_groups.get(group, []):
@@ -350,15 +451,23 @@ class SupervisorNode(Node):
             self._reset_clients[node_name] = client
         return client
 
-    def _log_param_result(self, node_name: str, future):
+    def _log_lifecycle_result(self, node_name: str, transition_id: int, future):
+        self._lifecycle_transition_succeeded(node_name, str(transition_id), future)
+
+    def _lifecycle_transition_succeeded(self, node_name: str, label: str, future) -> bool:
         try:
             response = future.result()
         except Exception as exc:  # noqa: BLE001
-            self.get_logger().warning(f"Failed to set params on {node_name}: {exc}")
-            return
-        for res in response.results:
-            if not res.successful:
-                self.get_logger().warning(f"Param set failed on {node_name}: {res.reason}")
+            self.get_logger().warning(
+                f"Lifecycle transition {label} failed on {node_name}: {exc}"
+            )
+            return False
+        if not response.success:
+            self.get_logger().warning(
+                f"Lifecycle transition {label} rejected by {node_name}"
+            )
+            return False
+        return True
 
     def _log_reset_result(self, node_name: str, future):
         try:
