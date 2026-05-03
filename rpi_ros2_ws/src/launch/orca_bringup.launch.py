@@ -61,7 +61,7 @@ def generate_launch_description():
     bottom_camera_pid_fbc_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
-                FindPackageShare('xy_translation_control'),
+                FindPackageShare('xy_control'),
                 'launch',
                 'bottom_camera_pid_fbc_launch.py'
             ])
@@ -85,7 +85,7 @@ def generate_launch_description():
     )
 
     lk_total_transform_node = Node(
-        package='xy_translation_control',
+        package='xy_control',
         executable='lk_total_transform_node',
         namespace=namespace,
         name='lk_total_transform_node',

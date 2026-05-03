@@ -2,7 +2,7 @@ import os
 from glob import glob
 from setuptools import find_packages, setup
 
-package_name = 'xy_translation_control'
+package_name = 'xy_control'
 
 setup(
     name=package_name,
@@ -27,9 +27,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'bottom_camera_pid_bridge_node = xy_translation_control.bottom_camera_pid_bridge_node:main',
-            'lk_total_transform_node = xy_translation_control.lk_total_transform_node:main',
-            'waypoint_target_publisher = xy_translation_control.waypoint_target_publisher:main',
+            'bottom_camera_pid_bridge_node = xy_control.bottom_camera_pid_bridge_node:main',
+            'lk_total_transform_node = xy_control.lk_total_transform_node:main',
+            'waypoint_target_publisher = xy_control.waypoint_target_publisher:main',
         ],
     },
 )

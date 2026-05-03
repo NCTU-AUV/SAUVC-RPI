@@ -184,7 +184,7 @@ class GUINode(Node):
         self._move_to_point_goal_handle = None
         self._process_commands = {
             protocol.PROCESS_BOTTOM_CAMERA_PID_FBC_LAUNCH: [
-                "ros2", "launch", "xy_translation_control", "bottom_camera_pid_fbc_launch.py",
+                "ros2", "launch", "xy_control", "bottom_camera_pid_fbc_launch.py",
                 f"namespace:={self._robot_namespace}",
             ],
             protocol.PROCESS_DEPTH_CONTROL_LAUNCH: [

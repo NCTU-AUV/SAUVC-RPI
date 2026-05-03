@@ -44,7 +44,7 @@ def generate_launch_description():
     )
 
     bridge_node = Node(
-        package='xy_translation_control',
+        package='xy_control',
         executable='bottom_camera_pid_bridge_node',
         namespace=namespace,
         parameters=[{
@@ -56,7 +56,7 @@ def generate_launch_description():
     )
 
     waypoint_target_publisher = Node(
-        package='xy_translation_control',
+        package='xy_control',
         executable='waypoint_target_publisher',
         namespace=namespace,
         name='waypoint_target_publisher',
