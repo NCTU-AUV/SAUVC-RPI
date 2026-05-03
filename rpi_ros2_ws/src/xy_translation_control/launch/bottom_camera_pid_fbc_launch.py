@@ -1,28 +1,11 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
     namespace = LaunchConfiguration('namespace')
-
-    bottom_camera_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution(
-                [
-                    FindPackageShare("bottom_camera"),
-                    "launch",
-                    "bottom_camera_optical_flow.launch.py",
-                ]
-            ),
-        ),
-        launch_arguments={
-            "namespace": namespace,
-        }.items(),
-    )
 
     x_coordinate_pid_controller_node = Node(
         package='control',
@@ -85,7 +68,6 @@ def generate_launch_description():
                 default_value='orca_auv',
                 description='Robot namespace',
             ),
-            bottom_camera_launch,
             x_coordinate_pid_controller_node,
             y_coordinate_pid_controller_node,
             bridge_node,

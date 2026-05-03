@@ -71,6 +71,19 @@ def generate_launch_description():
         }.items(),
     )
 
+    bottom_camera_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare('bottom_camera'),
+                'launch',
+                'bottom_camera_optical_flow.launch.py',
+            ])
+        ),
+        launch_arguments={
+            'namespace': namespace,
+        }.items(),
+    )
+
     lk_total_transform_node = Node(
         package='xy_translation_control',
         executable='lk_total_transform_node',
@@ -122,6 +135,7 @@ def generate_launch_description():
             default_value='false',
             description='Whether to publish debug keypoint overlay images',
         ),
+        bottom_camera_launch,
         bottom_camera_pid_fbc_launch,
         lk_total_transform_node,
         depth_control_launch,
