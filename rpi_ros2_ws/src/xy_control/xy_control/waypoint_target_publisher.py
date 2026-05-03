@@ -25,20 +25,17 @@ class WaypointTargetPublisher(Node):
         self.declare_parameter("target_topic", "control/targets/bottom_camera_point_px")
         self.declare_parameter("target_x_topic", "control/pid/bottom_camera/x/reference_px")
         self.declare_parameter("target_y_topic", "control/pid/bottom_camera/y/reference_px")
-        self.declare_parameter("target_yaw_topic", "control/pid/bottom_camera/yaw/reference_rad")
         self.declare_parameter("done_topic", "control/targets/done")
         self.declare_parameter("default_speed_px_s", 20.0)
         self.declare_parameter("publish_period", 0.1)
         self.declare_parameter("initial_x_px", 0.0)
         self.declare_parameter("initial_y_px", 0.0)
-        self.declare_parameter("initial_yaw_rad", 0.0)
         self.declare_parameter("publish_initial_target", True)
 
         self.action_name = self.get_parameter("action_name").value
         self.target_topic = self.get_parameter("target_topic").value
         self.target_x_topic = self.get_parameter("target_x_topic").value
         self.target_y_topic = self.get_parameter("target_y_topic").value
-        self.target_yaw_topic = self.get_parameter("target_yaw_topic").value
         self.done_topic = self.get_parameter("done_topic").value
         self.default_speed_px_s = float(self.get_parameter("default_speed_px_s").value)
         self.publish_period = float(self.get_parameter("publish_period").value)
@@ -49,13 +46,11 @@ class WaypointTargetPublisher(Node):
             float(self.get_parameter("initial_x_px").value),
             float(self.get_parameter("initial_y_px").value),
         )
-        self._target_yaw_rad = float(self.get_parameter("initial_yaw_rad").value)
         self.publish_initial_target = bool(self.get_parameter("publish_initial_target").value)
 
         self.pub_target = self.create_publisher(Float64MultiArray, self.target_topic, 10)
         self.pub_target_x = self.create_publisher(Float64, self.target_x_topic, 10)
         self.pub_target_y = self.create_publisher(Float64, self.target_y_topic, 10)
-        self.pub_target_yaw = self.create_publisher(Float64, self.target_yaw_topic, 10)
         self.pub_done = self.create_publisher(Bool, self.done_topic, 10)
 
         self._active_goal = None
@@ -77,14 +72,17 @@ class WaypointTargetPublisher(Node):
             f"target : {self.target_topic}\n"
             f"target_x: {self.target_x_topic}\n"
             f"target_y: {self.target_y_topic}\n"
-            f"target_yaw: {self.target_yaw_topic}\n"
             f"done   : {self.done_topic}\n"
             f"default_speed_px_s: {self.default_speed_px_s}\n"
             f"publish_period: {self.publish_period}"
         )
 
     def _goal_callback(self, goal_request: MoveToPoint.Goal):
-        values = (goal_request.x_px, goal_request.y_px, goal_request.speed_px_s)
+        values = (
+            goal_request.x_px,
+            goal_request.y_px,
+            goal_request.speed_px_s,
+        )
         if not all(math.isfinite(float(value)) for value in values):
             self.get_logger().warn("Rejected move_to_point goal with non-finite value.")
             return GoalResponse.REJECT
@@ -202,11 +200,8 @@ class WaypointTargetPublisher(Node):
         self.pub_target.publish(msg)
         self._publish_float(self.pub_target_x, tx)
         self._publish_float(self.pub_target_y, ty)
-        self._publish_float(self.pub_target_yaw, self._target_yaw_rad)
         if log:
-            self.get_logger().info(
-                f"[target] ({tx:.3f}, {ty:.3f}), yaw={self._target_yaw_rad:.3f}"
-            )
+            self.get_logger().info(f"[target] ({tx:.3f}, {ty:.3f})")
 
     @staticmethod
     def _publish_float(pub, value: float):

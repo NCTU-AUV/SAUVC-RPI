@@ -95,8 +95,10 @@ class GUINode(Node):
             for topic in (
                 protocol.TOPIC_BOTTOM_CAMERA_PID_X_REFERENCE_PX,
                 protocol.TOPIC_BOTTOM_CAMERA_PID_Y_REFERENCE_PX,
+                protocol.TOPIC_BOTTOM_CAMERA_PID_YAW_REFERENCE_RAD,
                 protocol.TOPIC_BOTTOM_CAMERA_PID_X_FEEDBACK_PX,
                 protocol.TOPIC_BOTTOM_CAMERA_PID_Y_FEEDBACK_PX,
+                protocol.TOPIC_BOTTOM_CAMERA_PID_YAW_FEEDBACK_RAD,
             )
         ]
 
@@ -174,6 +176,11 @@ class GUINode(Node):
         self._target_depth_publisher = self.create_publisher(
             Float64,
             protocol.TOPIC_TARGET_DEPTH_M,
+            10,
+        )
+        self._target_yaw_publisher = self.create_publisher(
+            Float64,
+            protocol.TOPIC_BOTTOM_CAMERA_PID_YAW_REFERENCE_RAD,
             10,
         )
         self._move_to_point_action_client = ActionClient(
@@ -339,6 +346,16 @@ class GUINode(Node):
                     msg = Float64()
                     msg.data = target_depth
                     self._target_depth_publisher.publish(msg)
+
+            if topic_name == protocol.TOPIC_BOTTOM_CAMERA_PID_YAW_REFERENCE_RAD:
+                try:
+                    target_yaw = float(msg_data[protocol.FIELD_MSG]["data"])
+                except (KeyError, TypeError, ValueError):
+                    self.get_logger().warning(f"Invalid target yaw message: {msg_json_object}")
+                else:
+                    msg = Float64()
+                    msg.data = target_yaw
+                    self._target_yaw_publisher.publish(msg)
 
             if topic_name == protocol.TOPIC_ELECTROMAGNET_ENABLED:
                 try:
