@@ -255,6 +255,16 @@
                 <button onclick="start_waypoint_target_publisher()">start</button>
                 <button onclick="stop_waypoint_target_publisher()">kill</button>
             </div>
+            <div class="grid-3">
+                <label class="inline-field">x px <input type="number" step="any" id="move_to_point_x_px_input" value="0"></label>
+                <label class="inline-field">y px <input type="number" step="any" id="move_to_point_y_px_input" value="0"></label>
+                <label class="inline-field">speed px/s <input type="number" step="any" min="0" id="move_to_point_speed_px_s_input" value="20"></label>
+            </div>
+            <div class="row">
+                <button onclick="move_to_point_button_onclick()">move</button>
+                <button onclick="cancel_move_to_point_button_onclick()">cancel</button>
+                <div>move status: <i id="move_to_point_status">idle</i></div>
+            </div>
             <div class="grid-2">
                 <div title="control/pid/bottom_camera/x/reference_px">PID x ref px: <i id="bottom_camera_pid_x_reference_px">none</i></div>
                 <div title="control/pid/bottom_camera/y/reference_px">PID y ref px: <i id="bottom_camera_pid_y_reference_px">none</i></div>
