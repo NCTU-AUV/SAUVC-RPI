@@ -49,6 +49,7 @@ const GuiProtocol = Object.freeze({
         systemManagerStatus: "system_manager/status",
         bottomCameraPidXReferencePx: "control/pid/bottom_camera/x/reference_px",
         bottomCameraPidYReferencePx: "control/pid/bottom_camera/y/reference_px",
+        bottomCameraYawTargetRad: "control/targets/bottom_camera/yaw_rad",
         bottomCameraPidYawReferenceRad: "control/pid/bottom_camera/yaw/reference_rad",
         bottomCameraPidXFeedbackPx: "control/pid/bottom_camera/x/feedback_px",
         bottomCameraPidYFeedbackPx: "control/pid/bottom_camera/y/feedback_px",

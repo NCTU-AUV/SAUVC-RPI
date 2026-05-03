@@ -61,6 +61,18 @@ def generate_launch_description():
         }],
     )
 
+    yaw_reference_unwrapper_node = Node(
+        package='xy_control',
+        namespace=namespace,
+        executable='yaw_reference_unwrapper_node',
+        name='yaw_reference_unwrapper_node',
+        parameters=[{
+            'target_topic': 'control/targets/bottom_camera/yaw_rad',
+            'feedback_topic': 'state/bottom_camera/yaw_rad',
+            'output_topic': 'control/pid/bottom_camera/yaw/reference_rad',
+        }],
+    )
+
     bridge_node = Node(
         package='xy_control',
         executable='bottom_camera_pid_bridge_node',
@@ -90,6 +102,7 @@ def generate_launch_description():
             ),
             x_coordinate_pid_controller_node,
             y_coordinate_pid_controller_node,
+            yaw_reference_unwrapper_node,
             yaw_angle_pid_controller_node,
             bridge_node,
             waypoint_target_publisher,

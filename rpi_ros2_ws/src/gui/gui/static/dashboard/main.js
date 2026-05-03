@@ -126,6 +126,7 @@ websocket.onmessage = (event) => {
         const bottomCameraPidTopicElements = {
             [protocol.topics.bottomCameraPidXReferencePx]: "bottom_camera_pid_x_reference_px",
             [protocol.topics.bottomCameraPidYReferencePx]: "bottom_camera_pid_y_reference_px",
+            [protocol.topics.bottomCameraYawTargetRad]: "bottom_camera_yaw_target_rad",
             [protocol.topics.bottomCameraPidYawReferenceRad]: "bottom_camera_pid_yaw_reference_rad",
             [protocol.topics.bottomCameraPidXFeedbackPx]: "bottom_camera_pid_x_feedback_px",
             [protocol.topics.bottomCameraPidYFeedbackPx]: "bottom_camera_pid_y_feedback_px",
@@ -269,7 +270,7 @@ function move_to_point_button_onclick() {
 
 function publish_bottom_camera_yaw_target_rad(yaw_rad) {
     websocket.send(JSON.stringify(protocol.makeTopicMessage(
-        protocol.topics.bottomCameraPidYawReferenceRad,
+        protocol.topics.bottomCameraYawTargetRad,
         {data: yaw_rad}
     )));
 }

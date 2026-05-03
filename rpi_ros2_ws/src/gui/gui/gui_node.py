@@ -95,6 +95,7 @@ class GUINode(Node):
             for topic in (
                 protocol.TOPIC_BOTTOM_CAMERA_PID_X_REFERENCE_PX,
                 protocol.TOPIC_BOTTOM_CAMERA_PID_Y_REFERENCE_PX,
+                protocol.TOPIC_BOTTOM_CAMERA_YAW_TARGET_RAD,
                 protocol.TOPIC_BOTTOM_CAMERA_PID_YAW_REFERENCE_RAD,
                 protocol.TOPIC_BOTTOM_CAMERA_PID_X_FEEDBACK_PX,
                 protocol.TOPIC_BOTTOM_CAMERA_PID_Y_FEEDBACK_PX,
@@ -180,7 +181,7 @@ class GUINode(Node):
         )
         self._target_yaw_publisher = self.create_publisher(
             Float64,
-            protocol.TOPIC_BOTTOM_CAMERA_PID_YAW_REFERENCE_RAD,
+            protocol.TOPIC_BOTTOM_CAMERA_YAW_TARGET_RAD,
             10,
         )
         self._move_to_point_action_client = ActionClient(
@@ -347,7 +348,7 @@ class GUINode(Node):
                     msg.data = target_depth
                     self._target_depth_publisher.publish(msg)
 
-            if topic_name == protocol.TOPIC_BOTTOM_CAMERA_PID_YAW_REFERENCE_RAD:
+            if topic_name == protocol.TOPIC_BOTTOM_CAMERA_YAW_TARGET_RAD:
                 try:
                     target_yaw = float(msg_data[protocol.FIELD_MSG]["data"])
                 except (KeyError, TypeError, ValueError):
