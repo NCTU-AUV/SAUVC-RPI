@@ -58,6 +58,9 @@ class SupervisorNode(Node):
     def __init__(self):
         super().__init__("supervisor_node")
 
+        self.declare_parameter("require_kill_switch_released", True)
+        # Backward-compatible alias used by older GUI clients. Despite the
+        # old name, the value means "enforce kill-switch safety".
         self.declare_parameter("require_kill_switch_closed", True)
         self.declare_parameter("require_thrusters_enabled", True)
         self.declare_parameter("depth_sensor_timeout_s", 1.0)
@@ -143,8 +146,8 @@ class SupervisorNode(Node):
     def _on_kill_switch(self, msg: Bool):
         self._kill_switch_closed = bool(msg.data)
         self._have_kill_switch = True
-        if not self._kill_switch_closed:
-            self._enter_fault("Kill switch is open")
+        if self._require_kill_switch_released() and self._kill_switch_closed:
+            self._enter_fault("Kill switch is closed")
 
     def _on_thrusters_enabled(self, msg: Bool):
         self._thrusters_enabled = bool(msg.data)
@@ -280,11 +283,11 @@ class SupervisorNode(Node):
             self._publish_zero_wrench()
 
     def _safety_ready(self):
-        if self.get_parameter("require_kill_switch_closed").value:
+        if self._require_kill_switch_released():
             if not self._have_kill_switch:
                 return False, "Kill switch state is unknown"
-            if not self._kill_switch_closed:
-                return False, "Kill switch is open"
+            if self._kill_switch_closed:
+                return False, "Kill switch is closed"
 
         if self.get_parameter("require_thrusters_enabled").value:
             if not self._have_thrusters_enabled:
@@ -293,6 +296,12 @@ class SupervisorNode(Node):
                 return False, "Thrusters are disabled"
 
         return True, ""
+
+    def _require_kill_switch_released(self):
+        return (
+            self.get_parameter("require_kill_switch_released").value
+            and self.get_parameter("require_kill_switch_closed").value
+        )
 
     def _depth_ready(self):
         timeout_s = float(self.get_parameter("depth_sensor_timeout_s").value)
