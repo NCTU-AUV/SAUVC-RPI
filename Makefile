@@ -31,6 +31,10 @@ else
 endif
 XAUTHORITY ?= /tmp/.Xauthority
 XAUTH_FLAGS := $(if $(and $(XAUTH_FILE),$(wildcard $(XAUTH_FILE))),-v $(XAUTH_FILE):/tmp/.Xauthority:ro -e XAUTHORITY=/tmp/.Xauthority,)
+ROS_DOMAIN_ID ?= 0
+ROS_LOCALHOST_ONLY ?= 0
+RMW_IMPLEMENTATION ?= rmw_fastrtps_cpp
+ROS_NET_ENV := ROS_DOMAIN_ID=$(ROS_DOMAIN_ID) ROS_LOCALHOST_ONLY=$(ROS_LOCALHOST_ONLY) RMW_IMPLEMENTATION=$(RMW_IMPLEMENTATION)
 
 .PHONY: all compose_up compose_down compose_build compose_shell init launch launch_detached compose_init compose_launch compose_launch_detached compose_clean clean update_image
 
@@ -43,17 +47,17 @@ compose_up:
 	@echo "Starting compose stack"
 	@mkdir -p $(dir $(XAUTH_FILE))
 	@touch $(XAUTH_FILE)
-	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) build --pull
-	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) up -d --no-build
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) build --pull
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) up -d --no-build
 
 compose_down:
 	$(COMPOSE) down
 
 compose_build:
-	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) build --pull
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) build --pull
 
 compose_shell:
-	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) exec orca /bin/bash -lc "\
 		source /opt/ros/humble/setup.bash; \
 		if [ -f /root/uros_ws/install/local_setup.bash ]; then \
 			source /root/uros_ws/install/local_setup.bash; \
@@ -64,7 +68,7 @@ compose_shell:
 		exec bash"
 
 init: compose_up
-	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) exec orca /bin/bash -lc "\
 		source /opt/ros/humble/setup.bash && \
 		cd $(WORKSPACE) && \
 		rosdep install --from-paths src --ignore-src -y && \
@@ -72,7 +76,7 @@ init: compose_up
 		echo \"source $(WORKSPACE)/install/setup.bash\" >> /etc/bash.bashrc"
 
 launch: compose_up
-	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec orca /bin/bash -lc "\
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) exec orca /bin/bash -lc "\
 		cd $(WORKSPACE) && \
 		source /opt/ros/humble/setup.bash && \
 		source /root/uros_ws/install/local_setup.bash && \
@@ -81,7 +85,7 @@ launch: compose_up
 
 launch_detached: compose_up
 	@echo "Launching ROS stack in detached mode"
-	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(COMPOSE) exec -d orca /bin/bash -lc "\
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) exec -d orca /bin/bash -lc "\
 		cd $(WORKSPACE) && \
 		source /opt/ros/humble/setup.bash && \
 		source /root/uros_ws/install/local_setup.bash && \
