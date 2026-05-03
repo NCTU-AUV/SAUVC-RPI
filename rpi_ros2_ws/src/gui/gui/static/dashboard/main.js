@@ -34,8 +34,8 @@ websocket.onmessage = (event) => {
     const msg_json_object = JSON.parse(event.data);
 
     if (msg_json_object.type == protocol.types.topic) {
-        if (msg_json_object.data.topic_name == protocol.topics.killSwitchClosed) {
-            document.getElementById("is_kill_switch_closed").innerHTML = msg_json_object.data.msg;
+        if (msg_json_object.data.topic_name == protocol.topics.killed) {
+            document.getElementById("killed").innerHTML = msg_json_object.data.msg;
         }
         if (msg_json_object.data.topic_name == protocol.topics.depthM) {
             document.getElementById("pressure_sensor_depth_m").innerHTML = msg_json_object.data.msg;

@@ -58,10 +58,7 @@ class SupervisorNode(Node):
     def __init__(self):
         super().__init__("supervisor_node")
 
-        self.declare_parameter("require_kill_switch_released", True)
-        # Backward-compatible alias used by older GUI clients. Despite the
-        # old name, the value means "enforce kill-switch safety".
-        self.declare_parameter("require_kill_switch_closed", True)
+        self.declare_parameter("require_not_killed", True)
         self.declare_parameter("require_thrusters_enabled", True)
         self.declare_parameter("depth_sensor_timeout_s", 1.0)
         self.declare_parameter("bottom_camera_timeout_s", 1.0)
@@ -83,8 +80,8 @@ class SupervisorNode(Node):
         self._mode = ControlMode.SAFE_DISABLED
         self._status = "Initialized in SAFE_DISABLED"
         self._active_controller_groups = set()
-        self._kill_switch_closed = False
-        self._have_kill_switch = False
+        self._killed = False
+        self._have_killed_state = False
         self._thrusters_enabled = False
         self._have_thrusters_enabled = False
         self._last_depth_stamp = None
@@ -104,7 +101,7 @@ class SupervisorNode(Node):
         self._status_publisher = self.create_publisher(String, "system_manager/status", 10)
         self._zero_wrench_publisher = self.create_publisher(Wrench, "control/wrench_command", 10)
 
-        self.create_subscription(Bool, "sensors/kill_switch_closed", self._on_kill_switch, 10)
+        self.create_subscription(Bool, "sensors/killed", self._on_killed, 10)
         self.create_subscription(Bool, "thrusters/enabled", self._on_thrusters_enabled, 10)
         self.create_subscription(Float32, "sensors/depth_m", self._on_depth_float32, 10)
         self.create_subscription(Float64, "state/depth_m", self._on_depth_float64, 10)
@@ -143,11 +140,11 @@ class SupervisorNode(Node):
         self.create_timer(0.2, self._check_active_mode_safety)
         self._stm32_auto_flash_timer = self.create_timer(0.5, self._maybe_auto_flash_stm32)
 
-    def _on_kill_switch(self, msg: Bool):
-        self._kill_switch_closed = bool(msg.data)
-        self._have_kill_switch = True
-        if self._require_kill_switch_released() and self._kill_switch_closed:
-            self._enter_fault("Kill switch is closed")
+    def _on_killed(self, msg: Bool):
+        self._killed = bool(msg.data)
+        self._have_killed_state = True
+        if self._require_not_killed() and self._killed:
+            self._enter_fault("Killed")
 
     def _on_thrusters_enabled(self, msg: Bool):
         self._thrusters_enabled = bool(msg.data)
@@ -283,11 +280,11 @@ class SupervisorNode(Node):
             self._publish_zero_wrench()
 
     def _safety_ready(self):
-        if self._require_kill_switch_released():
-            if not self._have_kill_switch:
-                return False, "Kill switch state is unknown"
-            if self._kill_switch_closed:
-                return False, "Kill switch is closed"
+        if self._require_not_killed():
+            if not self._have_killed_state:
+                return False, "Killed state is unknown"
+            if self._killed:
+                return False, "Killed"
 
         if self.get_parameter("require_thrusters_enabled").value:
             if not self._have_thrusters_enabled:
@@ -297,11 +294,8 @@ class SupervisorNode(Node):
 
         return True, ""
 
-    def _require_kill_switch_released(self):
-        return (
-            self.get_parameter("require_kill_switch_released").value
-            and self.get_parameter("require_kill_switch_closed").value
-        )
+    def _require_not_killed(self):
+        return self.get_parameter("require_not_killed").value
 
     def _depth_ready(self):
         timeout_s = float(self.get_parameter("depth_sensor_timeout_s").value)

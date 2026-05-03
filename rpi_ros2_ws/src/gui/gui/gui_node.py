@@ -50,10 +50,10 @@ class GUINode(Node):
         self.aiohttp_server.start_threading()
         self._robot_namespace = self.get_namespace().strip('/')
 
-        self._is_kill_switch_closed_subscribers = self.create_subscription(
+        self._killed_subscription = self.create_subscription(
                 msg_type=Bool,
-                topic=protocol.TOPIC_KILL_SWITCH_CLOSED,
-                callback=self._is_kill_switch_closed_callback,
+                topic=protocol.TOPIC_KILLED,
+                callback=self._killed_callback,
                 qos_profile=10
             )
         self._pressure_sensor_depth_subscriber = self.create_subscription(
@@ -227,8 +227,8 @@ class GUINode(Node):
             ): protocol.SUPERVISOR_SERVICE_RESET_CONTROLLERS,
         }
 
-    def _is_kill_switch_closed_callback(self, msg):
-        self.aiohttp_server.send_topic(protocol.TOPIC_KILL_SWITCH_CLOSED, msg.data)
+    def _killed_callback(self, msg):
+        self.aiohttp_server.send_topic(protocol.TOPIC_KILLED, msg.data)
 
     def _pressure_sensor_depth_callback(self, msg: Float32):
         self.aiohttp_server.send_topic(protocol.TOPIC_DEPTH_M, msg.data)
@@ -514,7 +514,7 @@ class GUINode(Node):
         require_hardware_safety = not enabled
         parameters = [
             Parameter(
-                "require_kill_switch_released",
+                "require_not_killed",
                 Parameter.Type.BOOL,
                 require_hardware_safety,
             ),
