@@ -36,6 +36,7 @@ class SupervisorNode(Node):
             "bottom_camera_pid_fbc": [
                 "x_coordinate_pid_controller_node",
                 "y_coordinate_pid_controller_node",
+                "yaw_angle_pid_controller_node",
             ],
         }
 

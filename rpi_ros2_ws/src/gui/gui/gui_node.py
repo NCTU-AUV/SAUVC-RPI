@@ -198,6 +198,7 @@ class GUINode(Node):
             protocol.CONTROLLER_GROUP_BOTTOM_CAMERA_PID_FBC: [
                 "x_coordinate_pid_controller_node",
                 "y_coordinate_pid_controller_node",
+                "yaw_angle_pid_controller_node",
             ],
             protocol.CONTROLLER_GROUP_DEPTH_CONTROL: [
                 "depth_pid_controller_node",

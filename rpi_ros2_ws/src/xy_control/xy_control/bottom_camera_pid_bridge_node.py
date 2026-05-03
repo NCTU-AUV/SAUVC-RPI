@@ -9,11 +9,11 @@ from geometry_msgs.msg import Wrench
 
 class BottomCameraPIDBridgeNode(Node):
     """
-    Combine bottom-camera X/Y PID outputs into a body-frame wrench.
+    Combine bottom-camera X/Y/yaw PID outputs into a body-frame wrench.
 
     Responsibilities:
       - Collect per-axis PID outputs and rotate world-frame forces into the AUV body frame using yaw.
-      - Publish the combined forces as a geometry_msgs/Wrench to drive the vehicle.
+      - Publish the combined force/torque as a geometry_msgs/Wrench to drive the vehicle.
     """
 
     def __init__(self):
@@ -24,11 +24,13 @@ class BottomCameraPIDBridgeNode(Node):
         self.declare_parameter("output_topic", "control/wrench_command")
         self.declare_parameter("x_manipulated_topic", "control/pid/bottom_camera/x/force_world_N")
         self.declare_parameter("y_manipulated_topic", "control/pid/bottom_camera/y/force_world_N")
+        self.declare_parameter("yaw_manipulated_topic", "control/pid/bottom_camera/yaw/torque_Nm")
 
         self.yaw_topic = self.get_parameter("yaw_topic").value
         self.output_topic = self.get_parameter("output_topic").value
         self.x_manipulated_topic = self.get_parameter("x_manipulated_topic").value
         self.y_manipulated_topic = self.get_parameter("y_manipulated_topic").value
+        self.yaw_manipulated_topic = self.get_parameter("yaw_manipulated_topic").value
 
         # State
         self._yaw = 0.0
@@ -36,8 +38,10 @@ class BottomCameraPIDBridgeNode(Node):
 
         self._x_force_world = 0.0
         self._y_force_world = 0.0
+        self._yaw_torque = 0.0
         self._have_x_force = False
         self._have_y_force = False
+        self._have_yaw_torque = False
 
         # Pub/Sub to consume PID outputs and publish the resulting wrench.
         self.pub_wrench = self.create_publisher(Wrench, self.output_topic, 10)
@@ -60,11 +64,18 @@ class BottomCameraPIDBridgeNode(Node):
             self._on_y_output,
             10,
         )
+        self.sub_yaw_manipulated = self.create_subscription(
+            Float64,
+            self.yaw_manipulated_topic,
+            self._on_yaw_output,
+            10,
+        )
 
         self.get_logger().info(
             f"yaw    : {self.yaw_topic}\n"
             f"output : {self.output_topic}\n"
-            f"x_out : {self.x_manipulated_topic} y_out: {self.y_manipulated_topic}"
+            f"x_out : {self.x_manipulated_topic} y_out: {self.y_manipulated_topic}\n"
+            f"yaw_out: {self.yaw_manipulated_topic}"
         )
 
     def _on_yaw(self, msg: Float64):
@@ -88,12 +99,20 @@ class BottomCameraPIDBridgeNode(Node):
         self._have_y_force = True
         self._maybe_publish_wrench()
 
+    def _on_yaw_output(self, msg: Float64):
+        if not math.isfinite(msg.data):
+            return
+        self._yaw_torque = float(msg.data)
+        self._have_yaw_torque = True
+        self._maybe_publish_wrench()
+
     def _maybe_publish_wrench(self):
-        if not (self._have_x_force or self._have_y_force):
+        if not (self._have_x_force or self._have_y_force or self._have_yaw_torque):
             return
 
         fx_world = self._x_force_world if self._have_x_force else 0.0
         fy_world = self._y_force_world if self._have_y_force else 0.0
+        yaw_torque = self._yaw_torque if self._have_yaw_torque else 0.0
         fx_body, fy_body = self._rotate_world_to_body(fx_world, fy_world)
 
         w = Wrench()
@@ -102,7 +121,7 @@ class BottomCameraPIDBridgeNode(Node):
         w.force.z = 0.0
         w.torque.x = 0.0
         w.torque.y = 0.0
-        w.torque.z = 0.0
+        w.torque.z = float(yaw_torque)
         self.pub_wrench.publish(w)
 
     def _rotate_world_to_body(self, fx_world: float, fy_world: float):
