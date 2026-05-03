@@ -23,14 +23,14 @@ class AIOHTTPServer:
     def send_topic(self, topic_name, msg):
         payload = json.dumps(protocol.topic_payload(topic_name, msg))
 
-        # Queue messages when no websocket client is connected yet to avoid crashing.
+        # Keep only the latest payload per topic while disconnected.
         with self._pending_lock:
             if (
                 not self.event_loop
                 or self.websocket_response is None
                 or self.websocket_response.closed
             ):
-                self._pending_topic_payloads.append(payload)
+                self._pending_topic_payloads[topic_name] = payload
                 return
             loop = self.event_loop
             websocket_response = self.websocket_response
@@ -43,13 +43,11 @@ class AIOHTTPServer:
         )
         await websocket_response.prepare(request)
 
-        self.websocket_response = websocket_response
-
-        # Flush any pending messages accumulated before a client connected.
-        pending_payloads = []
+        # Flush the latest pending message for each topic accumulated before connect.
         with self._pending_lock:
-            pending_payloads = self._pending_topic_payloads
-            self._pending_topic_payloads = []
+            self.websocket_response = websocket_response
+            pending_payloads = list(self._pending_topic_payloads.values())
+            self._pending_topic_payloads = {}
         for payload in pending_payloads:
             await websocket_response.send_str(payload)
 
@@ -89,7 +87,7 @@ class AIOHTTPServer:
         self.runner = web.AppRunner(app)
         self.websocket_response = None
         self.event_loop = None
-        self._pending_topic_payloads = []
+        self._pending_topic_payloads = {}
         self._pending_lock = threading.Lock()
         self._thread = None
         self._stopped = False
