@@ -89,6 +89,23 @@ websocket.onmessage = (event) => {
                 element.innerHTML = message ? `${successText}: ${message}` : successText;
             }
         }
+        if (msg_json_object.data.topic_name == protocol.topics.moveToPointStatus) {
+            const status = msg_json_object.data.msg || {};
+            const element = document.getElementById("move_to_point_status");
+            if (element) {
+                let text = status.state || "unknown";
+                if (status.message) {
+                    text += `: ${status.message}`;
+                }
+                if (typeof status.progress === "number") {
+                    text += ` (${Math.round(status.progress * 100)}%)`;
+                }
+                if (typeof status.remaining_distance_px === "number") {
+                    text += ` remaining ${status.remaining_distance_px.toFixed(1)} px`;
+                }
+                element.innerHTML = text;
+            }
+        }
         if (msg_json_object.data.topic_name == protocol.topics.stm32Log) {
             const element = document.getElementById("stm32_debug_log");
             if (element) {
@@ -228,18 +245,30 @@ function set_depth_pid_params_button_onclick() {
     )));
 }
 
-function start_waypoint_target_publisher() {
-    send_process_action(
-        protocol.processTargets.waypointTargetPublisher,
-        protocol.processActions.start
-    );
+function move_to_point_button_onclick() {
+    const x_px = document.getElementById("move_to_point_x_px_input").value;
+    const y_px = document.getElementById("move_to_point_y_px_input").value;
+    const speed_px_s = document.getElementById("move_to_point_speed_px_s_input").value;
+    const statusElement = document.getElementById("move_to_point_status");
+
+    if (statusElement) {
+        statusElement.innerHTML = "sending...";
+    }
+
+    websocket.send(JSON.stringify(protocol.makeActionMessage(
+        protocol.actions.moveToPoint,
+        {
+            x_px: x_px,
+            y_px: y_px,
+            speed_px_s: speed_px_s,
+        }
+    )));
 }
 
-function stop_waypoint_target_publisher() {
-    send_process_action(
-        protocol.processTargets.waypointTargetPublisher,
-        protocol.processActions.stop
-    );
+function cancel_move_to_point_button_onclick() {
+    websocket.send(JSON.stringify(protocol.makeActionMessage(
+        protocol.actions.cancelMoveToPoint
+    )));
 }
 
 function initialize_all_thrusters_button_onclick(){

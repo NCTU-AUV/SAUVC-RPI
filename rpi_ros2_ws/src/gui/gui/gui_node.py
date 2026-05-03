@@ -4,6 +4,7 @@ import signal
 import subprocess
 
 import rclpy
+from rclpy.action import ActionClient
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rcl_interfaces.srv import SetParameters
@@ -14,6 +15,7 @@ from std_msgs.msg import Int32MultiArray
 from std_msgs.msg import String
 from geometry_msgs.msg import Wrench
 from std_srvs.srv import Trigger
+from xy_translation_control_interfaces.action import MoveToPoint
 
 from .backend import protocol
 from .backend.aiohttp_server import AIOHTTPServer
@@ -174,6 +176,12 @@ class GUINode(Node):
             protocol.TOPIC_TARGET_DEPTH_M,
             10,
         )
+        self._move_to_point_action_client = ActionClient(
+            self,
+            MoveToPoint,
+            protocol.MOVE_TO_POINT_ACTION_NAME,
+        )
+        self._move_to_point_goal_handle = None
         self._process_commands = {
             protocol.PROCESS_BOTTOM_CAMERA_PID_FBC_LAUNCH: [
                 "ros2", "launch", "xy_translation_control", "bottom_camera_pid_fbc_launch.py",
@@ -182,10 +190,6 @@ class GUINode(Node):
             protocol.PROCESS_DEPTH_CONTROL_LAUNCH: [
                 "ros2", "launch", "depth_control", "depth_control_launch.py",
                 f"namespace:={self._robot_namespace}",
-            ],
-            protocol.PROCESS_WAYPOINT_TARGET_PUBLISHER: [
-                "ros2", "run", "xy_translation_control", "waypoint_target_publisher",
-                "--ros-args", "-r", f"__ns:=/{self._robot_namespace}",
             ],
         }
         self._processes = {}
@@ -281,6 +285,10 @@ class GUINode(Node):
                 self._flash_stm32()
             elif action_name == protocol.ACTION_SET_SUPERVISOR_SIMULATION_MODE:
                 self._set_supervisor_simulation_mode(bool(msg_data.get("enabled")))
+            elif action_name == protocol.ACTION_MOVE_TO_POINT:
+                self._send_move_to_point_goal(msg_data)
+            elif action_name == protocol.ACTION_CANCEL_MOVE_TO_POINT:
+                self._cancel_move_to_point_goal()
             else:
                 self.get_logger().warning(f"Unknown action request: {action_name}")
 
@@ -456,6 +464,145 @@ class GUINode(Node):
         self.aiohttp_server.send_topic(
             protocol.TOPIC_FLASH_STM32_STATUS,
             {"success": response.success, "message": response.message},
+        )
+
+    def _send_move_to_point_goal(self, data):
+        if (
+            self._move_to_point_goal_handle is not None
+            and self._move_to_point_goal_handle.accepted
+        ):
+            self._send_move_to_point_status(
+                "rejected",
+                "A move-to-point goal is already active.",
+            )
+            return
+
+        try:
+            x_px = float(data["x_px"])
+            y_px = float(data["y_px"])
+            speed_px_s = float(data["speed_px_s"])
+        except (KeyError, TypeError, ValueError):
+            self._send_move_to_point_status(
+                "rejected",
+                "Invalid move-to-point goal.",
+            )
+            return
+
+        if not self._move_to_point_action_client.server_is_ready():
+            self._send_move_to_point_status(
+                "rejected",
+                "Move-to-point action server is not ready.",
+            )
+            return
+
+        goal_msg = MoveToPoint.Goal()
+        goal_msg.x_px = x_px
+        goal_msg.y_px = y_px
+        goal_msg.speed_px_s = speed_px_s
+
+        self._send_move_to_point_status(
+            "sending",
+            f"Sending target ({x_px:.3f}, {y_px:.3f}) at {speed_px_s:.3f} px/s.",
+            x_px=x_px,
+            y_px=y_px,
+            speed_px_s=speed_px_s,
+        )
+
+        future = self._move_to_point_action_client.send_goal_async(
+            goal_msg,
+            feedback_callback=self._on_move_to_point_feedback,
+        )
+        future.add_done_callback(self._on_move_to_point_goal_response)
+
+    def _cancel_move_to_point_goal(self):
+        if self._move_to_point_goal_handle is None:
+            self._send_move_to_point_status("idle", "No active move-to-point goal.")
+            return
+
+        future = self._move_to_point_goal_handle.cancel_goal_async()
+        future.add_done_callback(self._on_move_to_point_cancel_response)
+        self._send_move_to_point_status("canceling", "Canceling move-to-point goal.")
+
+    def _on_move_to_point_goal_response(self, future):
+        try:
+            goal_handle = future.result()
+        except Exception as exc:  # noqa: BLE001
+            self._move_to_point_goal_handle = None
+            self._send_move_to_point_status(
+                "failed",
+                f"Move-to-point send failed: {exc}",
+            )
+            return
+
+        if not goal_handle.accepted:
+            self._move_to_point_goal_handle = None
+            self._send_move_to_point_status(
+                "rejected",
+                "Move-to-point goal rejected.",
+            )
+            return
+
+        self._move_to_point_goal_handle = goal_handle
+        self._send_move_to_point_status("active", "Move-to-point goal accepted.")
+        result_future = goal_handle.get_result_async()
+        result_future.add_done_callback(self._on_move_to_point_result)
+
+    def _on_move_to_point_feedback(self, feedback_msg):
+        feedback = feedback_msg.feedback
+        self._send_move_to_point_status(
+            "active",
+            "Move-to-point goal running.",
+            target_x_px=feedback.target_x_px,
+            target_y_px=feedback.target_y_px,
+            progress=feedback.progress,
+            remaining_distance_px=feedback.remaining_distance_px,
+        )
+
+    def _on_move_to_point_result(self, future):
+        try:
+            response = future.result()
+        except Exception as exc:  # noqa: BLE001
+            self._move_to_point_goal_handle = None
+            self._send_move_to_point_status(
+                "failed",
+                f"Move-to-point result failed: {exc}",
+            )
+            return
+
+        result = response.result
+        self._move_to_point_goal_handle = None
+        status = "succeeded" if result.success else "failed"
+        self._send_move_to_point_status(status, result.message)
+
+    def _on_move_to_point_cancel_response(self, future):
+        try:
+            response = future.result()
+        except Exception as exc:  # noqa: BLE001
+            self._send_move_to_point_status(
+                "failed",
+                f"Move-to-point cancel failed: {exc}",
+            )
+            return
+
+        if response.goals_canceling:
+            self._send_move_to_point_status(
+                "canceling",
+                "Move-to-point cancel accepted.",
+            )
+        else:
+            self._send_move_to_point_status(
+                "failed",
+                "Move-to-point cancel rejected.",
+            )
+
+    def _send_move_to_point_status(self, state: str, message: str, **extra):
+        self.aiohttp_server.send_topic(
+            protocol.TOPIC_MOVE_TO_POINT_STATUS,
+            {
+                "state": state,
+                "message": message,
+                **extra,
+            },
         )
 
     def _call_supervisor(self, service_key: str):

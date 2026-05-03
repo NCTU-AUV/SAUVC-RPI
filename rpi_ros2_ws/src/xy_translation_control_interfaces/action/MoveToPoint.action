@@ -1,0 +1,11 @@
+float64 x_px
+float64 y_px
+float64 speed_px_s
+---
+bool success
+string message
+---
+float64 target_x_px
+float64 target_y_px
+float64 progress
+float64 remaining_distance_px

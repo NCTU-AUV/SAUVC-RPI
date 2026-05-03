@@ -22,10 +22,10 @@ const GuiProtocol = Object.freeze({
         initializeAllThrusters: "initialize_all_thrusters",
         flashStm32: "flash_stm32",
         setSupervisorSimulationMode: "set_supervisor_simulation_mode",
+        moveToPoint: "move_to_point",
+        cancelMoveToPoint: "cancel_move_to_point",
     }),
-    processTargets: Object.freeze({
-        waypointTargetPublisher: "waypoint_target_publisher",
-    }),
+    processTargets: Object.freeze({}),
     processActions: Object.freeze({
         start: "start",
         stop: "stop",
@@ -57,6 +57,7 @@ const GuiProtocol = Object.freeze({
         wrenchCommand: "control/wrench_command",
         targetDepthM: "control/targets/depth_m",
         flashStm32Status: "flash_stm32_status",
+        moveToPointStatus: "control/targets/move_to_point/gui_status",
     }),
     makeWebsocketUrl(hostname) {
         return "ws://" + hostname + this.websocketPath;

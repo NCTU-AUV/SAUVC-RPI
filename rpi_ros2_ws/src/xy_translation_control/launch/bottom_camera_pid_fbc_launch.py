@@ -55,6 +55,13 @@ def generate_launch_description():
         }],
     )
 
+    waypoint_target_publisher = Node(
+        package='xy_translation_control',
+        executable='waypoint_target_publisher',
+        namespace=namespace,
+        name='waypoint_target_publisher',
+    )
+
     return LaunchDescription(
         [
             DeclareLaunchArgument(
@@ -65,5 +72,6 @@ def generate_launch_description():
             x_coordinate_pid_controller_node,
             y_coordinate_pid_controller_node,
             bridge_node,
+            waypoint_target_publisher,
         ]
     )

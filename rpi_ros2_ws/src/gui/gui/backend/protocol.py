@@ -22,10 +22,11 @@ MESSAGE_TYPES = (TYPE_ACTION, TYPE_TOPIC, TYPE_PROCESS, TYPE_CONTROLLER)
 ACTION_INITIALIZE_ALL_THRUSTERS = "initialize_all_thrusters"
 ACTION_FLASH_STM32 = "flash_stm32"
 ACTION_SET_SUPERVISOR_SIMULATION_MODE = "set_supervisor_simulation_mode"
+ACTION_MOVE_TO_POINT = "move_to_point"
+ACTION_CANCEL_MOVE_TO_POINT = "cancel_move_to_point"
 
 PROCESS_BOTTOM_CAMERA_PID_FBC_LAUNCH = "bottom_camera_pid_fbc_launch"
 PROCESS_DEPTH_CONTROL_LAUNCH = "depth_control_launch"
-PROCESS_WAYPOINT_TARGET_PUBLISHER = "waypoint_target_publisher"
 
 CONTROLLER_GROUP_BOTTOM_CAMERA_PID_FBC = "bottom_camera_pid_fbc"
 CONTROLLER_GROUP_DEPTH_CONTROL = "depth_control"
@@ -62,6 +63,9 @@ TOPIC_ELECTROMAGNET_ENABLED = "actuators/electromagnet/enabled"
 TOPIC_WRENCH_COMMAND = "control/wrench_command"
 TOPIC_TARGET_DEPTH_M = "control/targets/depth_m"
 TOPIC_FLASH_STM32_STATUS = "flash_stm32_status"
+TOPIC_MOVE_TO_POINT_STATUS = "control/targets/move_to_point/gui_status"
+
+MOVE_TO_POINT_ACTION_NAME = "control/targets/move_to_point"
 
 
 def topic_payload(topic_name, msg):
