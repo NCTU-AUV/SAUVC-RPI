@@ -1,118 +1,203 @@
 #!/usr/bin/env python3
 import math
-from typing import List, Tuple
+import time
 
 import rclpy
+from rclpy.action import ActionServer, CancelResponse, GoalResponse
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import Bool, Float64, Float64MultiArray
+from xy_translation_control_interfaces.action import MoveToPoint
 
 
 class WaypointTargetPublisher(Node):
     """
-    Publishes a feed-forward target path (Float64MultiArray: [tx, ty]) along a hard-coded list.
-    Does not use feedback; it simply walks the path at a constant speed and raises done=True (Bool) at the end.
+    Action server that publishes bottom-camera XY PID setpoints.
+
+    The node does not use vehicle feedback. A goal succeeds when the generated
+    setpoint reaches the requested coordinate at the requested speed.
     """
 
     def __init__(self):
         super().__init__("waypoint_target_publisher")
 
-        # --- Parameters (keep topics/tolerance configurable) ---
-        self.declare_parameter("current_topic", "camera/bottom/pose_px")
+        self.declare_parameter("action_name", "control/targets/move_to_point")
         self.declare_parameter("target_topic", "control/targets/bottom_camera_point_px")
         self.declare_parameter("target_x_topic", "control/pid/bottom_camera/x/reference_px")
         self.declare_parameter("target_y_topic", "control/pid/bottom_camera/y/reference_px")
         self.declare_parameter("done_topic", "control/targets/done")
-
-        # Desired speed for interpolated setpoints (units/sec, same units as waypoints)
-        self.declare_parameter("setpoint_speed", 20.0)
-        # Timer period for publishing interpolated setpoints
+        self.declare_parameter("default_speed_px_s", 20.0)
         self.declare_parameter("publish_period", 0.1)
+        self.declare_parameter("initial_x_px", 0.0)
+        self.declare_parameter("initial_y_px", 0.0)
+        self.declare_parameter("publish_initial_target", True)
 
-        # Publish the first target immediately on startup
-        self.declare_parameter("publish_first_immediately", True)
-
-        self.current_topic = self.get_parameter("current_topic").value
+        self.action_name = self.get_parameter("action_name").value
         self.target_topic = self.get_parameter("target_topic").value
         self.target_x_topic = self.get_parameter("target_x_topic").value
         self.target_y_topic = self.get_parameter("target_y_topic").value
         self.done_topic = self.get_parameter("done_topic").value
-
-        self.setpoint_speed = float(self.get_parameter("setpoint_speed").value)
+        self.default_speed_px_s = float(self.get_parameter("default_speed_px_s").value)
         self.publish_period = float(self.get_parameter("publish_period").value)
-        self.publish_first_immediately = bool(self.get_parameter("publish_first_immediately").value)
+        if self.publish_period <= 0.0:
+            self.get_logger().warn("publish_period <= 0; using 0.1 s.")
+            self.publish_period = 0.1
+        self._current_point = (
+            float(self.get_parameter("initial_x_px").value),
+            float(self.get_parameter("initial_y_px").value),
+        )
+        self.publish_initial_target = bool(self.get_parameter("publish_initial_target").value)
 
-        # =========================================================
-        # Hard-coded waypoint list (x, y) in order
-        # Modify this list to change the route.
-        # =========================================================
-        self.targets: List[Tuple[float, float]] = [
-            (0.0,   0.0),
-            (1000.0, 0.0),
-            # (1000.0, -300.0),
-            # (500.0, -300.0),
-            # (500.0,   0.0),
-            (0.0,   0.0),
-        ]
-        # =========================================================
-
-        # --- Internal state ---
-        self.idx = 0                 # Current waypoint index
-        self._next_idx = 1 if len(self.targets) > 1 else None
-        self._current_point = self.targets[0] if self.targets else (0.0, 0.0)
-        self._last_time = None       # Time of last timer tick
-        self._done_published = False
-
-        # --- Publishers/Subscribers ---
         self.pub_target = self.create_publisher(Float64MultiArray, self.target_topic, 10)
         self.pub_target_x = self.create_publisher(Float64, self.target_x_topic, 10)
         self.pub_target_y = self.create_publisher(Float64, self.target_y_topic, 10)
         self.pub_done = self.create_publisher(Bool, self.done_topic, 10)
 
-        if self.publish_period > 0.0:
-            self.timer = self.create_timer(self.publish_period, self._on_timer)
-        else:
-            self.get_logger().warn("publish_period <= 0; no timer created, targets will not be published.")
+        self._active_goal = None
+        self._action_server = ActionServer(
+            self,
+            MoveToPoint,
+            self.action_name,
+            execute_callback=self._execute_callback,
+            goal_callback=self._goal_callback,
+            cancel_callback=self._cancel_callback,
+        )
 
-        # Startup behavior
-        if not self.targets:
-            self.get_logger().warn("targets list is empty. No target will be published.")
-            self._publish_done(True)
-        else:
-            self._publish_done(False)
-            if self.publish_first_immediately:
-                self._publish_current_target(log=True)
+        self._publish_done(True)
+        if self.publish_initial_target:
+            self._publish_target_point(*self._current_point, log=True)
 
         self.get_logger().info(
-            f"current: {self.current_topic}\n"
+            f"action : {self.action_name}\n"
             f"target : {self.target_topic}\n"
             f"target_x: {self.target_x_topic}\n"
             f"target_y: {self.target_y_topic}\n"
             f"done   : {self.done_topic}\n"
-            f"targets({len(self.targets)}): {self.targets}"
+            f"default_speed_px_s: {self.default_speed_px_s}\n"
+            f"publish_period: {self.publish_period}"
         )
 
+    def _goal_callback(self, goal_request: MoveToPoint.Goal):
+        values = (goal_request.x_px, goal_request.y_px, goal_request.speed_px_s)
+        if not all(math.isfinite(float(value)) for value in values):
+            self.get_logger().warn("Rejected move_to_point goal with non-finite value.")
+            return GoalResponse.REJECT
+
+        if float(goal_request.speed_px_s) < 0.0:
+            self.get_logger().warn("Rejected move_to_point goal with speed < 0.")
+            return GoalResponse.REJECT
+
+        speed = self._resolve_speed(goal_request.speed_px_s)
+        if speed <= 0.0:
+            self.get_logger().warn("Rejected move_to_point goal with speed <= 0.")
+            return GoalResponse.REJECT
+
+        if self._active_goal is not None and self._active_goal.is_active:
+            self.get_logger().warn("Rejected move_to_point goal because another goal is active.")
+            return GoalResponse.REJECT
+
+        return GoalResponse.ACCEPT
+
+    def _cancel_callback(self, goal_handle):
+        return CancelResponse.ACCEPT
+
+    def _execute_callback(self, goal_handle):
+        self._active_goal = goal_handle
+        goal = goal_handle.request
+        target = (float(goal.x_px), float(goal.y_px))
+        speed = self._resolve_speed(goal.speed_px_s)
+        start = self._current_point
+        total_distance = self._distance(start, target)
+
+        self.get_logger().info(
+            f"MoveToPoint goal accepted: target=({target[0]:.3f}, {target[1]:.3f}), "
+            f"speed={speed:.3f} px/s"
+        )
+        self._publish_done(False)
+
+        result = MoveToPoint.Result()
+        if total_distance < 1e-9:
+            self._publish_target_point(*target, log=True)
+            goal_handle.succeed()
+            self._publish_done(True)
+            result.success = True
+            result.message = "Setpoint already at target."
+            self._active_goal = None
+            return result
+
+        remaining_distance = total_distance
+        feedback = MoveToPoint.Feedback()
+
+        while rclpy.ok() and goal_handle.is_active:
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                self._publish_done(True)
+                result.success = False
+                result.message = "MoveToPoint goal canceled."
+                self.get_logger().info(result.message)
+                self._active_goal = None
+                return result
+
+            step = speed * self.publish_period
+            cx, cy = self._current_point
+            dx = target[0] - cx
+            dy = target[1] - cy
+            remaining_distance = math.hypot(dx, dy)
+
+            if remaining_distance <= step or remaining_distance < 1e-9:
+                self._current_point = target
+                remaining_distance = 0.0
+            else:
+                scale = step / remaining_distance
+                self._current_point = (cx + dx * scale, cy + dy * scale)
+                remaining_distance -= step
+
+            self._publish_target_point(*self._current_point)
+            feedback.target_x_px = float(self._current_point[0])
+            feedback.target_y_px = float(self._current_point[1])
+            feedback.remaining_distance_px = float(remaining_distance)
+            feedback.progress = float(1.0 - remaining_distance / total_distance)
+            goal_handle.publish_feedback(feedback)
+
+            if remaining_distance <= 0.0:
+                goal_handle.succeed()
+                self._publish_done(True)
+                result.success = True
+                result.message = "Generated setpoint reached target."
+                self.get_logger().info(result.message)
+                self._active_goal = None
+                return result
+
+            time.sleep(self.publish_period)
+
+        if goal_handle.is_active:
+            goal_handle.abort()
+
+        self._publish_done(True)
+        result.success = False
+        result.message = "MoveToPoint aborted because ROS is shutting down."
+        self._active_goal = None
+        return result
+
+    def _resolve_speed(self, requested_speed: float) -> float:
+        requested_speed = float(requested_speed)
+        if requested_speed > 0.0:
+            return requested_speed
+        return self.default_speed_px_s
+
     def _publish_done(self, done: bool):
-        """Publish mission done flag."""
         msg = Bool()
         msg.data = bool(done)
         self.pub_done.publish(msg)
 
-    def _publish_current_target(self, log: bool = False):
-        """Publish the current waypoint target (tx, ty)."""
-        if self.idx >= len(self.targets):
-            return
-        tx, ty = self.targets[self.idx]
-        self._publish_target_point(tx, ty, log=log)
-
     def _publish_target_point(self, tx: float, ty: float, log: bool = False):
-        """Publish an arbitrary target point."""
         msg = Float64MultiArray()
         msg.data = [float(tx), float(ty)]
         self.pub_target.publish(msg)
         self._publish_float(self.pub_target_x, tx)
         self._publish_float(self.pub_target_y, ty)
         if log:
-            self.get_logger().info(f"[target] idx={self.idx} -> ({tx:.3f}, {ty:.3f})")
+            self.get_logger().info(f"[target] ({tx:.3f}, {ty:.3f})")
 
     @staticmethod
     def _publish_float(pub, value: float):
@@ -120,73 +205,22 @@ class WaypointTargetPublisher(Node):
         msg.data = float(value)
         pub.publish(msg)
 
-    def _advance_target(self):
-        """Advance to the next waypoint, or mark done if finished."""
-        self.idx += 1
-        self._next_idx = self.idx + 1 if self.idx + 1 < len(self.targets) else None
-        if self.idx >= len(self.targets) - 1:
-            if not self._done_published:
-                self.get_logger().info("All targets published. done=True")
-                self._publish_done(True)
-                self._done_published = True
-            return
-
-        self.get_logger().info(f"Advance to next target: idx={self.idx}")
-        self._publish_current_target(log=True)
-
-    def _on_timer(self):
-        """Timer callback: walk the path at constant speed, no feedback."""
-        if not self.targets:
-            return
-
-        now = self.get_clock().now()
-        if self._last_time is None:
-            self._last_time = now
-            return
-
-        dt = (now - self._last_time).nanoseconds / 1e9
-        self._last_time = now
-
-        if dt <= 0.0 or self.setpoint_speed <= 0.0:
-            self._publish_target_point(*self._current_point)
-            return
-
-        remaining_step = self.setpoint_speed * dt
-
-        while remaining_step > 0.0 and self._next_idx is not None:
-            tx, ty = self.targets[self._next_idx]
-            cx, cy = self._current_point
-            dx = tx - cx
-            dy = ty - cy
-            distance = math.hypot(dx, dy)
-
-            if distance < 1e-9:
-                # Already at the next waypoint, advance.
-                self._current_point = (tx, ty)
-                self._advance_target()
-                continue
-
-            if distance <= remaining_step:
-                # Reach the waypoint in this cycle.
-                self._current_point = (tx, ty)
-                remaining_step -= distance
-                self._advance_target()
-            else:
-                # Move along the segment by the remaining step.
-                scale = remaining_step / distance
-                self._current_point = (cx + dx * scale, cy + dy * scale)
-                remaining_step = 0.0
-
-        # Publish current interpolated point (or last waypoint if done)
-        self._publish_target_point(*self._current_point)
+    @staticmethod
+    def _distance(a, b) -> float:
+        return math.hypot(float(b[0]) - float(a[0]), float(b[1]) - float(a[1]))
 
 
 def main():
     rclpy.init()
     node = WaypointTargetPublisher()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+    try:
+        executor.spin()
+    finally:
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":
