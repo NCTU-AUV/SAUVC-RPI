@@ -42,7 +42,7 @@ const GuiProtocol = Object.freeze({
         setPidParams: "set_pid_params",
     }),
     topics: Object.freeze({
-        killSwitchClosed: "sensors/kill_switch_closed",
+        killed: "sensors/killed",
         depthM: "sensors/depth_m",
         stm32Log: "diagnostics/stm32/log",
         systemManagerMode: "system_manager/mode",

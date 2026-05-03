@@ -47,7 +47,7 @@ SUPERVISOR_SERVICE_RESET_CONTROLLERS = "reset_controllers"
 SUPERVISOR_SERVICE_SAFE_DISABLED = "safe_disabled"
 SUPERVISOR_SERVICE_MANUAL = "manual"
 
-TOPIC_KILL_SWITCH_CLOSED = "sensors/kill_switch_closed"
+TOPIC_KILLED = "sensors/killed"
 TOPIC_DEPTH_M = "sensors/depth_m"
 TOPIC_STM32_LOG = "diagnostics/stm32/log"
 TOPIC_SYSTEM_MANAGER_MODE = "system_manager/mode"
