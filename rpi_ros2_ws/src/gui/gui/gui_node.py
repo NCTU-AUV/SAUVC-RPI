@@ -514,7 +514,7 @@ class GUINode(Node):
         require_hardware_safety = not enabled
         parameters = [
             Parameter(
-                "require_kill_switch_closed",
+                "require_kill_switch_released",
                 Parameter.Type.BOOL,
                 require_hardware_safety,
             ),
