@@ -1,4 +1,8 @@
-const websocket = new WebSocket("ws://" + window.location.hostname + "/websocket", "protocolOne");
+const protocol = GuiProtocol;
+const websocket = new WebSocket(
+    protocol.makeWebsocketUrl(window.location.hostname),
+    protocol.websocketSubprotocol
+);
 const stm32LogState = {
     shouldAutoScroll: true,
 };
@@ -27,16 +31,16 @@ document.addEventListener("DOMContentLoaded", () => {
 websocket.onmessage = (event) => {
   console.log(event.data);
 
-    msg_json_object = JSON.parse(event.data);
+    const msg_json_object = JSON.parse(event.data);
 
-    if (msg_json_object.type == "topic") {
-        if (msg_json_object.data.topic_name == "sensors/kill_switch_closed") {
+    if (msg_json_object.type == protocol.types.topic) {
+        if (msg_json_object.data.topic_name == protocol.topics.killSwitchClosed) {
             document.getElementById("is_kill_switch_closed").innerHTML = msg_json_object.data.msg;
         }
-        if (msg_json_object.data.topic_name == "sensors/depth_m") {
+        if (msg_json_object.data.topic_name == protocol.topics.depthM) {
             document.getElementById("pressure_sensor_depth_m").innerHTML = msg_json_object.data.msg;
         }
-        if (msg_json_object.data.topic_name == "thrusters/pwm_us") {
+        if (msg_json_object.data.topic_name == protocol.topics.thrustersPwmUs) {
             const pwmValues = msg_json_object.data.msg || [];
             for (let i = 0; i < 8; i += 1) {
                 const value = pwmValues[i] ?? "";
@@ -46,26 +50,26 @@ websocket.onmessage = (event) => {
                 }
             }
         }
-        if (msg_json_object.data.topic_name == "thrusters/enabled") {
+        if (msg_json_object.data.topic_name == protocol.topics.thrustersEnabled) {
             const enabled = msg_json_object.data.msg === true;
             const element = document.getElementById("thrusters_enabled_status");
             if (element) {
                 element.innerHTML = enabled ? "on" : "off";
             }
         }
-        if (msg_json_object.data.topic_name == "system_manager/mode") {
+        if (msg_json_object.data.topic_name == protocol.topics.systemManagerMode) {
             const element = document.getElementById("system_manager_mode");
             if (element) {
                 element.innerHTML = msg_json_object.data.msg;
             }
         }
-        if (msg_json_object.data.topic_name == "system_manager/status") {
+        if (msg_json_object.data.topic_name == protocol.topics.systemManagerStatus) {
             const element = document.getElementById("system_manager_status");
             if (element) {
                 element.innerHTML = msg_json_object.data.msg;
             }
         }
-        if (msg_json_object.data.topic_name == "actuators/electromagnet/enabled") {
+        if (msg_json_object.data.topic_name == protocol.topics.electromagnetEnabled) {
             const enabled = msg_json_object.data.msg === true;
             const checkbox = document.getElementById("electromagnet_set_on_input");
             const status = document.getElementById("electromagnet_set_on_status");
@@ -76,7 +80,7 @@ websocket.onmessage = (event) => {
                 status.innerHTML = enabled ? "on" : "off";
             }
         }
-        if (msg_json_object.data.topic_name == "flash_stm32_status") {
+        if (msg_json_object.data.topic_name == protocol.topics.flashStm32Status) {
             const status = msg_json_object.data.msg || {};
             const message = status.message || "";
             const successText = status.success === true ? "success" : "failed";
@@ -85,7 +89,7 @@ websocket.onmessage = (event) => {
                 element.innerHTML = message ? `${successText}: ${message}` : successText;
             }
         }
-        if (msg_json_object.data.topic_name == "diagnostics/stm32/log") {
+        if (msg_json_object.data.topic_name == protocol.topics.stm32Log) {
             const element = document.getElementById("stm32_debug_log");
             if (element) {
                 const line = msg_json_object.data.msg || "";
@@ -103,10 +107,10 @@ websocket.onmessage = (event) => {
         }
 
         const bottomCameraPidTopicElements = {
-            "control/pid/bottom_camera/x/reference_px": "bottom_camera_pid_x_reference_px",
-            "control/pid/bottom_camera/y/reference_px": "bottom_camera_pid_y_reference_px",
-            "control/pid/bottom_camera/x/feedback_px": "bottom_camera_pid_x_feedback_px",
-            "control/pid/bottom_camera/y/feedback_px": "bottom_camera_pid_y_feedback_px",
+            [protocol.topics.bottomCameraPidXReferencePx]: "bottom_camera_pid_x_reference_px",
+            [protocol.topics.bottomCameraPidYReferencePx]: "bottom_camera_pid_y_reference_px",
+            [protocol.topics.bottomCameraPidXFeedbackPx]: "bottom_camera_pid_x_feedback_px",
+            [protocol.topics.bottomCameraPidYFeedbackPx]: "bottom_camera_pid_y_feedback_px",
         };
         const bottomCameraPidElementId = bottomCameraPidTopicElements[msg_json_object.data.topic_name];
         if (bottomCameraPidElementId) {
@@ -123,45 +127,60 @@ websocket.onopen = (event) => {
 };
 
 function send_process_action(target, action) {
-    websocket.send(JSON.stringify({type: "process", data: {target: target, action: action}}));
+    websocket.send(JSON.stringify(protocol.makeProcessMessage(target, action)));
 }
 
 function send_controller_action(group, action) {
-    websocket.send(JSON.stringify({type: "controller", data: {group: group, action: action}}));
+    websocket.send(JSON.stringify(protocol.makeControllerMessage(group, action)));
 }
 
 function enable_bottom_camera_pid_fbc() {
-    send_controller_action("bottom_camera_pid_fbc", "enable");
+    send_controller_action(
+        protocol.controllerGroups.bottomCameraPidFbc,
+        protocol.controllerActions.enable
+    );
 }
 
 function disable_bottom_camera_pid_fbc() {
-    send_controller_action("bottom_camera_pid_fbc", "disable");
+    send_controller_action(
+        protocol.controllerGroups.bottomCameraPidFbc,
+        protocol.controllerActions.disable
+    );
 }
 
 function reset_bottom_camera_pid_fbc() {
-    send_controller_action("bottom_camera_pid_fbc", "reset");
+    send_controller_action(
+        protocol.controllerGroups.bottomCameraPidFbc,
+        protocol.controllerActions.reset
+    );
 }
 
 function enable_depth_control() {
-    send_controller_action("depth_control", "enable");
+    send_controller_action(
+        protocol.controllerGroups.depthControl,
+        protocol.controllerActions.enable
+    );
 }
 
 function disable_depth_control() {
-    send_controller_action("depth_control", "disable");
+    send_controller_action(
+        protocol.controllerGroups.depthControl,
+        protocol.controllerActions.disable
+    );
 }
 
 function reset_depth_control() {
-    send_controller_action("depth_control", "reset");
+    send_controller_action(
+        protocol.controllerGroups.depthControl,
+        protocol.controllerActions.reset
+    );
 }
 
 function set_supervisor_simulation_mode(enabled) {
-    websocket.send(JSON.stringify({
-        type: "action",
-        data: {
-            action_name: "set_supervisor_simulation_mode",
-            enabled: enabled,
-        }
-    }));
+    websocket.send(JSON.stringify(protocol.makeActionMessage(
+        protocol.actions.setSupervisorSimulationMode,
+        {enabled: enabled}
+    )));
 }
 
 function supervisor_simulation_mode_input_onchange() {
@@ -171,11 +190,17 @@ function supervisor_simulation_mode_input_onchange() {
 
 function set_target_depth_m_button_onclick() {
     const target_depth_m = document.getElementById("target_depth_m_input").value;
-    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "control/targets/depth_m", msg: {data: target_depth_m}}}));
+    websocket.send(JSON.stringify(protocol.makeTopicMessage(
+        protocol.topics.targetDepthM,
+        {data: target_depth_m}
+    )));
 }
 
 function set_electromagnet_on(enabled) {
-    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "actuators/electromagnet/enabled", msg: {data: enabled}}}));
+    websocket.send(JSON.stringify(protocol.makeTopicMessage(
+        protocol.topics.electromagnetEnabled,
+        {data: enabled}
+    )));
 }
 
 function electromagnet_set_on_input_onchange() {
@@ -189,11 +214,10 @@ function set_depth_pid_params_button_onclick() {
     const d = document.getElementById("depth_pid_d_input").value;
     const smoothing = document.getElementById("depth_pid_smoothing_input").value;
 
-    websocket.send(JSON.stringify({
-        type: "controller",
-        data: {
-            group: "depth_control",
-            action: "set_pid_params",
+    websocket.send(JSON.stringify(protocol.makeControllerMessage(
+        protocol.controllerGroups.depthControl,
+        protocol.controllerActions.setPidParams,
+        {
             params: {
                 proportional_gain: p,
                 integral_gain: i,
@@ -201,21 +225,30 @@ function set_depth_pid_params_button_onclick() {
                 derivative_smoothing_factor: smoothing,
             }
         }
-    }));
+    )));
 }
 
 function start_waypoint_target_publisher() {
-    send_process_action("waypoint_target_publisher", "start");
+    send_process_action(
+        protocol.processTargets.waypointTargetPublisher,
+        protocol.processActions.start
+    );
 }
 
 function stop_waypoint_target_publisher() {
-    send_process_action("waypoint_target_publisher", "stop");
+    send_process_action(
+        protocol.processTargets.waypointTargetPublisher,
+        protocol.processActions.stop
+    );
 }
 
 function initialize_all_thrusters_button_onclick(){
       console.log("initialize_all_thrusters_button_onclick");
 
-      websocket.send(JSON.stringify({type: "action", data: {action_name: "initialize_all_thrusters", goal: ""}}));
+      websocket.send(JSON.stringify(protocol.makeActionMessage(
+          protocol.actions.initializeAllThrusters,
+          {goal: ""}
+      )));
 }
 
 function flash_stm32_button_onclick() {
@@ -230,7 +263,7 @@ function flash_stm32_button_onclick() {
         logElement.scrollTop = logElement.scrollHeight;
         stm32LogState.shouldAutoScroll = true;
     }
-    websocket.send(JSON.stringify({type: "action", data: {action_name: "flash_stm32"}}));
+    websocket.send(JSON.stringify(protocol.makeActionMessage(protocol.actions.flashStm32)));
 }
 
 function clear_stm32_log_button_onclick() {
@@ -251,13 +284,10 @@ function set_pwm_output_signal_value_us_button_onclick() {
 
     console.log("set_pwm_output_signal_value_us_button_onclick", pwm_values);
 
-    websocket.send(JSON.stringify({
-        type: "topic",
-        data: {
-            topic_name: "thrusters/pwm_us",
-            msg: {data: pwm_values}
-        }
-    }));
+    websocket.send(JSON.stringify(protocol.makeTopicMessage(
+        protocol.topics.thrustersPwmUs,
+        {data: pwm_values}
+    )));
 }
 
 function set_control_wrench_command_button_onclick() {
@@ -276,5 +306,8 @@ function set_control_wrench_command_button_onclick() {
 
     console.log("set_control_wrench_command_button_onclick", msg);
 
-    websocket.send(JSON.stringify({type: "topic", data: {topic_name: "control/wrench_command", msg: msg}}));
+    websocket.send(JSON.stringify(protocol.makeTopicMessage(
+        protocol.topics.wrenchCommand,
+        msg
+    )));
 }

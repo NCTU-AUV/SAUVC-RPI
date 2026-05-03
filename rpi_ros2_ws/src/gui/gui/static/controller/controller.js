@@ -8,6 +8,7 @@ const cameraFeedElement = document.getElementById("camera_feed");
 const thrusterPwmElements = Array.from({ length: 8 }, (_, index) =>
     document.getElementById(`thruster_pwm_${index}`)
 );
+const protocol = GuiProtocol;
 
 const max_push = 10;
 const max_twist = 5;
@@ -33,7 +34,10 @@ let lastSendTime = 0;
 let lastBPressed = false;
 const pressedKeys = new Set();
 
-const websocket = new WebSocket("ws://" + window.location.hostname + "/websocket", "protocolOne");
+const websocket = new WebSocket(
+    protocol.makeWebsocketUrl(window.location.hostname),
+    protocol.websocketSubprotocol
+);
 
 function initializeCameraFeed() {
     if (!cameraFeedElement) {
@@ -84,13 +88,10 @@ function applyDeadzone(value) {
 }
 
 function buildWrenchPayload() {
-    return JSON.stringify({
-        type: "topic",
-        data: {
-            topic_name: "control/wrench_command",
-            msg: current_wrench,
-        },
-    });
+    return JSON.stringify(protocol.makeTopicMessage(
+        protocol.topics.wrenchCommand,
+        current_wrench
+    ));
 }
 
 function sendCurrentWrench() {
@@ -276,13 +277,13 @@ websocket.onmessage = (event) => {
         return;
     }
 
-    if (msgJsonObject.type !== "topic") {
+    if (msgJsonObject.type !== protocol.types.topic) {
         return;
     }
 
     const topicName = msgJsonObject.data && msgJsonObject.data.topic_name;
     const topicMsg = msgJsonObject.data && msgJsonObject.data.msg;
-    if (topicName !== "thrusters/pwm_us" || !Array.isArray(topicMsg)) {
+    if (topicName !== protocol.topics.thrustersPwmUs || !Array.isArray(topicMsg)) {
         return;
     }
 

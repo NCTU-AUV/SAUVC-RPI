@@ -15,7 +15,8 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Wrench
 from std_srvs.srv import Trigger
 
-from .aiohttp_server import AIOHTTPServer
+from .backend import protocol
+from .backend.aiohttp_server import AIOHTTPServer
 
 
 class _AsyncParameterClient:
@@ -40,7 +41,10 @@ class GUINode(Node):
 
         self._thruster_count = 8
         self._initial_pwm_output_signal_value_us = 1500
-        self._pwm_output_signal_value_us = [self._initial_pwm_output_signal_value_us for _ in range(self._thruster_count)]
+        self._pwm_output_signal_value_us = [
+            self._initial_pwm_output_signal_value_us
+            for _ in range(self._thruster_count)
+        ]
 
         self.aiohttp_server = AIOHTTPServer(self._msg_callback)
         self.aiohttp_server.start_threading()
@@ -48,31 +52,31 @@ class GUINode(Node):
 
         self._is_kill_switch_closed_subscribers = self.create_subscription(
                 msg_type=Bool,
-                topic="sensors/kill_switch_closed",
+                topic=protocol.TOPIC_KILL_SWITCH_CLOSED,
                 callback=self._is_kill_switch_closed_callback,
                 qos_profile=10
             )
         self._pressure_sensor_depth_subscriber = self.create_subscription(
                 msg_type=Float32,
-                topic="sensors/depth_m",
+                topic=protocol.TOPIC_DEPTH_M,
                 callback=self._pressure_sensor_depth_callback,
                 qos_profile=10
             )
         self._stm32_log_subscriber = self.create_subscription(
                 msg_type=String,
-                topic="diagnostics/stm32/log",
+                topic=protocol.TOPIC_STM32_LOG,
                 callback=self._stm32_log_callback,
                 qos_profile=10
             )
         self._supervisor_mode_subscriber = self.create_subscription(
                 msg_type=String,
-                topic="system_manager/mode",
+                topic=protocol.TOPIC_SYSTEM_MANAGER_MODE,
                 callback=self._supervisor_mode_callback,
                 qos_profile=10
             )
         self._supervisor_status_subscriber = self.create_subscription(
                 msg_type=String,
-                topic="system_manager/status",
+                topic=protocol.TOPIC_SYSTEM_MANAGER_STATUS,
                 callback=self._supervisor_status_callback,
                 qos_profile=10
             )
@@ -80,45 +84,51 @@ class GUINode(Node):
             self.create_subscription(
                 msg_type=Float64,
                 topic=topic,
-                callback=lambda msg, topic_name=topic: self._float64_topic_callback(topic_name, msg),
+                callback=lambda msg, topic_name=topic: self._float64_topic_callback(
+                    topic_name,
+                    msg,
+                ),
                 qos_profile=10,
             )
             for topic in (
-                "control/pid/bottom_camera/x/reference_px",
-                "control/pid/bottom_camera/y/reference_px",
-                "control/pid/bottom_camera/x/feedback_px",
-                "control/pid/bottom_camera/y/feedback_px",
+                protocol.TOPIC_BOTTOM_CAMERA_PID_X_REFERENCE_PX,
+                protocol.TOPIC_BOTTOM_CAMERA_PID_Y_REFERENCE_PX,
+                protocol.TOPIC_BOTTOM_CAMERA_PID_X_FEEDBACK_PX,
+                protocol.TOPIC_BOTTOM_CAMERA_PID_Y_FEEDBACK_PX,
             )
         ]
 
-        self._initialize_all_thrusters_client = self.create_client(Trigger, 'thrusters/initialize_all')
+        self._initialize_all_thrusters_client = self.create_client(
+            Trigger,
+            'thrusters/initialize_all',
+        )
         self._flash_stm32_client = self.create_client(Trigger, '/flash_stm32')
         self._supervisor_clients = {
-            "safe_disabled": self.create_client(
+            protocol.SUPERVISOR_SERVICE_SAFE_DISABLED: self.create_client(
                 Trigger,
                 "system_manager/set_mode/safe_disabled",
             ),
-            "manual": self.create_client(
+            protocol.SUPERVISOR_SERVICE_MANUAL: self.create_client(
                 Trigger,
                 "system_manager/set_mode/manual",
             ),
-            "depth_hold": self.create_client(
+            protocol.SUPERVISOR_SERVICE_DEPTH_HOLD: self.create_client(
                 Trigger,
                 "system_manager/set_mode/depth_hold",
             ),
-            "bottom_camera_hold": self.create_client(
+            protocol.SUPERVISOR_SERVICE_BOTTOM_CAMERA_HOLD: self.create_client(
                 Trigger,
                 "system_manager/set_mode/bottom_camera_hold",
             ),
-            "reset_controllers": self.create_client(
+            protocol.SUPERVISOR_SERVICE_RESET_CONTROLLERS: self.create_client(
                 Trigger,
                 "system_manager/reset_controllers",
             ),
-            "disable_depth_hold": self.create_client(
+            protocol.SUPERVISOR_SERVICE_DISABLE_DEPTH_HOLD: self.create_client(
                 Trigger,
                 "system_manager/disable/depth_hold",
             ),
-            "disable_bottom_camera_hold": self.create_client(
+            protocol.SUPERVISOR_SERVICE_DISABLE_BOTTOM_CAMERA_HOLD: self.create_client(
                 Trigger,
                 "system_manager/disable/bottom_camera_hold",
             ),
@@ -126,46 +136,54 @@ class GUINode(Node):
 
         self._pwm_output_signal_value_subscription = self.create_subscription(
             msg_type=Int32MultiArray,
-            topic="thrusters/pwm_us",
+            topic=protocol.TOPIC_THRUSTERS_PWM_US,
             callback=self._pwm_output_signal_value_subscription_callback,
             qos_profile=10
         )
         self._thrusters_enabled_subscription = self.create_subscription(
             msg_type=Bool,
-            topic="thrusters/enabled",
+            topic=protocol.TOPIC_THRUSTERS_ENABLED,
             callback=self._thrusters_enabled_callback,
             qos_profile=10
         )
         self._electromagnet_set_on_subscription = self.create_subscription(
             msg_type=Bool,
-            topic="actuators/electromagnet/enabled",
+            topic=protocol.TOPIC_ELECTROMAGNET_ENABLED,
             callback=self._electromagnet_set_on_callback,
             qos_profile=10
         )
 
         self._set_pwm_output_signal_value_publisher = self.create_publisher(
             msg_type=Int32MultiArray,
-            topic="thrusters/pwm_us",
+            topic=protocol.TOPIC_THRUSTERS_PWM_US,
             qos_profile=10
         )
         self._electromagnet_set_on_publisher = self.create_publisher(
             msg_type=Bool,
-            topic="actuators/electromagnet/enabled",
+            topic=protocol.TOPIC_ELECTROMAGNET_ENABLED,
             qos_profile=10
         )
 
-        self._set_output_wrench_at_center_publisher = self.create_publisher(Wrench, 'control/wrench_command', 10)
-        self._target_depth_publisher = self.create_publisher(Float64, 'control/targets/depth_m', 10)
+        self._set_output_wrench_at_center_publisher = self.create_publisher(
+            Wrench,
+            protocol.TOPIC_WRENCH_COMMAND,
+            10,
+        )
+        self._target_depth_publisher = self.create_publisher(
+            Float64,
+            protocol.TOPIC_TARGET_DEPTH_M,
+            10,
+        )
         self._process_commands = {
-            "bottom_camera_pid_fbc_launch": [
+            protocol.PROCESS_BOTTOM_CAMERA_PID_FBC_LAUNCH: [
                 "ros2", "launch", "xy_translation_control", "bottom_camera_pid_fbc_launch.py",
                 f"namespace:={self._robot_namespace}",
             ],
-            "depth_control_launch": [
+            protocol.PROCESS_DEPTH_CONTROL_LAUNCH: [
                 "ros2", "launch", "depth_control", "depth_control_launch.py",
                 f"namespace:={self._robot_namespace}",
             ],
-            "waypoint_target_publisher": [
+            protocol.PROCESS_WAYPOINT_TARGET_PUBLISHER: [
                 "ros2", "run", "xy_translation_control", "waypoint_target_publisher",
                 "--ros-args", "-r", f"__ns:=/{self._robot_namespace}",
             ],
@@ -173,38 +191,56 @@ class GUINode(Node):
         self._processes = {}
 
         self._controller_groups = {
-            "bottom_camera_pid_fbc": [
+            protocol.CONTROLLER_GROUP_BOTTOM_CAMERA_PID_FBC: [
                 "x_coordinate_pid_controller_node",
                 "y_coordinate_pid_controller_node",
             ],
-            "depth_control": [
+            protocol.CONTROLLER_GROUP_DEPTH_CONTROL: [
                 "depth_pid_controller_node",
             ],
         }
         self._param_clients = {}
         self._controller_supervisor_actions = {
-            ("bottom_camera_pid_fbc", "enable"): "bottom_camera_hold",
-            ("bottom_camera_pid_fbc", "disable"): "disable_bottom_camera_hold",
-            ("bottom_camera_pid_fbc", "reset"): "reset_controllers",
-            ("depth_control", "enable"): "depth_hold",
-            ("depth_control", "disable"): "disable_depth_hold",
-            ("depth_control", "reset"): "reset_controllers",
+            (
+                protocol.CONTROLLER_GROUP_BOTTOM_CAMERA_PID_FBC,
+                protocol.CONTROLLER_ACTION_ENABLE,
+            ): protocol.SUPERVISOR_SERVICE_BOTTOM_CAMERA_HOLD,
+            (
+                protocol.CONTROLLER_GROUP_BOTTOM_CAMERA_PID_FBC,
+                protocol.CONTROLLER_ACTION_DISABLE,
+            ): protocol.SUPERVISOR_SERVICE_DISABLE_BOTTOM_CAMERA_HOLD,
+            (
+                protocol.CONTROLLER_GROUP_BOTTOM_CAMERA_PID_FBC,
+                protocol.CONTROLLER_ACTION_RESET,
+            ): protocol.SUPERVISOR_SERVICE_RESET_CONTROLLERS,
+            (
+                protocol.CONTROLLER_GROUP_DEPTH_CONTROL,
+                protocol.CONTROLLER_ACTION_ENABLE,
+            ): protocol.SUPERVISOR_SERVICE_DEPTH_HOLD,
+            (
+                protocol.CONTROLLER_GROUP_DEPTH_CONTROL,
+                protocol.CONTROLLER_ACTION_DISABLE,
+            ): protocol.SUPERVISOR_SERVICE_DISABLE_DEPTH_HOLD,
+            (
+                protocol.CONTROLLER_GROUP_DEPTH_CONTROL,
+                protocol.CONTROLLER_ACTION_RESET,
+            ): protocol.SUPERVISOR_SERVICE_RESET_CONTROLLERS,
         }
 
     def _is_kill_switch_closed_callback(self, msg):
-        self.aiohttp_server.send_topic("sensors/kill_switch_closed", msg.data)
+        self.aiohttp_server.send_topic(protocol.TOPIC_KILL_SWITCH_CLOSED, msg.data)
 
     def _pressure_sensor_depth_callback(self, msg: Float32):
-        self.aiohttp_server.send_topic("sensors/depth_m", msg.data)
+        self.aiohttp_server.send_topic(protocol.TOPIC_DEPTH_M, msg.data)
 
     def _stm32_log_callback(self, msg: String):
-        self.aiohttp_server.send_topic("diagnostics/stm32/log", msg.data)
+        self.aiohttp_server.send_topic(protocol.TOPIC_STM32_LOG, msg.data)
 
     def _supervisor_mode_callback(self, msg: String):
-        self.aiohttp_server.send_topic("system_manager/mode", msg.data)
+        self.aiohttp_server.send_topic(protocol.TOPIC_SYSTEM_MANAGER_MODE, msg.data)
 
     def _supervisor_status_callback(self, msg: String):
-        self.aiohttp_server.send_topic("system_manager/status", msg.data)
+        self.aiohttp_server.send_topic(protocol.TOPIC_SYSTEM_MANAGER_STATUS, msg.data)
 
     def _float64_topic_callback(self, topic_name: str, msg: Float64):
         self.aiohttp_server.send_topic(topic_name, msg.data)
@@ -212,15 +248,20 @@ class GUINode(Node):
     def _pwm_output_signal_value_subscription_callback(self, msg: Int32MultiArray):
         values = list(msg.data)
         if len(values) < self._thruster_count:
-            values += [self._initial_pwm_output_signal_value_us] * (self._thruster_count - len(values))
+            values += [self._initial_pwm_output_signal_value_us] * (
+                self._thruster_count - len(values)
+            )
         self._pwm_output_signal_value_us = values[:self._thruster_count]
-        self.aiohttp_server.send_topic("thrusters/pwm_us", list(self._pwm_output_signal_value_us))
+        self.aiohttp_server.send_topic(
+            protocol.TOPIC_THRUSTERS_PWM_US,
+            list(self._pwm_output_signal_value_us),
+        )
 
     def _thrusters_enabled_callback(self, msg: Bool):
-        self.aiohttp_server.send_topic("thrusters/enabled", msg.data)
+        self.aiohttp_server.send_topic(protocol.TOPIC_THRUSTERS_ENABLED, msg.data)
 
     def _electromagnet_set_on_callback(self, msg: Bool):
-        self.aiohttp_server.send_topic("actuators/electromagnet/enabled", msg.data)
+        self.aiohttp_server.send_topic(protocol.TOPIC_ELECTROMAGNET_ENABLED, msg.data)
 
     def _msg_callback(self, msg):
         try:
@@ -229,25 +270,25 @@ class GUINode(Node):
             self.get_logger().warning(f"Received non-JSON message: {msg}")
             return
 
-        msg_type = msg_json_object.get("type")
-        msg_data = msg_json_object.get("data", {})
+        msg_type = msg_json_object.get(protocol.FIELD_TYPE)
+        msg_data = msg_json_object.get(protocol.FIELD_DATA, {})
 
-        if msg_type == "action":
-            action_name = msg_data.get("action_name")
-            if action_name == "initialize_all_thrusters":
+        if msg_type == protocol.TYPE_ACTION:
+            action_name = msg_data.get(protocol.FIELD_ACTION_NAME)
+            if action_name == protocol.ACTION_INITIALIZE_ALL_THRUSTERS:
                 self._initialize_all_thrusters_client.call_async(Trigger.Request())
-            elif action_name == "flash_stm32":
+            elif action_name == protocol.ACTION_FLASH_STM32:
                 self._flash_stm32()
-            elif action_name == "set_supervisor_simulation_mode":
+            elif action_name == protocol.ACTION_SET_SUPERVISOR_SIMULATION_MODE:
                 self._set_supervisor_simulation_mode(bool(msg_data.get("enabled")))
             else:
                 self.get_logger().warning(f"Unknown action request: {action_name}")
 
-        if msg_type == "topic":
-            topic_name = msg_data.get("topic_name")
-            if topic_name == "thrusters/pwm_us":
+        if msg_type == protocol.TYPE_TOPIC:
+            topic_name = msg_data.get(protocol.FIELD_TOPIC_NAME)
+            if topic_name == protocol.TOPIC_THRUSTERS_PWM_US:
                 try:
-                    raw_values = msg_data["msg"]["data"]
+                    raw_values = msg_data[protocol.FIELD_MSG]["data"]
                     if not isinstance(raw_values, list):
                         raise TypeError
                     pwm_values = [int(value) for value in raw_values]
@@ -255,16 +296,18 @@ class GUINode(Node):
                     self.get_logger().warning(f"Invalid PWM set message: {msg_json_object}")
                 else:
                     if len(pwm_values) < self._thruster_count:
-                        pwm_values += [self._initial_pwm_output_signal_value_us] * (self._thruster_count - len(pwm_values))
+                        pwm_values += [self._initial_pwm_output_signal_value_us] * (
+                            self._thruster_count - len(pwm_values)
+                        )
                     pwm_values = pwm_values[:self._thruster_count]
                     pwm_array_msg = Int32MultiArray()
                     pwm_array_msg.data = pwm_values
                     self._set_pwm_output_signal_value_publisher.publish(pwm_array_msg)
                     self._pwm_output_signal_value_us = pwm_values
 
-            if topic_name == "control/wrench_command":
+            if topic_name == protocol.TOPIC_WRENCH_COMMAND:
                 try:
-                    wrench_msg = msg_data["msg"]
+                    wrench_msg = msg_data[protocol.FIELD_MSG]
                     msg = Wrench()
 
                     msg.force.x = float(wrench_msg["force"]["x"])
@@ -278,9 +321,9 @@ class GUINode(Node):
                 else:
                     self._set_output_wrench_at_center_publisher.publish(msg)
 
-            if topic_name == "control/targets/depth_m":
+            if topic_name == protocol.TOPIC_TARGET_DEPTH_M:
                 try:
-                    target_depth = float(msg_data["msg"]["data"])
+                    target_depth = float(msg_data[protocol.FIELD_MSG]["data"])
                 except (KeyError, TypeError, ValueError):
                     self.get_logger().warning(f"Invalid target depth message: {msg_json_object}")
                 else:
@@ -288,42 +331,44 @@ class GUINode(Node):
                     msg.data = target_depth
                     self._target_depth_publisher.publish(msg)
 
-            if topic_name == "actuators/electromagnet/enabled":
+            if topic_name == protocol.TOPIC_ELECTROMAGNET_ENABLED:
                 try:
-                    electromagnet_set_on = bool(msg_data["msg"]["data"])
+                    electromagnet_set_on = bool(msg_data[protocol.FIELD_MSG]["data"])
                 except (KeyError, TypeError):
-                    self.get_logger().warning(f"Invalid electromagnet set message: {msg_json_object}")
+                    self.get_logger().warning(
+                        f"Invalid electromagnet set message: {msg_json_object}"
+                    )
                 else:
                     msg = Bool()
                     msg.data = electromagnet_set_on
                     self._electromagnet_set_on_publisher.publish(msg)
 
-        if msg_type == "process":
-            target = msg_data.get("target")
-            action = msg_data.get("action")
+        if msg_type == protocol.TYPE_PROCESS:
+            target = msg_data.get(protocol.FIELD_TARGET)
+            action = msg_data.get(protocol.FIELD_ACTION)
             if not target or target not in self._process_commands:
                 self.get_logger().warning(f"Unknown process target: {msg_data}")
-            elif action == "start":
+            elif action == protocol.PROCESS_ACTION_START:
                 self._start_process(target)
-            elif action in ("stop", "kill"):
+            elif action in (protocol.PROCESS_ACTION_STOP, protocol.PROCESS_ACTION_KILL):
                 self._stop_process(target)
             else:
                 self.get_logger().warning(f"Unknown process action: {msg_data}")
 
-        if msg_type == "controller":
-            group = msg_data.get("group")
-            action = msg_data.get("action")
+        if msg_type == protocol.TYPE_CONTROLLER:
+            group = msg_data.get(protocol.FIELD_GROUP)
+            action = msg_data.get(protocol.FIELD_ACTION)
             if not group or group not in self._controller_groups:
                 self.get_logger().warning(f"Unknown controller group: {msg_data}")
-            elif action == "set_pid_params":
-                self._set_group_pid_params(group, msg_data.get("params", {}))
+            elif action == protocol.CONTROLLER_ACTION_SET_PID_PARAMS:
+                self._set_group_pid_params(group, msg_data.get(protocol.FIELD_PARAMS, {}))
             elif (group, action) in self._controller_supervisor_actions:
                 service_key = self._controller_supervisor_actions[(group, action)]
                 self._call_supervisor(service_key)
             else:
                 self.get_logger().warning(f"Unknown controller action: {msg_data}")
 
-        if msg_type not in ("action", "topic", "process", "controller"):
+        if msg_type not in protocol.MESSAGE_TYPES:
             self.get_logger().warning(f"Unknown message type: {msg_json_object}")
 
     def destroy_node(self):
@@ -387,7 +432,10 @@ class GUINode(Node):
         if not self._flash_stm32_client.service_is_ready():
             message = "STM32 flash service not ready."
             self.get_logger().warning(message)
-            self.aiohttp_server.send_topic("flash_stm32_status", {"success": False, "message": message})
+            self.aiohttp_server.send_topic(
+                protocol.TOPIC_FLASH_STM32_STATUS,
+                {"success": False, "message": message},
+            )
             return
 
         future = self._flash_stm32_client.call_async(Trigger.Request())
@@ -399,11 +447,14 @@ class GUINode(Node):
         except Exception as exc:  # noqa: BLE001
             message = f"STM32 flash failed: {exc}"
             self.get_logger().error(message)
-            self.aiohttp_server.send_topic("flash_stm32_status", {"success": False, "message": message})
+            self.aiohttp_server.send_topic(
+                protocol.TOPIC_FLASH_STM32_STATUS,
+                {"success": False, "message": message},
+            )
             return
 
         self.aiohttp_server.send_topic(
-            "flash_stm32_status",
+            protocol.TOPIC_FLASH_STM32_STATUS,
             {"success": response.success, "message": response.message},
         )
 
@@ -416,7 +467,7 @@ class GUINode(Node):
         if not client.service_is_ready():
             self.get_logger().warning(f"Supervisor service not ready: {service_key}")
             self.aiohttp_server.send_topic(
-                "system_manager/status",
+                protocol.TOPIC_SYSTEM_MANAGER_STATUS,
                 f"Supervisor service not ready: {service_key}",
             )
             return
@@ -432,7 +483,10 @@ class GUINode(Node):
         except Exception as exc:  # noqa: BLE001
             message = f"Supervisor call failed: {service_key}: {exc}"
             self.get_logger().warning(message)
-            self.aiohttp_server.send_topic("system_manager/status", message)
+            self.aiohttp_server.send_topic(
+                protocol.TOPIC_SYSTEM_MANAGER_STATUS,
+                message,
+            )
             return
 
         message = response.message
@@ -444,14 +498,17 @@ class GUINode(Node):
             self.get_logger().info(
                 f"Supervisor accepted {service_key}: {message}"
             )
-        self.aiohttp_server.send_topic("system_manager/status", message)
+        self.aiohttp_server.send_topic(protocol.TOPIC_SYSTEM_MANAGER_STATUS, message)
 
     def _set_supervisor_simulation_mode(self, enabled: bool):
         client = self._get_param_client("supervisor_node")
         if not client.service_is_ready():
             message = "Supervisor parameter service not ready"
             self.get_logger().warning(message)
-            self.aiohttp_server.send_topic("system_manager/status", message)
+            self.aiohttp_server.send_topic(
+                protocol.TOPIC_SYSTEM_MANAGER_STATUS,
+                message,
+            )
             return
 
         require_hardware_safety = not enabled
@@ -481,20 +538,29 @@ class GUINode(Node):
         except Exception as exc:  # noqa: BLE001
             message = f"Supervisor simulation mode update failed: {exc}"
             self.get_logger().warning(message)
-            self.aiohttp_server.send_topic("system_manager/status", message)
+            self.aiohttp_server.send_topic(
+                protocol.TOPIC_SYSTEM_MANAGER_STATUS,
+                message,
+            )
             return
 
         for res in response.results:
             if not res.successful:
                 message = f"Supervisor simulation mode rejected: {res.reason}"
                 self.get_logger().warning(message)
-                self.aiohttp_server.send_topic("system_manager/status", message)
+                self.aiohttp_server.send_topic(
+                    protocol.TOPIC_SYSTEM_MANAGER_STATUS,
+                    message,
+                )
                 return
 
         mode = "enabled" if simulation_mode_enabled else "disabled"
         message = f"Supervisor simulation mode {mode}"
         self.get_logger().info(message)
-        self.aiohttp_server.send_topic("system_manager/status", message)
+        self.aiohttp_server.send_topic(
+            protocol.TOPIC_SYSTEM_MANAGER_STATUS,
+            message,
+        )
 
     def _get_param_client(self, node_name: str):
         client = self._param_clients.get(node_name)
