@@ -191,10 +191,6 @@ class GUINode(Node):
                 "ros2", "launch", "depth_control", "depth_control_launch.py",
                 f"namespace:={self._robot_namespace}",
             ],
-            protocol.PROCESS_WAYPOINT_TARGET_PUBLISHER: [
-                "ros2", "run", "xy_translation_control", "waypoint_target_publisher",
-                "--ros-args", "-r", f"__ns:=/{self._robot_namespace}",
-            ],
         }
         self._processes = {}
 

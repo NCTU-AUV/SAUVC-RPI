@@ -25,9 +25,7 @@ const GuiProtocol = Object.freeze({
         moveToPoint: "move_to_point",
         cancelMoveToPoint: "cancel_move_to_point",
     }),
-    processTargets: Object.freeze({
-        waypointTargetPublisher: "waypoint_target_publisher",
-    }),
+    processTargets: Object.freeze({}),
     processActions: Object.freeze({
         start: "start",
         stop: "stop",

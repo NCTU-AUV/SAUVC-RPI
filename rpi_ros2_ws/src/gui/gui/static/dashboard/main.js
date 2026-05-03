@@ -245,20 +245,6 @@ function set_depth_pid_params_button_onclick() {
     )));
 }
 
-function start_waypoint_target_publisher() {
-    send_process_action(
-        protocol.processTargets.waypointTargetPublisher,
-        protocol.processActions.start
-    );
-}
-
-function stop_waypoint_target_publisher() {
-    send_process_action(
-        protocol.processTargets.waypointTargetPublisher,
-        protocol.processActions.stop
-    );
-}
-
 function move_to_point_button_onclick() {
     const x_px = document.getElementById("move_to_point_x_px_input").value;
     const y_px = document.getElementById("move_to_point_y_px_input").value;

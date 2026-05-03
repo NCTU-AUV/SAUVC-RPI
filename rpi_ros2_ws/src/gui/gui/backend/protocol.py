@@ -27,7 +27,6 @@ ACTION_CANCEL_MOVE_TO_POINT = "cancel_move_to_point"
 
 PROCESS_BOTTOM_CAMERA_PID_FBC_LAUNCH = "bottom_camera_pid_fbc_launch"
 PROCESS_DEPTH_CONTROL_LAUNCH = "depth_control_launch"
-PROCESS_WAYPOINT_TARGET_PUBLISHER = "waypoint_target_publisher"
 
 CONTROLLER_GROUP_BOTTOM_CAMERA_PID_FBC = "bottom_camera_pid_fbc"
 CONTROLLER_GROUP_DEPTH_CONTROL = "depth_control"
