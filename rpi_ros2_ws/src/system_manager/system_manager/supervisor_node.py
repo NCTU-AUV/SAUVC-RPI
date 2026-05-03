@@ -165,9 +165,10 @@ class SupervisorNode(Node):
             response.message = reason
             return response
 
-        self._reset_group("depth_control")
-        self._enable_group("depth_control")
-        self._active_controller_groups.add("depth_control")
+        if "depth_control" not in self._active_controller_groups:
+            self._reset_group("depth_control")
+            self._enable_group("depth_control")
+            self._active_controller_groups.add("depth_control")
         self._refresh_mode_from_active_groups()
         response.success = True
         response.message = self._status
@@ -191,9 +192,10 @@ class SupervisorNode(Node):
             response.message = reason
             return response
 
-        self._reset_group("bottom_camera_pid_fbc")
-        self._enable_group("bottom_camera_pid_fbc")
-        self._active_controller_groups.add("bottom_camera_pid_fbc")
+        if "bottom_camera_pid_fbc" not in self._active_controller_groups:
+            self._reset_group("bottom_camera_pid_fbc")
+            self._enable_group("bottom_camera_pid_fbc")
+            self._active_controller_groups.add("bottom_camera_pid_fbc")
         self._refresh_mode_from_active_groups()
         response.success = True
         response.message = self._status
