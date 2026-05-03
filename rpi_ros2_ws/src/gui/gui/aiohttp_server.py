@@ -5,6 +5,8 @@ import json
 import threading
 from pathlib import Path
 import gui
+from . import protocol
+
 
 class AIOHTTPServer:
     async def respond_index(request):
@@ -14,11 +16,15 @@ class AIOHTTPServer:
         return web.FileResponse(path=Path(gui.__file__).parent/"controller.html")
 
     def send_topic(self, topic_name, msg):
-        payload = json.dumps({"type": "topic", "data": {"topic_name": topic_name, "msg": msg}})
+        payload = json.dumps(protocol.topic_payload(topic_name, msg))
 
         # Queue messages when no websocket client is connected yet to avoid crashing.
         with self._pending_lock:
-            if not self.event_loop or self.websocket_response is None or self.websocket_response.closed:
+            if (
+                not self.event_loop
+                or self.websocket_response is None
+                or self.websocket_response.closed
+            ):
                 self._pending_topic_payloads.append(payload)
                 return
             loop = self.event_loop
@@ -27,7 +33,9 @@ class AIOHTTPServer:
         asyncio.run_coroutine_threadsafe(websocket_response.send_str(payload), loop)
 
     async def websocket_handler(self, request):
-        websocket_response = web.WebSocketResponse(protocols=("protocolOne"))
+        websocket_response = web.WebSocketResponse(
+            protocols=(protocol.WEBSOCKET_SUBPROTOCOL,)
+        )
         await websocket_response.prepare(request)
 
         self.websocket_response = websocket_response
@@ -35,7 +43,8 @@ class AIOHTTPServer:
         # Flush any pending messages accumulated before a client connected.
         pending_payloads = []
         with self._pending_lock:
-            pending_payloads, self._pending_topic_payloads = self._pending_topic_payloads, []
+            pending_payloads = self._pending_topic_payloads
+            self._pending_topic_payloads = []
         for payload in pending_payloads:
             await websocket_response.send_str(payload)
 
@@ -46,8 +55,10 @@ class AIOHTTPServer:
                 else:
                     self._msg_callback(msg.data)
             elif msg.type == aiohttp.WSMsgType.ERROR:
-                print('websocket connection closed with exception %s' %
-                    websocket_response.exception())
+                print(
+                    "websocket connection closed with exception %s"
+                    % websocket_response.exception()
+                )
 
         print('websocket connection closed')
 
@@ -64,7 +75,7 @@ class AIOHTTPServer:
 
         app = web.Application(middlewares=[AIOHTTPServer.no_cache_middleware])
 
-        app.router.add_get('/websocket', self.websocket_handler)
+        app.router.add_get(protocol.WEBSOCKET_PATH, self.websocket_handler)
         app.router.add_get('/', AIOHTTPServer.respond_index)
         app.router.add_get('/controller', AIOHTTPServer.respond_controller)
         app.router.add_get('/play', AIOHTTPServer.respond_controller)
@@ -102,7 +113,11 @@ class AIOHTTPServer:
             self.event_loop.close()
 
     def start_threading(self):
-        self._thread = threading.Thread(target=self.run_loop, daemon=True, name="AIOHTTPServerThread")
+        self._thread = threading.Thread(
+            target=self.run_loop,
+            daemon=True,
+            name="AIOHTTPServerThread",
+        )
         self._thread.start()
 
     def stop_threading(self, join_timeout: float = 2.0):
