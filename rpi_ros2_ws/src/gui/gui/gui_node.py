@@ -230,6 +230,8 @@ class GUINode(Node):
                 self._initialize_all_thrusters_client.call_async(Trigger.Request())
             elif action_name == "flash_stm32":
                 self._flash_stm32()
+            elif action_name == "set_supervisor_simulation_mode":
+                self._set_supervisor_simulation_mode(bool(msg_data.get("enabled")))
             else:
                 self.get_logger().warning(f"Unknown action request: {action_name}")
 
@@ -434,6 +436,56 @@ class GUINode(Node):
             self.get_logger().info(
                 f"Supervisor accepted {service_key}: {message}"
             )
+        self.aiohttp_server.send_topic("system_manager/status", message)
+
+    def _set_supervisor_simulation_mode(self, enabled: bool):
+        client = self._get_param_client("supervisor_node")
+        if not client.service_is_ready():
+            message = "Supervisor parameter service not ready"
+            self.get_logger().warning(message)
+            self.aiohttp_server.send_topic("system_manager/status", message)
+            return
+
+        require_hardware_safety = not enabled
+        parameters = [
+            Parameter(
+                "require_kill_switch_closed",
+                Parameter.Type.BOOL,
+                require_hardware_safety,
+            ),
+            Parameter(
+                "require_thrusters_enabled",
+                Parameter.Type.BOOL,
+                require_hardware_safety,
+            ),
+        ]
+        future = client.set_parameters(parameters)
+        future.add_done_callback(
+            lambda f, mode_enabled=enabled: self._log_supervisor_config_result(
+                mode_enabled,
+                f,
+            )
+        )
+
+    def _log_supervisor_config_result(self, simulation_mode_enabled: bool, future):
+        try:
+            response = future.result()
+        except Exception as exc:  # noqa: BLE001
+            message = f"Supervisor simulation mode update failed: {exc}"
+            self.get_logger().warning(message)
+            self.aiohttp_server.send_topic("system_manager/status", message)
+            return
+
+        for res in response.results:
+            if not res.successful:
+                message = f"Supervisor simulation mode rejected: {res.reason}"
+                self.get_logger().warning(message)
+                self.aiohttp_server.send_topic("system_manager/status", message)
+                return
+
+        mode = "enabled" if simulation_mode_enabled else "disabled"
+        message = f"Supervisor simulation mode {mode}"
+        self.get_logger().info(message)
         self.aiohttp_server.send_topic("system_manager/status", message)
 
     def _get_param_client(self, node_name: str):

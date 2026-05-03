@@ -154,6 +154,21 @@ function reset_depth_control() {
     send_controller_action("depth_control", "reset");
 }
 
+function set_supervisor_simulation_mode(enabled) {
+    websocket.send(JSON.stringify({
+        type: "action",
+        data: {
+            action_name: "set_supervisor_simulation_mode",
+            enabled: enabled,
+        }
+    }));
+}
+
+function supervisor_simulation_mode_input_onchange() {
+    const checkbox = document.getElementById("supervisor_simulation_mode_input");
+    set_supervisor_simulation_mode(Boolean(checkbox && checkbox.checked));
+}
+
 function set_target_depth_m_button_onclick() {
     const target_depth_m = document.getElementById("target_depth_m_input").value;
     websocket.send(JSON.stringify({type: "topic", data: {topic_name: "control/targets/depth_m", msg: {data: target_depth_m}}}));
