@@ -53,6 +53,18 @@ websocket.onmessage = (event) => {
                 element.innerHTML = enabled ? "on" : "off";
             }
         }
+        if (msg_json_object.data.topic_name == "system_manager/mode") {
+            const element = document.getElementById("system_manager_mode");
+            if (element) {
+                element.innerHTML = msg_json_object.data.msg;
+            }
+        }
+        if (msg_json_object.data.topic_name == "system_manager/status") {
+            const element = document.getElementById("system_manager_status");
+            if (element) {
+                element.innerHTML = msg_json_object.data.msg;
+            }
+        }
         if (msg_json_object.data.topic_name == "actuators/electromagnet/enabled") {
             const enabled = msg_json_object.data.msg === true;
             const checkbox = document.getElementById("electromagnet_set_on_input");
@@ -140,6 +152,21 @@ function disable_depth_control() {
 
 function reset_depth_control() {
     send_controller_action("depth_control", "reset");
+}
+
+function set_supervisor_simulation_mode(enabled) {
+    websocket.send(JSON.stringify({
+        type: "action",
+        data: {
+            action_name: "set_supervisor_simulation_mode",
+            enabled: enabled,
+        }
+    }));
+}
+
+function supervisor_simulation_mode_input_onchange() {
+    const checkbox = document.getElementById("supervisor_simulation_mode_input");
+    set_supervisor_simulation_mode(Boolean(checkbox && checkbox.checked));
 }
 
 function set_target_depth_m_button_onclick() {

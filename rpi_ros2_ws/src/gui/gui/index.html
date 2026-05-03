@@ -216,6 +216,16 @@
 <body>
     <div class="status-bar">
         <div>sensors/kill_switch_closed: <i id="is_kill_switch_closed">none</i></div>
+        <div>system_manager/mode: <i id="system_manager_mode">none</i></div>
+        <div>system_manager/status: <i id="system_manager_status">none</i></div>
+        <label class="inline-field">
+            simulation
+            <input
+                type="checkbox"
+                id="supervisor_simulation_mode_input"
+                onchange="supervisor_simulation_mode_input_onchange()"
+            >
+        </label>
     </div>
 
     <div class="layout">
