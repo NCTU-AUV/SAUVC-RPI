@@ -7,7 +7,12 @@
   <maintainer email="root@todo.todo">root</maintainer>
   <license>TODO: License declaration</license>
 
+  <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>python3-aiohttp</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
   <depend>xy_translation_control_interfaces</depend>
 
   <test_depend>ament_copyright</test_depend>
