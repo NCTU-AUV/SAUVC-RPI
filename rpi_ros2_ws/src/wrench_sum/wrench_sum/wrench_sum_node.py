@@ -1,10 +1,11 @@
 import rclpy
-from rclpy.node import Node
 from geometry_msgs.msg import Wrench
+from rclpy.lifecycle import LifecycleNode
+from rclpy.lifecycle import TransitionCallbackReturn
 import numpy as np
 
 
-class WrenchSum(Node):
+class WrenchSum(LifecycleNode):
     def __init__(self):
         super().__init__('wrench_sum_node')
 
@@ -34,6 +35,7 @@ class WrenchSum(Node):
         self.wrench_buffer = {topic: np.zeros(6) for topic in self.input_topics}
         self.last_update_time = {topic: None for topic in self.input_topics}
         self.stale_topics = set()
+        self.active = False
 
         # --- 3. Create Subscribers ---
         self.subs = []
@@ -52,6 +54,33 @@ class WrenchSum(Node):
         # --- 4. Create Publisher ---
         self.publisher_ = self.create_publisher(Wrench, output_topic, 10)
         self.publish_timer = self.create_timer(1.0 / publish_rate, self.publish_sum)
+
+    def on_configure(self, state) -> TransitionCallbackReturn:
+        self._clear_sources()
+        return TransitionCallbackReturn.SUCCESS
+
+    def on_activate(self, state) -> TransitionCallbackReturn:
+        self._clear_sources()
+        self.active = True
+        return TransitionCallbackReturn.SUCCESS
+
+    def on_deactivate(self, state) -> TransitionCallbackReturn:
+        self.active = False
+        self._clear_sources()
+        self._publish_wrench(np.zeros(6))
+        return TransitionCallbackReturn.SUCCESS
+
+    def on_cleanup(self, state) -> TransitionCallbackReturn:
+        self.active = False
+        self._clear_sources()
+        self._publish_wrench(np.zeros(6))
+        return TransitionCallbackReturn.SUCCESS
+
+    def on_shutdown(self, state) -> TransitionCallbackReturn:
+        self.active = False
+        self._clear_sources()
+        self._publish_wrench(np.zeros(6))
+        return TransitionCallbackReturn.SUCCESS
 
     def listener_callback(self, msg, topic_name):
         """
@@ -74,6 +103,9 @@ class WrenchSum(Node):
         self.publish_sum()
 
     def publish_sum(self):
+        if not self.active:
+            return
+
         active_wrenches = []
         now = self.get_clock().now()
         for topic, wrench in self.wrench_buffer.items():
@@ -94,16 +126,23 @@ class WrenchSum(Node):
         # Sum only currently active source values. Sources that never published
         # or timed out contribute zero instead of retaining old force commands.
         net_wrench_arr = sum(active_wrenches, np.zeros(6))
+        self._publish_wrench(net_wrench_arr)
 
+    def _publish_wrench(self, wrench_arr):
         msg_out = Wrench()
-        msg_out.force.x = net_wrench_arr[0]
-        msg_out.force.y = net_wrench_arr[1]
-        msg_out.force.z = net_wrench_arr[2]
-        msg_out.torque.x = net_wrench_arr[3]
-        msg_out.torque.y = net_wrench_arr[4]
-        msg_out.torque.z = net_wrench_arr[5]
+        msg_out.force.x = float(wrench_arr[0])
+        msg_out.force.y = float(wrench_arr[1])
+        msg_out.force.z = float(wrench_arr[2])
+        msg_out.torque.x = float(wrench_arr[3])
+        msg_out.torque.y = float(wrench_arr[4])
+        msg_out.torque.z = float(wrench_arr[5])
 
         self.publisher_.publish(msg_out)
+
+    def _clear_sources(self):
+        self.wrench_buffer = {topic: np.zeros(6) for topic in self.input_topics}
+        self.last_update_time = {topic: None for topic in self.input_topics}
+        self.stale_topics.clear()
 
     def _is_source_stale(self, topic_name, now):
         last_update = self.last_update_time[topic_name]

@@ -1,5 +1,4 @@
 import rclpy
-from geometry_msgs.msg import Wrench
 from rclpy.node import Node
 from std_msgs.msg import Bool
 from std_msgs.msg import Float32
@@ -24,7 +23,6 @@ class SupervisorNode(Node):
         self.declare_parameter("require_thrusters_enabled", True)
         self.declare_parameter("depth_sensor_timeout_s", 1.0)
         self.declare_parameter("bottom_camera_timeout_s", 1.0)
-        self.declare_parameter("publish_zero_wrench_on_disable", True)
         self.declare_parameter("auto_flash_stm32_on_startup", True)
         self.declare_parameter("stm32_flash_service", "/flash_stm32")
         self.declare_parameter("stm32_flash_service_timeout_s", 15.0)
@@ -39,6 +37,7 @@ class SupervisorNode(Node):
                 "yaw_angle_pid_controller_node",
             ],
         }
+        self._wrench_sum_group = "wrench_sum"
 
         self._mode = ControlMode.SAFE_DISABLED
         self._status = "Initialized in SAFE_DISABLED"
@@ -48,10 +47,18 @@ class SupervisorNode(Node):
             self,
             self._controller_groups,
         )
+        self._wrench_sum = ControllerGroupManager(
+            self,
+            {
+                self._wrench_sum_group: [
+                    "wrench_sum_node",
+                ],
+            },
+        )
+        self._wrench_sum_active = False
 
         self._mode_publisher = self.create_publisher(String, "system_manager/mode", 10)
         self._status_publisher = self.create_publisher(String, "system_manager/status", 10)
-        self._zero_wrench_publisher = self.create_publisher(Wrench, "control/wrench_command", 10)
 
         self.create_subscription(Bool, "sensors/killed", self._on_killed, 10)
         self.create_subscription(Bool, "thrusters/enabled", self._on_thrusters_enabled, 10)
@@ -201,8 +208,10 @@ class SupervisorNode(Node):
         if mode in (ControlMode.SAFE_DISABLED, ControlMode.MANUAL, ControlMode.FAULT):
             self._active_controller_groups.clear()
             self._controllers.disable_all()
-        if mode in (ControlMode.SAFE_DISABLED, ControlMode.FAULT):
-            self._publish_zero_wrench()
+        if mode == ControlMode.MANUAL:
+            self._activate_wrench_sum()
+        elif mode in (ControlMode.SAFE_DISABLED, ControlMode.FAULT):
+            self._deactivate_wrench_sum()
 
     def _enter_fault(self, reason: str):
         if self._mode == ControlMode.FAULT and self._status == reason:
@@ -212,7 +221,7 @@ class SupervisorNode(Node):
         self._active_controller_groups.clear()
         self.get_logger().warning(f"Entering FAULT: {reason}")
         self._controllers.disable_all()
-        self._publish_zero_wrench()
+        self._deactivate_wrench_sum()
 
     def _refresh_mode_from_active_groups(self):
         depth_active = "depth_control" in self._active_controller_groups
@@ -221,16 +230,19 @@ class SupervisorNode(Node):
         if depth_active and bottom_camera_active:
             self._mode = ControlMode.DEPTH_AND_BOTTOM_CAMERA_HOLD
             self._status = "Depth hold and bottom camera hold active"
+            self._activate_wrench_sum()
         elif depth_active:
             self._mode = ControlMode.DEPTH_HOLD
             self._status = "Depth hold active"
+            self._activate_wrench_sum()
         elif bottom_camera_active:
             self._mode = ControlMode.BOTTOM_CAMERA_HOLD
             self._status = "Bottom camera hold active"
+            self._activate_wrench_sum()
         else:
             self._mode = ControlMode.SAFE_DISABLED
             self._status = "No controller groups active"
-            self._publish_zero_wrench()
+            self._deactivate_wrench_sum()
 
     def _safety_ready(self):
         return self._safety.safety_ready()
@@ -270,11 +282,17 @@ class SupervisorNode(Node):
     def _reset_group(self, group: str):
         self._controllers.reset_group(group)
 
-    def _publish_zero_wrench(self):
-        if not self.get_parameter("publish_zero_wrench_on_disable").value:
+    def _activate_wrench_sum(self):
+        if self._wrench_sum_active:
             return
-        msg = Wrench()
-        self._zero_wrench_publisher.publish(msg)
+        self._wrench_sum.enable_group(self._wrench_sum_group)
+        self._wrench_sum_active = True
+
+    def _deactivate_wrench_sum(self):
+        if not self._wrench_sum_active:
+            return
+        self._wrench_sum.disable_group(self._wrench_sum_group)
+        self._wrench_sum_active = False
 
     def _publish_state(self):
         mode_msg = String()
