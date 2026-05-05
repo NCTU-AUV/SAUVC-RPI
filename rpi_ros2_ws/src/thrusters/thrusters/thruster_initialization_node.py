@@ -21,7 +21,7 @@ class ThrusterInitializationNode(Node):
 
         self.__set_pwm_output_on_publisher = self.create_publisher(
             msg_type=Bool,
-            topic="thrusters/enabled",
+            topic="thrusters/set_enabled",
             qos_profile=10
         )
 
