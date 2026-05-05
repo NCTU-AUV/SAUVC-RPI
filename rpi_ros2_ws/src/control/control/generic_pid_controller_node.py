@@ -1,3 +1,5 @@
+import math
+
 import rclpy
 from rcl_interfaces.msg import SetParametersResult
 from rclpy.lifecycle import LifecycleNode
@@ -53,6 +55,15 @@ class GenericPIDControllerNode(LifecycleNode):
         self.add_on_set_parameters_callback(self._on_params)
 
     def on_configure(self, state) -> TransitionCallbackReturn:
+        derivative_smoothing_factor = self.get_parameter(
+            'derivative_smoothing_factor'
+        ).get_parameter_value().double_value
+        if not self._is_valid_derivative_smoothing_factor(derivative_smoothing_factor):
+            self.get_logger().error(
+                'derivative_smoothing_factor must be finite and between 0.0 and 1.0'
+            )
+            return TransitionCallbackReturn.FAILURE
+
         self._reset_state()
         return TransitionCallbackReturn.SUCCESS
 
@@ -86,6 +97,24 @@ class GenericPIDControllerNode(LifecycleNode):
         self._output_feedback = msg.data
 
     def _on_params(self, params):
+        for param in params:
+            if param.name != 'derivative_smoothing_factor':
+                continue
+
+            try:
+                value = float(param.value)
+            except (TypeError, ValueError):
+                return SetParametersResult(
+                    successful=False,
+                    reason='derivative_smoothing_factor must be a number',
+                )
+
+            if not self._is_valid_derivative_smoothing_factor(value):
+                return SetParametersResult(
+                    successful=False,
+                    reason='derivative_smoothing_factor must be finite and between 0.0 and 1.0',
+                )
+
         return SetParametersResult(successful=True)
 
     def _on_reset(self, request, response):
@@ -120,7 +149,6 @@ class GenericPIDControllerNode(LifecycleNode):
 
         derivative_gain = self.get_parameter('derivative_gain').get_parameter_value().double_value
         derivative_smoothing_factor = self.get_parameter('derivative_smoothing_factor').get_parameter_value().double_value
-        assert 0.0 <= derivative_smoothing_factor <= 1.0
 
         self._derivative_controller_new_stored_value = (
             (1 - derivative_smoothing_factor ** self._controller_loop_timer_period_s) * error
@@ -137,6 +165,10 @@ class GenericPIDControllerNode(LifecycleNode):
         total_output = proportional_output + integral_output + derivative_output
 
         self._publish_output(total_output)
+
+    @staticmethod
+    def _is_valid_derivative_smoothing_factor(value: float) -> bool:
+        return math.isfinite(value) and 0.0 <= value <= 1.0
 
 
 def main(args=None):
