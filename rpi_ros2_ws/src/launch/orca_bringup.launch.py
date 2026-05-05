@@ -33,6 +33,8 @@ def generate_launch_description():
                 'control/wrench_sources/depth',
             ],
             'output_topic': 'control/wrench_command',
+            'publish_rate': 30.0,
+            'source_timeout_s': 0.5,
         }]
     )
 

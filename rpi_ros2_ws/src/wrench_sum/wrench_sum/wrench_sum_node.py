@@ -3,6 +3,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Wrench
 import numpy as np
 
+
 class WrenchSum(Node):
     def __init__(self):
         super().__init__('wrench_sum_node')
@@ -15,16 +16,25 @@ class WrenchSum(Node):
         ])
         # Output topic name
         self.declare_parameter('output_topic', 'control/wrench_command')
+        self.declare_parameter('publish_rate', 30.0)
+        self.declare_parameter('source_timeout_s', 0.5)
 
         # Get parameter values
         self.input_topics = self.get_parameter('input_topics').get_parameter_value().string_array_value
         output_topic = self.get_parameter('output_topic').get_parameter_value().string_value
+        publish_rate = float(self.get_parameter('publish_rate').value)
+        self.source_timeout_s = float(self.get_parameter('source_timeout_s').value)
+        if publish_rate <= 0.0:
+            self.get_logger().warn('publish_rate <= 0; using 30.0 Hz')
+            publish_rate = 30.0
 
         # --- 2. Initialize storage ---
         # Use Dictionary to store the latest data for each topic
         # Key: topic_name, Value: np.array([fx, fy, fz, tx, ty, tz])
         self.wrench_buffer = {topic: np.zeros(6) for topic in self.input_topics}
-        
+        self.last_update_time = {topic: None for topic in self.input_topics}
+        self.stale_topics = set()
+
         # --- 3. Create Subscribers ---
         self.subs = []
         for topic in self.input_topics:
@@ -41,6 +51,7 @@ class WrenchSum(Node):
 
         # --- 4. Create Publisher ---
         self.publisher_ = self.create_publisher(Wrench, output_topic, 10)
+        self.publish_timer = self.create_timer(1.0 / publish_rate, self.publish_sum)
 
     def listener_callback(self, msg, topic_name):
         """
@@ -55,12 +66,34 @@ class WrenchSum(Node):
             msg.torque.y,
             msg.torque.z
         ])
-        
+
         # Update the latest value for this topic
         self.wrench_buffer[topic_name] = wrench_arr
+        self.last_update_time[topic_name] = self.get_clock().now()
+        self.stale_topics.discard(topic_name)
+        self.publish_sum()
 
-        # Sum all values currently in the buffer and publish immediately
-        net_wrench_arr = sum(self.wrench_buffer.values())
+    def publish_sum(self):
+        active_wrenches = []
+        now = self.get_clock().now()
+        for topic, wrench in self.wrench_buffer.items():
+            if self.last_update_time[topic] is None:
+                active_wrenches.append(np.zeros(6))
+                continue
+            if self._is_source_stale(topic, now):
+                if topic not in self.stale_topics:
+                    self.get_logger().warn(
+                        f'Wrench source stale; zeroing residual output: {topic}',
+                        throttle_duration_sec=5.0,
+                    )
+                    self.stale_topics.add(topic)
+                active_wrenches.append(np.zeros(6))
+                continue
+            active_wrenches.append(wrench)
+
+        # Sum only currently active source values. Sources that never published
+        # or timed out contribute zero instead of retaining old force commands.
+        net_wrench_arr = sum(active_wrenches, np.zeros(6))
 
         msg_out = Wrench()
         msg_out.force.x = net_wrench_arr[0]
@@ -71,6 +104,16 @@ class WrenchSum(Node):
         msg_out.torque.z = net_wrench_arr[5]
 
         self.publisher_.publish(msg_out)
+
+    def _is_source_stale(self, topic_name, now):
+        last_update = self.last_update_time[topic_name]
+        if last_update is None:
+            return True
+        if self.source_timeout_s <= 0.0:
+            return False
+        age_s = (now - last_update).nanoseconds / 1e9
+        return age_s > self.source_timeout_s
+
 
 def main(args=None):
     rclpy.init(args=args)
