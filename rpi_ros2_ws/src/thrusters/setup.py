@@ -8,6 +8,9 @@ setup(
     name=package_name,
     version='0.0.0',
     packages=find_packages(exclude=['test']),
+    package_data={
+        package_name: ['thruster_lookup_table_16V.csv'],
+    },
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -15,7 +18,7 @@ setup(
         (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
     ],
     install_requires=['setuptools'],
-    zip_safe=True,
+    zip_safe=False,
     maintainer='root',
     maintainer_email='root@todo.todo',
     description='TODO: Package description',
