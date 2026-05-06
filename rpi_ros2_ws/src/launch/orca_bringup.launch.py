@@ -31,6 +31,7 @@ def generate_launch_description():
                 'control/wrench_sources/gui',
                 'control/wrench_sources/bottom_camera',
                 'control/wrench_sources/depth',
+                'control/wrench_sources/decision',
             ],
             'output_topic': 'control/wrench_command',
             'publish_rate': 30.0,
