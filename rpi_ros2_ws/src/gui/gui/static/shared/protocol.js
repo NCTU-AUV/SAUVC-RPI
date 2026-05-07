@@ -22,6 +22,7 @@ const GuiProtocol = Object.freeze({
         initializeAllThrusters: "initialize_all_thrusters",
         flashStm32: "flash_stm32",
         setSupervisorSimulationMode: "set_supervisor_simulation_mode",
+        setSupervisorManualMode: "set_supervisor_manual_mode",
         moveToPoint: "move_to_point",
         cancelMoveToPoint: "cancel_move_to_point",
     }),

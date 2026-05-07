@@ -294,6 +294,11 @@ class GUINode(Node):
                 self._flash_stm32()
             elif action_name == protocol.ACTION_SET_SUPERVISOR_SIMULATION_MODE:
                 self._set_supervisor_simulation_mode(bool(msg_data.get("enabled")))
+            elif action_name == protocol.ACTION_SET_SUPERVISOR_MANUAL_MODE:
+                if bool(msg_data.get("enabled")):
+                    self._call_supervisor(protocol.SUPERVISOR_SERVICE_MANUAL)
+                else:
+                    self._call_supervisor(protocol.SUPERVISOR_SERVICE_SAFE_DISABLED)
             elif action_name == protocol.ACTION_MOVE_TO_POINT:
                 self._send_move_to_point_goal(msg_data)
             elif action_name == protocol.ACTION_CANCEL_MOVE_TO_POINT:
