@@ -5,6 +5,9 @@ const thrustYElement = document.getElementById("thrust_y");
 const thrustZElement = document.getElementById("thrust_z");
 const thrustYawElement = document.getElementById("thrust_yaw");
 const cameraFeedElement = document.getElementById("camera_feed");
+const systemManagerModeElement = document.getElementById("system_manager_mode");
+const guiControlManualButton = document.getElementById("gui_control_manual_button");
+const guiControlSafeButton = document.getElementById("gui_control_safe_button");
 const thrusterPwmElements = Array.from({ length: 8 }, (_, index) =>
     document.getElementById(`thruster_pwm_${index}`)
 );
@@ -32,6 +35,7 @@ let activeGamepadIndex = null;
 let animationFrameId = null;
 let lastSendTime = 0;
 let lastBPressed = false;
+let currentSystemManagerMode = null;
 const pressedKeys = new Set();
 
 const websocket = new WebSocket(
@@ -55,7 +59,7 @@ function updateWsStatus(connected) {
     if (!wsStatusElement) {
         return;
     }
-    wsStatusElement.textContent = connected ? "🟢 Connected" : "🔴 Disconnected";
+    wsStatusElement.textContent = connected ? "Connected" : "Disconnected";
 }
 
 function updateGamepadStatus(text) {
@@ -78,6 +82,41 @@ function updateHudWrench() {
     if (thrustYawElement) {
         thrustYawElement.textContent = current_wrench.torque.z.toFixed(2);
     }
+}
+
+function updateGuiControlState(mode) {
+    const isManual = mode === "MANUAL";
+    if (systemManagerModeElement) {
+        systemManagerModeElement.textContent = mode || "none";
+    }
+    if (guiControlManualButton) {
+        guiControlManualButton.classList.toggle("is-active", isManual);
+        guiControlManualButton.setAttribute("aria-pressed", String(isManual));
+    }
+    if (guiControlSafeButton) {
+        guiControlSafeButton.classList.toggle("is-active", !isManual);
+        guiControlSafeButton.setAttribute("aria-pressed", String(!isManual));
+    }
+}
+
+function setGuiControlEnabled(enabled) {
+    if (websocket.readyState !== WebSocket.OPEN) {
+        return;
+    }
+    websocket.send(JSON.stringify(protocol.makeActionMessage(
+        protocol.actions.setGuiControlEnabled,
+        {enabled: enabled}
+    )));
+}
+
+function gui_control_manual_button_onclick() {
+    setGuiControlEnabled(true);
+}
+
+function gui_control_safe_button_onclick() {
+    setWrenchToZero();
+    sendCurrentWrench();
+    setGuiControlEnabled(false);
 }
 
 function applyDeadzone(value) {
@@ -156,7 +195,7 @@ function getActiveGamepad() {
 }
 
 function applyGamepadInput(gamepad) {
-    updateGamepadStatus("🎮 已連接: " + gamepad.id);
+    updateGamepadStatus("已連接: " + gamepad.id);
 
     const leftX = applyDeadzone(gamepad.axes[0] || 0);
     const leftY = applyDeadzone(gamepad.axes[1] || 0);
@@ -198,9 +237,9 @@ function applyKeyboardInput() {
     current_wrench.torque.z = (yawRight ? max_twist : 0) + (yawLeft ? -max_twist : 0);
 
     if (pressedKeys.size > 0) {
-        updateGamepadStatus("⌨️ 鍵盤控制中");
+        updateGamepadStatus("鍵盤控制中");
     } else {
-        updateGamepadStatus("🎮 未連接，使用鍵盤控制");
+        updateGamepadStatus("未連接，使用鍵盤控制");
     }
 
     updateHudWrench();
@@ -226,14 +265,14 @@ function tickControls() {
 
 window.addEventListener("gamepadconnected", (event) => {
     activeGamepadIndex = event.gamepad.index;
-    updateGamepadStatus("🎮 已連接: " + event.gamepad.id);
+    updateGamepadStatus("已連接: " + event.gamepad.id);
 });
 
 window.addEventListener("gamepaddisconnected", (event) => {
     if (activeGamepadIndex === event.gamepad.index) {
         activeGamepadIndex = null;
         lastBPressed = false;
-        updateGamepadStatus("🎮 未連接，使用鍵盤控制");
+        updateGamepadStatus("未連接，使用鍵盤控制");
         setWrenchToZero();
         sendCurrentWrench();
     }
@@ -283,6 +322,12 @@ websocket.onmessage = (event) => {
 
     const topicName = msgJsonObject.data && msgJsonObject.data.topic_name;
     const topicMsg = msgJsonObject.data && msgJsonObject.data.msg;
+    if (topicName === protocol.topics.systemManagerMode) {
+        currentSystemManagerMode = topicMsg;
+        updateGuiControlState(currentSystemManagerMode);
+        return;
+    }
+
     if (topicName !== protocol.topics.thrustersPwmUs || !Array.isArray(topicMsg)) {
         return;
     }
@@ -301,6 +346,7 @@ websocket.onerror = () => {
 
 updateWsStatus(false);
 updateHudWrench();
+updateGuiControlState(currentSystemManagerMode);
 updateThrusterPwmDisplay(Array(8).fill(1500));
 initializeCameraFeed();
 animationFrameId = requestAnimationFrame(tickControls);

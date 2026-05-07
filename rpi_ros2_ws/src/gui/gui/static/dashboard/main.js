@@ -6,6 +6,7 @@ const websocket = new WebSocket(
 const stm32LogState = {
     shouldAutoScroll: true,
 };
+let currentSystemManagerMode = null;
 
 function isAtBottom(element, thresholdPx = 8) {
     return element.scrollTop + element.clientHeight >= element.scrollHeight - thresholdPx;
@@ -21,11 +22,11 @@ function updateStm32LogAutoScrollState() {
 
 document.addEventListener("DOMContentLoaded", () => {
     const element = document.getElementById("stm32_debug_log");
-    if (!element) {
-        return;
+    if (element) {
+        element.addEventListener("scroll", updateStm32LogAutoScrollState);
+        stm32LogState.shouldAutoScroll = isAtBottom(element);
     }
-    element.addEventListener("scroll", updateStm32LogAutoScrollState);
-    stm32LogState.shouldAutoScroll = isAtBottom(element);
+    updateGuiControlState(currentSystemManagerMode);
 });
 
 websocket.onmessage = (event) => {
@@ -58,10 +59,12 @@ websocket.onmessage = (event) => {
             }
         }
         if (msg_json_object.data.topic_name == protocol.topics.systemManagerMode) {
+            currentSystemManagerMode = msg_json_object.data.msg;
             const element = document.getElementById("system_manager_mode");
             if (element) {
-                element.innerHTML = msg_json_object.data.msg;
+                element.innerHTML = currentSystemManagerMode;
             }
+            updateGuiControlState(currentSystemManagerMode);
         }
         if (msg_json_object.data.topic_name == protocol.topics.systemManagerStatus) {
             const element = document.getElementById("system_manager_status");
@@ -206,6 +209,46 @@ function set_supervisor_simulation_mode(enabled) {
 function supervisor_simulation_mode_input_onchange() {
     const checkbox = document.getElementById("supervisor_simulation_mode_input");
     set_supervisor_simulation_mode(Boolean(checkbox && checkbox.checked));
+}
+
+function set_gui_control_enabled(enabled) {
+    const statusElement = document.getElementById("system_manager_status");
+    if (statusElement) {
+        statusElement.innerHTML = enabled
+            ? "Enabling GUI control..."
+            : "Stopping GUI control...";
+    }
+    websocket.send(JSON.stringify(protocol.makeActionMessage(
+        protocol.actions.setGuiControlEnabled,
+        {enabled: enabled}
+    )));
+}
+
+function gui_control_manual_button_onclick() {
+    set_gui_control_enabled(true);
+}
+
+function gui_control_safe_button_onclick() {
+    set_gui_control_enabled(false);
+}
+
+function updateGuiControlState(mode) {
+    const manualButton = document.getElementById("gui_control_manual_button");
+    const safeButton = document.getElementById("gui_control_safe_button");
+    const modeChip = document.getElementById("system_manager_mode_chip");
+    const isManual = mode === "MANUAL";
+
+    if (manualButton) {
+        manualButton.classList.toggle("is-active", isManual);
+        manualButton.setAttribute("aria-pressed", String(isManual));
+    }
+    if (safeButton) {
+        safeButton.classList.toggle("is-active", !isManual);
+        safeButton.setAttribute("aria-pressed", String(!isManual));
+    }
+    if (modeChip) {
+        modeChip.classList.toggle("is-active", isManual);
+    }
 }
 
 function set_target_depth_m_button_onclick() {
