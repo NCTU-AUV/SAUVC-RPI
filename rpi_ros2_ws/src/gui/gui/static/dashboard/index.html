@@ -220,6 +220,14 @@
         <div>system_manager/mode: <i id="system_manager_mode">none</i></div>
         <div>system_manager/status: <i id="system_manager_status">none</i></div>
         <label class="inline-field">
+            manual
+            <input
+                type="checkbox"
+                id="supervisor_manual_mode_input"
+                onchange="supervisor_manual_mode_input_onchange()"
+            >
+        </label>
+        <label class="inline-field">
             simulation
             <input
                 type="checkbox"

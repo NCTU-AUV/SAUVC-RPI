@@ -58,9 +58,14 @@ websocket.onmessage = (event) => {
             }
         }
         if (msg_json_object.data.topic_name == protocol.topics.systemManagerMode) {
+            const mode = msg_json_object.data.msg;
             const element = document.getElementById("system_manager_mode");
             if (element) {
-                element.innerHTML = msg_json_object.data.msg;
+                element.innerHTML = mode;
+            }
+            const checkbox = document.getElementById("supervisor_manual_mode_input");
+            if (checkbox) {
+                checkbox.checked = mode === "MANUAL";
             }
         }
         if (msg_json_object.data.topic_name == protocol.topics.systemManagerStatus) {
@@ -201,6 +206,18 @@ function set_supervisor_simulation_mode(enabled) {
         protocol.actions.setSupervisorSimulationMode,
         {enabled: enabled}
     )));
+}
+
+function set_supervisor_manual_mode(enabled) {
+    websocket.send(JSON.stringify(protocol.makeActionMessage(
+        protocol.actions.setSupervisorManualMode,
+        {enabled: enabled}
+    )));
+}
+
+function supervisor_manual_mode_input_onchange() {
+    const checkbox = document.getElementById("supervisor_manual_mode_input");
+    set_supervisor_manual_mode(Boolean(checkbox && checkbox.checked));
 }
 
 function supervisor_simulation_mode_input_onchange() {
