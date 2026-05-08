@@ -23,6 +23,7 @@ ACTION_INITIALIZE_ALL_THRUSTERS = "initialize_all_thrusters"
 ACTION_FLASH_STM32 = "flash_stm32"
 ACTION_SET_SUPERVISOR_SIMULATION_MODE = "set_supervisor_simulation_mode"
 ACTION_SET_SUPERVISOR_MANUAL_MODE = "set_supervisor_manual_mode"
+ACTION_SET_GUI_CONTROL_ENABLED = "set_gui_control_enabled"
 ACTION_MOVE_TO_POINT = "move_to_point"
 ACTION_CANCEL_MOVE_TO_POINT = "cancel_move_to_point"
 

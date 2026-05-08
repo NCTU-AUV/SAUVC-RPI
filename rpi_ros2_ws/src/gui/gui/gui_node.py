@@ -295,10 +295,9 @@ class GUINode(Node):
             elif action_name == protocol.ACTION_SET_SUPERVISOR_SIMULATION_MODE:
                 self._set_supervisor_simulation_mode(bool(msg_data.get("enabled")))
             elif action_name == protocol.ACTION_SET_SUPERVISOR_MANUAL_MODE:
-                if bool(msg_data.get("enabled")):
-                    self._call_supervisor(protocol.SUPERVISOR_SERVICE_MANUAL)
-                else:
-                    self._call_supervisor(protocol.SUPERVISOR_SERVICE_SAFE_DISABLED)
+                self._set_gui_control_enabled(msg_data.get("enabled") is True)
+            elif action_name == protocol.ACTION_SET_GUI_CONTROL_ENABLED:
+                self._set_gui_control_enabled(msg_data.get("enabled") is True)
             elif action_name == protocol.ACTION_MOVE_TO_POINT:
                 self._send_move_to_point_goal(msg_data)
             elif action_name == protocol.ACTION_CANCEL_MOVE_TO_POINT:
@@ -749,6 +748,74 @@ class GUINode(Node):
         for res in response.results:
             if not res.successful:
                 self.get_logger().warning(f"Param set failed on {node_name}: {res.reason}")
+
+    def _publish_zero_wrench(self):
+        self._set_output_wrench_at_center_publisher.publish(Wrench())
+
+    def _set_gui_control_enabled(self, enabled: bool):
+        if enabled:
+            self._enable_gui_control()
+            return
+        self._disable_gui_control()
+
+    def _enable_gui_control(self):
+        client = self._get_param_client("supervisor_node")
+        if not client.service_is_ready():
+            message = "Supervisor parameter service not ready"
+            self.get_logger().warning(message)
+            self.aiohttp_server.send_topic(
+                protocol.TOPIC_SYSTEM_MANAGER_STATUS,
+                message,
+            )
+            return
+
+        self.aiohttp_server.send_topic(
+            protocol.TOPIC_SYSTEM_MANAGER_STATUS,
+            "Enabling GUI control: simulation safety bypass",
+        )
+        parameters = [
+            Parameter("require_not_killed", Parameter.Type.BOOL, False),
+            Parameter("require_thrusters_enabled", Parameter.Type.BOOL, False),
+        ]
+        future = client.set_parameters(parameters)
+        future.add_done_callback(self._on_gui_control_safety_params_result)
+
+    def _on_gui_control_safety_params_result(self, future):
+        try:
+            response = future.result()
+        except Exception as exc:  # noqa: BLE001
+            message = f"GUI control enable failed: {exc}"
+            self.get_logger().warning(message)
+            self.aiohttp_server.send_topic(
+                protocol.TOPIC_SYSTEM_MANAGER_STATUS,
+                message,
+            )
+            return
+
+        for res in response.results:
+            if not res.successful:
+                message = f"GUI control enable rejected: {res.reason}"
+                self.get_logger().warning(message)
+                self.aiohttp_server.send_topic(
+                    protocol.TOPIC_SYSTEM_MANAGER_STATUS,
+                    message,
+                )
+                return
+
+        self.get_logger().info("GUI control safety bypass enabled; switching to MANUAL")
+        self.aiohttp_server.send_topic(
+            protocol.TOPIC_SYSTEM_MANAGER_STATUS,
+            "GUI control safety bypass enabled; switching to MANUAL",
+        )
+        self._call_supervisor(protocol.SUPERVISOR_SERVICE_MANUAL)
+
+    def _disable_gui_control(self):
+        self._publish_zero_wrench()
+        self.aiohttp_server.send_topic(
+            protocol.TOPIC_SYSTEM_MANAGER_STATUS,
+            "GUI control stopping; zero wrench sent",
+        )
+        self._call_supervisor(protocol.SUPERVISOR_SERVICE_SAFE_DISABLED)
 
     def _set_group_pid_params(self, group: str, params):
         nodes = self._controller_groups.get(group, [])
