@@ -4,20 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ORCA AUV Fullscreen Controller</title>
+    <link rel="stylesheet" href="/static/shared/linear_theme.css">
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
         body {
-            margin: 0;
             width: 100vw;
             height: 100vh;
             overflow: hidden;
             position: relative;
-            background: #000;
-            font-family: "Space Grotesk", "Noto Sans", sans-serif;
-            color: #ffffff;
         }
 
         #camera_feed {
@@ -36,25 +29,35 @@
             top: 20px;
             left: 20px;
             min-width: 320px;
-            background: rgba(0, 0, 0, 0.5);
-            color: #ffffff;
             padding: 14px 16px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(4px);
+            background: rgba(15, 16, 17, 0.92);
+            backdrop-filter: blur(10px);
             line-height: 1.5;
             z-index: 1;
         }
 
         .hud-title {
             font-size: 16px;
-            font-weight: 700;
+            font-weight: 600;
             margin-bottom: 8px;
         }
 
         .hud-row {
             margin: 4px 0;
             font-size: 14px;
+        }
+        .hud-status {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 8px 0 10px;
+        }
+        .hud-control {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin: 10px 0 12px;
         }
 
         .wrench {
@@ -69,13 +72,12 @@
         .control-help {
             margin-top: 12px;
             padding-top: 10px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: 1px solid var(--linear-hairline);
         }
 
         .control-help-title {
             font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 0.02em;
+            font-weight: 600;
             margin-bottom: 6px;
         }
 
@@ -91,8 +93,8 @@
             display: inline-block;
             padding: 1px 6px;
             border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--linear-hairline-strong);
+            background: var(--linear-surface-2);
             font-weight: 600;
             white-space: nowrap;
         }
@@ -100,18 +102,18 @@
         .thruster-panel {
             margin-top: 12px;
             padding-top: 10px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: 1px solid var(--linear-hairline);
         }
 
         .thruster-panel-title {
             font-size: 13px;
-            font-weight: 700;
+            font-weight: 600;
             margin-bottom: 6px;
         }
 
         .thruster-panel-note {
             font-size: 11px;
-            opacity: 0.8;
+            color: var(--linear-ink-subtle);
             margin-bottom: 6px;
         }
 
@@ -127,6 +129,11 @@
             justify-content: space-between;
             gap: 8px;
             white-space: nowrap;
+            color: var(--linear-ink-muted);
+        }
+        .thruster-item strong,
+        .wrench strong {
+            color: var(--linear-primary-hover);
         }
 
         @media (max-width: 640px) {
@@ -144,8 +151,18 @@
 
     <div class="hud">
         <div class="hud-title">ORCA AUV Controller HUD</div>
-        <div class="hud-row">WebSocket: <span id="ws_status">🔴 Disconnected</span></div>
-        <div class="hud-row">Gamepad: <span id="gamepad_status">🎮 請按下搖桿任意鍵...</span></div>
+        <div class="hud-status">
+            <span class="status-chip"><strong>WebSocket</strong><span id="ws_status">Disconnected</span></span>
+            <span class="status-chip"><strong>Mode</strong><span id="system_manager_mode">none</span></span>
+        </div>
+        <div class="hud-row">Gamepad: <span id="gamepad_status">請按下搖桿任意鍵...</span></div>
+        <div class="hud-control">
+            <span class="control-label">GUI Control</span>
+            <div class="segmented-control" role="group" aria-label="GUI control mode">
+                <button id="gui_control_manual_button" class="button-primary" onclick="gui_control_manual_button_onclick()">MANUAL</button>
+                <button id="gui_control_safe_button" onclick="gui_control_safe_button_onclick()">SAFE</button>
+            </div>
+        </div>
         <div class="hud-row wrench">Current Wrench:</div>
         <div class="hud-row">
             <span>X: <strong id="thrust_x">0.00</strong></span>

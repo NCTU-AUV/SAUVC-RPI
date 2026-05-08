@@ -205,10 +205,10 @@ function updateGamepadConnectionStatus() {
     if (statusElement) {
         if (gamepadState.connected) {
             statusElement.textContent = "Connected ✓";
-            statusElement.style.color = "var(--accent)";
+            statusElement.style.color = "var(--linear-primary-hover)";
         } else {
             statusElement.textContent = "Not Connected";
-            statusElement.style.color = "var(--muted)";
+            statusElement.style.color = "var(--linear-ink-subtle)";
         }
     }
 }
@@ -269,10 +269,10 @@ function updateGamepadButtonDisplay(buttonAPressed, buttonBPressed) {
     if (buttonAElem) {
         if (buttonAPressed) {
             buttonAElem.textContent = "Pressed ✓";
-            buttonAElem.style.color = "var(--accent)";
+            buttonAElem.style.color = "var(--linear-primary-hover)";
         } else {
             buttonAElem.textContent = "Released";
-            buttonAElem.style.color = "var(--muted)";
+            buttonAElem.style.color = "var(--linear-ink-subtle)";
         }
     }
     
@@ -282,7 +282,7 @@ function updateGamepadButtonDisplay(buttonAPressed, buttonBPressed) {
             buttonBElem.style.color = "#ff6b6b";
         } else {
             buttonBElem.textContent = "Released";
-            buttonBElem.style.color = "var(--muted)";
+            buttonBElem.style.color = "var(--linear-ink-subtle)";
         }
     }
 }

@@ -2,48 +2,55 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ORCA AUV GUI</title>
+    <link rel="stylesheet" href="/static/shared/linear_theme.css">
     <style>
-        :root {
-            --bg: #0c1220;
-            --bg-alt: #111a2b;
-            --card: #161f33;
-            --text: #e7ecf6;
-            --muted: #9fb0d0;
-            --accent: #5ed1b6;
-            --accent-2: #7aa7ff;
-            --border: #27324a;
-            --shadow: rgba(4, 10, 22, 0.35);
-        }
-        * {
-            box-sizing: border-box;
-        }
         body {
-            margin: 0;
             padding: 24px;
-            font-family: "Space Grotesk", "Noto Sans", sans-serif;
-            color: var(--text);
-            background:
-                radial-gradient(900px 500px at 10% -10%, rgba(94, 209, 182, 0.16), transparent 60%),
-                radial-gradient(900px 500px at 90% -20%, rgba(122, 167, 255, 0.2), transparent 60%),
-                var(--bg);
-            line-height: 1.5;
         }
-        p, div {
-            margin: 0 0 12px;
+        .status-bar,
+        .panel {
+            margin-bottom: 16px;
         }
         .status-bar {
             display: flex;
             flex-wrap: wrap;
-            gap: 16px 24px;
+            gap: 12px;
             align-items: center;
-            margin-bottom: 16px;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: var(--linear-surface-1);
+            border: 1px solid var(--linear-hairline);
+            border-radius: 8px;
+        }
+        .status-main,
+        .status-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .control-block {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .toggle-secondary {
+            min-height: 32px;
+            padding: 5px 9px;
+            border: 1px solid var(--linear-hairline);
+            border-radius: 999px;
+            background: var(--linear-canvas);
+            color: var(--linear-ink-subtle);
+            font-size: 12px;
         }
         .row {
             display: flex;
             flex-wrap: wrap;
             gap: 8px 12px;
             align-items: center;
+            margin-bottom: 12px;
         }
         .grid-2 {
             display: grid;
@@ -64,6 +71,11 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+        .stack > div,
+        .panel > div,
+        .panel > p {
+            margin-bottom: 10px;
         }
         .inline-field {
             display: flex;
@@ -94,8 +106,8 @@
             align-items: center;
             min-width: 0;
             padding: 8px 10px;
-            background: var(--bg-alt);
-            border: 1px solid var(--border);
+            background: var(--linear-surface-2);
+            border: 1px solid var(--linear-hairline);
             border-radius: 8px;
         }
         .thruster-pwm-row .inline-field {
@@ -115,7 +127,7 @@
         .thruster-pwm-6 { grid-area: thruster-6; }
         .thruster-pwm-7 { grid-area: thruster-7; }
         .thruster-pwm-label {
-            color: var(--muted);
+            color: var(--linear-ink-subtle);
         }
         .thruster-pwm-panel {
             grid-column: 1 / -1;
@@ -133,8 +145,8 @@
             max-width: 260px;
             height: auto;
             border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--bg-alt);
+            border: 1px solid var(--linear-hairline);
+            background: var(--linear-surface-2);
         }
         @media (max-width: 920px) {
             .thruster-pwm-grid {
@@ -159,56 +171,70 @@
             grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
             gap: 16px;
         }
-        button {
-            border: 1px solid var(--border);
-            background: linear-gradient(135deg, rgba(94, 209, 182, 0.16), rgba(122, 167, 255, 0.18));
-            color: var(--text);
-            padding: 8px 14px;
-            border-radius: 10px;
-            cursor: pointer;
-            box-shadow: 0 8px 20px var(--shadow);
-            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-        }
-        button:hover {
-            transform: translateY(-1px);
-            border-color: rgba(94, 209, 182, 0.7);
-            box-shadow: 0 12px 28px var(--shadow);
-        }
-        button:active {
-            transform: translateY(0);
-        }
-        input[type="number"] {
-            width: 160px;
-            background: var(--bg-alt);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 6px 10px;
-            border-radius: 8px;
-        }
-        input[type="number"]:focus {
-            outline: none;
-            border-color: var(--accent-2);
-            box-shadow: 0 0 0 2px rgba(122, 167, 255, 0.2);
-        }
-        input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--accent);
-        }
         .panel {
-            background: var(--card);
             padding: 16px 18px;
-            border-radius: 14px;
-            border: 1px solid var(--border);
-            box-shadow: 0 10px 24px var(--shadow);
         }
-        body > p {
-            font-size: 15px;
-            color: var(--muted);
+        .panel > p,
+        .section-title {
+            color: var(--linear-ink);
+            font-size: 14px;
+            font-weight: 600;
         }
-        i {
-            color: var(--accent);
-            font-style: normal;
+        #stm32_debug_log {
+            max-height: 220px;
+            overflow: auto;
+            margin: 8px 0 0;
+            padding: 12px;
+        }
+        #gamepad_status {
+            margin-top: 8px;
+            padding: 12px;
+            background: var(--linear-canvas);
+            border: 1px solid var(--linear-hairline);
+            border-radius: 8px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 13px;
+        }
+        .section-kicker {
+            margin-bottom: 8px;
+            color: var(--linear-ink-muted);
+        }
+        .row-start {
+            align-items: flex-start;
+        }
+        .offset-top {
+            margin-top: 8px;
+        }
+        .spaced-block {
+            margin-bottom: 12px;
+        }
+        .gamepad-section {
+            margin-top: 8px;
+        }
+        .gamepad-values {
+            margin-top: 4px;
+            margin-left: 12px;
+        }
+        .status-value-muted {
+            color: var(--linear-ink-subtle);
+        }
+        @media (max-width: 760px) {
+            body {
+                padding: 12px;
+            }
+            .layout {
+                grid-template-columns: 1fr;
+            }
+            .status-bar {
+                align-items: stretch;
+            }
+            .status-main,
+            .status-actions {
+                width: 100%;
+            }
+            input[type="number"] {
+                width: 100%;
+            }
         }
     </style>
     <script src="/static/shared/protocol.js"></script>
@@ -216,25 +242,28 @@
 </head>
 <body>
     <div class="status-bar">
-        <div>sensors/killed: <i id="killed">none</i></div>
-        <div>system_manager/mode: <i id="system_manager_mode">none</i></div>
-        <div>system_manager/status: <i id="system_manager_status">none</i></div>
-        <label class="inline-field">
-            manual
-            <input
-                type="checkbox"
-                id="supervisor_manual_mode_input"
-                onchange="supervisor_manual_mode_input_onchange()"
-            >
-        </label>
-        <label class="inline-field">
-            simulation
-            <input
-                type="checkbox"
-                id="supervisor_simulation_mode_input"
-                onchange="supervisor_simulation_mode_input_onchange()"
-            >
-        </label>
+        <div class="status-main">
+            <span class="status-chip"><strong>Killed</strong><i id="killed">none</i></span>
+            <span class="status-chip" id="system_manager_mode_chip"><strong>Mode</strong><i id="system_manager_mode">none</i></span>
+            <span class="status-chip"><strong>Status</strong><i id="system_manager_status">none</i></span>
+        </div>
+        <div class="status-actions">
+            <div class="control-block">
+                <span class="control-label">GUI Control</span>
+                <div class="segmented-control" role="group" aria-label="GUI control mode">
+                    <button id="gui_control_manual_button" class="button-primary" onclick="gui_control_manual_button_onclick()">MANUAL</button>
+                    <button id="gui_control_safe_button" onclick="gui_control_safe_button_onclick()">SAFE</button>
+                </div>
+            </div>
+            <label class="inline-field toggle-secondary">
+                simulation
+                <input
+                    type="checkbox"
+                    id="supervisor_simulation_mode_input"
+                    onchange="supervisor_simulation_mode_input_onchange()"
+                >
+            </label>
+        </div>
     </div>
 
     <div class="layout">
@@ -247,7 +276,7 @@
                 <div>diagnostics/stm32/log:</div>
                 <button onclick="clear_stm32_log_button_onclick()">clear</button>
             </div>
-            <pre id="stm32_debug_log" style="max-height: 220px; overflow: auto; margin: 8px 0 0;"></pre>
+            <pre id="stm32_debug_log"></pre>
         </div>
 
         <div class="panel">
@@ -299,14 +328,14 @@
                 <button onclick="reset_depth_control()">reset</button>
             </div>
             <div>
-                <div style="margin-bottom: 8px;">depth PID params:</div>
+                <div class="section-kicker">depth PID params:</div>
                 <div class="grid-2">
                     <div class="inline-field">P: <input type="number" step="any" id="depth_pid_p_input"></div>
                     <div class="inline-field">I: <input type="number" step="any" id="depth_pid_i_input"></div>
                     <div class="inline-field">D: <input type="number" step="any" id="depth_pid_d_input"></div>
                     <div class="inline-field">smoothing: <input type="number" step="any" id="depth_pid_smoothing_input"></div>
                 </div>
-                <div class="row" style="margin-top: 8px;">
+                <div class="row offset-top">
                     <button onclick="set_depth_pid_params_button_onclick()">set PID params</button>
                 </div>
             </div>
@@ -386,7 +415,7 @@
 
         <div class="panel">
             control/wrench_command:
-            <div class="row" style="align-items: flex-start;">
+            <div class="row row-start">
                 <div class="stack">
                     <div>force:</div>
                     <div class="inline-field">x: <input type="number" id="control_wrench_command_force_x"></div>
@@ -404,31 +433,31 @@
         </div>
 
         <div class="panel">
-            <div style="margin-bottom: 12px;">
+            <div class="spaced-block">
                 <strong>Xbox Gamepad Status:</strong>
-                <div id="gamepad_status" style="margin-top: 8px; padding: 12px; background: var(--bg-alt); border-radius: 8px; font-family: monospace; font-size: 13px;">
+                <div id="gamepad_status">
                     <div>Connection: <i id="gamepad_connection_status">Not Connected</i></div>
-                    <div style="margin-top: 8px;">
+                    <div class="gamepad-section">
                         <strong>Analog Sticks:</strong>
-                        <div style="margin-left: 12px; margin-top: 4px;">
+                        <div class="gamepad-values">
                             <div>Left Stick: X=<i id="gamepad_left_x">0.00</i> Y=<i id="gamepad_left_y">0.00</i></div>
                             <div>Right Stick: X=<i id="gamepad_right_x">0.00</i> Y=<i id="gamepad_right_y">0.00</i></div>
                         </div>
                     </div>
-                    <div style="margin-top: 8px;">
+                    <div class="gamepad-section">
                         <strong>Output Motion Control:</strong>
-                        <div style="margin-left: 12px; margin-top: 4px;">
+                        <div class="gamepad-values">
                             <div>Force X (fwd): <i id="gamepad_output_force_x">0.00</i> N</div>
                             <div>Force Y (strafe): <i id="gamepad_output_force_y">0.00</i> N</div>
                             <div>Force Z (depth): <i id="gamepad_output_force_z">0.00</i> N</div>
                             <div>Torque Z (rotation): <i id="gamepad_output_torque_z">0.00</i> Nm</div>
                         </div>
                     </div>
-                    <div style="margin-top: 8px;">
+                    <div class="gamepad-section">
                         <strong>Buttons:</strong>
-                        <div style="margin-left: 12px; margin-top: 4px;">
-                            <div>A (Init): <i id="gamepad_button_a" style="color: var(--muted);">Released</i></div>
-                            <div>B (E-Stop): <i id="gamepad_button_b" style="color: var(--muted);">Released</i></div>
+                        <div class="gamepad-values">
+                            <div>A (Init): <i id="gamepad_button_a" class="status-value-muted">Released</i></div>
+                            <div>B (E-Stop): <i id="gamepad_button_b" class="status-value-muted">Released</i></div>
                         </div>
                     </div>
                 </div>
@@ -451,7 +480,7 @@
                 </div>
             </div>
 
-            <div class="grid-3" style="margin-top: 8px;">
+            <div class="grid-3 offset-top">
                 <button id="push_down_button">push down</button>
                 <button id="push_up_button">push up</button>
                 <button id="push_left_button">push left</button>
