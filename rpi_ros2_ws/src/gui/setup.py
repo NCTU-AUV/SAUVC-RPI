@@ -12,6 +12,7 @@ setup(
             'static/controller/*.js',
             'static/dashboard/*.html',
             'static/dashboard/*.js',
+            'static/shared/*.css',
             'static/shared/*.js',
             'static/shared/*.png',
         ],
