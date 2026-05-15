@@ -12,8 +12,9 @@ class BottomCameraPIDBridgeNode(Node):
     Combine bottom-camera X/Y/yaw PID outputs into a body-frame wrench.
 
     Responsibilities:
-      - Collect per-axis PID outputs and rotate world-frame forces into the AUV body frame using yaw.
-      - Publish the combined force/torque as a geometry_msgs/Wrench to drive the vehicle.
+      - Collect per-axis PID outputs and rotate world-frame forces into the
+        AUV body frame using yaw.
+      - Publish the combined force/torque as a geometry_msgs/Wrench.
     """
 
     def __init__(self):

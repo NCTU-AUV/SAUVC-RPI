@@ -21,28 +21,7 @@ def _T(tx: float, ty: float) -> np.ndarray:
 
 
 class LkTotalTransformNode(Node):
-    """
-    Subscribe:
-      - image_topic (sensor_msgs/Image)
-      - (optional) camera_info_topic (sensor_msgs/CameraInfo)
-
-    Publish:
-      - output_topic (std_msgs/Float64MultiArray): vehicle pose in world frame [x, y, yaw, scale]
-      - scalar compensated pose topics for direct PID/controller consumers
-      - (optional) output_topic_raw              : raw pose (no center compensation) [x, y, yaw, scale]
-
-    Notes:
-      - Tracks corners with PyrLK, estimates a partial affine each frame (RANSAC).
-      - Translations are rescaled back to the original image size.
-      - The incoming image transform describes how the world moves in the image; the
-        vehicle motion is the inverse of that transform. We accumulate that inverse
-        to get pose in the world frame (world origin = first frame).
-      - Two running totals:
-          raw: accumulated directly
-          compensated: H_c = T(-c) * H_raw * T(c) (c = image center or principal point)
-        so pure rotations about the chosen center do not introduce spurious translation.
-      - Outputs are expressed in the configured body frame (image_to_body mapping + flips).
-    """
+    """Track bottom-camera image motion and publish accumulated pose."""
 
     def __init__(self):
         super().__init__('lk_total_transform_node')
@@ -172,11 +151,18 @@ class LkTotalTransformNode(Node):
         self._sub_img = self.create_subscription(Image, self._image_topic, self._on_image, 10)
         self._sub_info = None
         if self._rotation_center_mode == 'principal_point':
-            self._sub_info = self.create_subscription(CameraInfo, self._camera_info_topic, self._on_camerainfo, 10)
+            self._sub_info = self.create_subscription(
+                CameraInfo,
+                self._camera_info_topic,
+                self._on_camerainfo,
+                10,
+            )
 
         self.get_logger().info(
-            f'LK total transform node started. image_topic={self._image_topic}, output_topic={self._output_topic}, '
-            f'rotation_center_mode={self._rotation_center_mode}, publish_raw={self._publish_raw_output}\n'
+            f'LK total transform node started. image_topic={self._image_topic}, '
+            f'output_topic={self._output_topic}, '
+            f'rotation_center_mode={self._rotation_center_mode}, '
+            f'publish_raw={self._publish_raw_output}\n'
             f'scalar outputs: x={self._output_x_topic}, y={self._output_y_topic}, '
             f'yaw={self._output_yaw_topic}, scale={self._output_scale_topic}'
         )
@@ -270,7 +256,10 @@ class LkTotalTransformNode(Node):
         try:
             out = self._bridge.cv2_to_imgmsg(overlay, encoding='bgr8')
         except Exception as exc:
-            self.get_logger().warn(f'Failed to convert debug image: {exc}', throttle_duration_sec=5.0)
+            self.get_logger().warn(
+                f'Failed to convert debug image: {exc}',
+                throttle_duration_sec=5.0,
+            )
             return
         self._debug_pub.publish(out)
 
@@ -291,7 +280,11 @@ class LkTotalTransformNode(Node):
         gray_small, scale_factor = self._downscale_gray(gray)
 
         # init / re-init
-        if self._prev_gray is None or self._prev_pts is None or len(self._prev_pts) < self._min_tracked_points:
+        if (
+            self._prev_gray is None
+            or self._prev_pts is None
+            or len(self._prev_pts) < self._min_tracked_points
+        ):
             self._prev_gray = gray_small
             self._prev_pts = self._detect_features(gray_small)
             if self._publish_debug_image and self._prev_pts is not None:
@@ -388,7 +381,10 @@ class LkTotalTransformNode(Node):
             H_motion_raw_body = np.linalg.inv(H_scene_raw_body)
             H_motion_comp_body = np.linalg.inv(H_scene_comp_body)
         except np.linalg.LinAlgError:
-            self.get_logger().warn('Failed to invert LK transform; reinitializing tracks.', throttle_duration_sec=5.0)
+            self.get_logger().warn(
+                'Failed to invert LK transform; reinitializing tracks.',
+                throttle_duration_sec=5.0,
+            )
             if self._reinit_if_fail:
                 self._prev_gray = gray_small
                 self._prev_pts = self._detect_features(gray_small)
