@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import math
-from typing import Optional, Tuple
+from dataclasses import dataclass
+from typing import Iterable, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -21,6 +22,103 @@ def _T(tx: float, ty: float) -> np.ndarray:
     ], dtype=np.float64)
 
 
+@dataclass(frozen=True)
+class HoughGridObservation:
+    """Folded square-grid line orientation estimate."""
+
+    theta_rad: float
+    confidence: float
+    line_count: int
+    segments: Tuple[Tuple[float, float, float, float], ...] = ()
+
+
+def _wrap_to_period(angle: float, period: float) -> float:
+    return (angle + 0.5 * period) % period - 0.5 * period
+
+
+def _wrap_to_pi(angle: float) -> float:
+    return math.atan2(math.sin(angle), math.cos(angle))
+
+
+def _clamp(value: float, lower: float, upper: float) -> float:
+    return min(max(value, lower), upper)
+
+
+def _grid_orientation_from_segments(
+    segments: Iterable[Tuple[float, float, float, float]],
+    min_lines: int,
+) -> Optional[HoughGridObservation]:
+    total_weight = 0.0
+    sum_cos = 0.0
+    sum_sin = 0.0
+    line_count = 0
+    valid_segments = []
+
+    for x1, y1, x2, y2 in segments:
+        dx = float(x2) - float(x1)
+        dy = float(y2) - float(y1)
+        length = math.hypot(dx, dy)
+        if length <= 0.0:
+            continue
+
+        angle = math.atan2(dy, dx)
+        folded = 4.0 * angle
+        sum_cos += length * math.cos(folded)
+        sum_sin += length * math.sin(folded)
+        total_weight += length
+        line_count += 1
+        valid_segments.append((float(x1), float(y1), float(x2), float(y2)))
+
+    if line_count < min_lines or total_weight <= 0.0:
+        return None
+
+    theta = 0.25 * math.atan2(sum_sin, sum_cos)
+    theta = _wrap_to_period(theta, math.pi / 2.0)
+    confidence = math.hypot(sum_cos, sum_sin) / total_weight
+    return HoughGridObservation(
+        theta,
+        confidence,
+        line_count,
+        tuple(valid_segments),
+    )
+
+
+def _map_line_angle(angle_rad: float, mapping: np.ndarray) -> float:
+    direction = np.array([
+        [math.cos(angle_rad)],
+        [math.sin(angle_rad)],
+    ], dtype=np.float64)
+    mapped = mapping @ direction
+    return math.atan2(float(mapped[1, 0]), float(mapped[0, 0]))
+
+
+def _relative_grid_yaw(theta_now: float, theta_reference: float) -> float:
+    return -_wrap_to_period(theta_now - theta_reference, math.pi / 2.0)
+
+
+def _select_nearest_grid_yaw(yaw_mod: float, reference_yaw: float) -> float:
+    period = math.pi / 2.0
+    nearest_k = int(round((reference_yaw - yaw_mod) / period))
+    candidates = [
+        yaw_mod + (nearest_k + offset) * period
+        for offset in (-1, 0, 1)
+    ]
+    return min(candidates, key=lambda yaw: abs(yaw - reference_yaw))
+
+
+def _bounded_yaw_correction(
+    current_yaw: float,
+    measured_yaw: float,
+    alpha: float,
+    max_step_rad: float,
+) -> Tuple[float, float]:
+    error = _wrap_to_pi(measured_yaw - current_yaw)
+    step = alpha * error
+    if max_step_rad >= 0.0:
+        step = _clamp(step, -max_step_rad, max_step_rad)
+    return current_yaw + step, step
+
+
 class LkTotalTransformNode(Node):
     """Track bottom-camera image motion and publish accumulated pose."""
 
@@ -35,6 +133,24 @@ class LkTotalTransformNode(Node):
         self.declare_parameter('output_yaw_topic', 'state/bottom_camera/yaw_rad')
         self.declare_parameter('output_scale_topic', 'state/bottom_camera/scale')
 
+        # Hough grid yaw diagnostics
+        self.declare_parameter(
+            'output_yaw_lk_uncorrected_topic',
+            'state/bottom_camera/yaw_lk_uncorrected_rad',
+        )
+        self.declare_parameter(
+            'output_yaw_hough_topic',
+            'state/bottom_camera/yaw_hough_rad',
+        )
+        self.declare_parameter(
+            'output_yaw_hough_error_topic',
+            'state/bottom_camera/yaw_hough_error_rad',
+        )
+        self.declare_parameter(
+            'output_yaw_hough_confidence_topic',
+            'state/bottom_camera/yaw_hough_confidence',
+        )
+
         # raw output (debug / diagnostics)
         self.declare_parameter('publish_raw_output', True)
         self.declare_parameter('output_topic_raw', 'camera/bottom/pose_raw_px')
@@ -42,6 +158,11 @@ class LkTotalTransformNode(Node):
         # debug image overlay
         self.declare_parameter('publish_debug_image', False)
         self.declare_parameter('debug_image_topic', 'camera/bottom/debug/lk_tracks')
+        self.declare_parameter('publish_hough_debug_image', False)
+        self.declare_parameter(
+            'hough_debug_image_topic',
+            'camera/bottom/debug/hough_lines',
+        )
 
         # ---- Params (rotation center) ----
         # 'image_center' or 'principal_point'
@@ -75,6 +196,19 @@ class LkTotalTransformNode(Node):
         self.declare_parameter('min_tracked_points', 100)
         self.declare_parameter('reinit_if_fail', True)
 
+        # ---- Params (Hough square-grid yaw correction) ----
+        self.declare_parameter('enable_hough_yaw_correction', True)
+        self.declare_parameter('hough_correction_alpha', 0.15)
+        self.declare_parameter('hough_max_correction_step_rad', 0.03)
+        self.declare_parameter('hough_min_lines', 6)
+        self.declare_parameter('hough_min_confidence', 0.55)
+        self.declare_parameter('hough_reject_error_rad', 0.70)
+        self.declare_parameter('hough_canny_low', 50)
+        self.declare_parameter('hough_canny_high', 150)
+        self.declare_parameter('hough_threshold', 35)
+        self.declare_parameter('hough_min_line_length_ratio', 0.15)
+        self.declare_parameter('hough_max_line_gap_px', 10)
+
         # ---- Load params ----
         self._bridge = CvBridge()
         self._image_topic = self.get_parameter('image_topic').value
@@ -83,12 +217,30 @@ class LkTotalTransformNode(Node):
         self._output_y_topic = self.get_parameter('output_y_topic').value
         self._output_yaw_topic = self.get_parameter('output_yaw_topic').value
         self._output_scale_topic = self.get_parameter('output_scale_topic').value
+        self._output_yaw_lk_uncorrected_topic = self.get_parameter(
+            'output_yaw_lk_uncorrected_topic'
+        ).value
+        self._output_yaw_hough_topic = self.get_parameter(
+            'output_yaw_hough_topic'
+        ).value
+        self._output_yaw_hough_error_topic = self.get_parameter(
+            'output_yaw_hough_error_topic'
+        ).value
+        self._output_yaw_hough_confidence_topic = self.get_parameter(
+            'output_yaw_hough_confidence_topic'
+        ).value
 
         self._publish_raw_output = bool(self.get_parameter('publish_raw_output').value)
         self._output_topic_raw = self.get_parameter('output_topic_raw').value
 
         self._publish_debug_image = bool(self.get_parameter('publish_debug_image').value)
         self._debug_image_topic = self.get_parameter('debug_image_topic').value
+        self._publish_hough_debug_image = bool(
+            self.get_parameter('publish_hough_debug_image').value
+        )
+        self._hough_debug_image_topic = self.get_parameter(
+            'hough_debug_image_topic'
+        ).value
 
         self._rotation_center_mode = str(self.get_parameter('rotation_center_mode').value)
         self._camera_info_topic = str(self.get_parameter('camera_info_topic').value)
@@ -122,6 +274,32 @@ class LkTotalTransformNode(Node):
         self._min_tracked_points = int(self.get_parameter('min_tracked_points').value)
         self._reinit_if_fail = bool(self.get_parameter('reinit_if_fail').value)
 
+        self._enable_hough_yaw_correction = bool(
+            self.get_parameter('enable_hough_yaw_correction').value
+        )
+        self._hough_correction_alpha = float(
+            self.get_parameter('hough_correction_alpha').value
+        )
+        self._hough_max_correction_step_rad = float(
+            self.get_parameter('hough_max_correction_step_rad').value
+        )
+        self._hough_min_lines = int(self.get_parameter('hough_min_lines').value)
+        self._hough_min_confidence = float(
+            self.get_parameter('hough_min_confidence').value
+        )
+        self._hough_reject_error_rad = float(
+            self.get_parameter('hough_reject_error_rad').value
+        )
+        self._hough_canny_low = int(self.get_parameter('hough_canny_low').value)
+        self._hough_canny_high = int(self.get_parameter('hough_canny_high').value)
+        self._hough_threshold = int(self.get_parameter('hough_threshold').value)
+        self._hough_min_line_length_ratio = float(
+            self.get_parameter('hough_min_line_length_ratio').value
+        )
+        self._hough_max_line_gap_px = int(
+            self.get_parameter('hough_max_line_gap_px').value
+        )
+
         # ---- CameraInfo principal point (optional) ----
         self._have_pp = False
         self._pp_cx = 0.0
@@ -133,7 +311,14 @@ class LkTotalTransformNode(Node):
 
         # running totals (vehicle pose in world frame)
         self._total_raw = np.eye(3, dtype=np.float64)
+        self._total_comp_lk = np.eye(3, dtype=np.float64)
         self._total_comp = np.eye(3, dtype=np.float64)
+
+        # Hough grid yaw correction state
+        self._hough_reference_body_rad: Optional[float] = None
+        self._last_hough_yaw: Optional[float] = None
+        self._last_hough_error: Optional[float] = None
+        self._last_hough_confidence = 0.0
 
         # ---- Pub/Sub ----
         self._pub_comp = self.create_publisher(Float64MultiArray, self._output_topic, 10)
@@ -141,6 +326,26 @@ class LkTotalTransformNode(Node):
         self._pub_y = self.create_publisher(Float64, self._output_y_topic, 10)
         self._pub_yaw = self.create_publisher(Float64, self._output_yaw_topic, 10)
         self._pub_scale = self.create_publisher(Float64, self._output_scale_topic, 10)
+        self._pub_yaw_lk_uncorrected = self.create_publisher(
+            Float64,
+            self._output_yaw_lk_uncorrected_topic,
+            10,
+        )
+        self._pub_yaw_hough = self.create_publisher(
+            Float64,
+            self._output_yaw_hough_topic,
+            10,
+        )
+        self._pub_yaw_hough_error = self.create_publisher(
+            Float64,
+            self._output_yaw_hough_error_topic,
+            10,
+        )
+        self._pub_yaw_hough_confidence = self.create_publisher(
+            Float64,
+            self._output_yaw_hough_confidence_topic,
+            10,
+        )
         self._pub_raw = None
         if self._publish_raw_output:
             self._pub_raw = self.create_publisher(Float64MultiArray, self._output_topic_raw, 10)
@@ -148,6 +353,13 @@ class LkTotalTransformNode(Node):
         self._debug_pub = None
         if self._publish_debug_image:
             self._debug_pub = self.create_publisher(Image, self._debug_image_topic, 10)
+        self._hough_debug_pub = None
+        if self._publish_hough_debug_image:
+            self._hough_debug_pub = self.create_publisher(
+                Image,
+                self._hough_debug_image_topic,
+                10,
+            )
 
         self._sub_img = self.create_subscription(Image, self._image_topic, self._on_image, 10)
         self._reset_service = self.create_service(
@@ -170,7 +382,9 @@ class LkTotalTransformNode(Node):
             f'rotation_center_mode={self._rotation_center_mode}, '
             f'publish_raw={self._publish_raw_output}\n'
             f'scalar outputs: x={self._output_x_topic}, y={self._output_y_topic}, '
-            f'yaw={self._output_yaw_topic}, scale={self._output_scale_topic}'
+            f'yaw={self._output_yaw_topic}, scale={self._output_scale_topic}, '
+            f'hough_yaw_correction={self._enable_hough_yaw_correction}, '
+            f'hough_debug={self._hough_debug_image_topic}'
         )
 
     def _on_camerainfo(self, msg: CameraInfo):
@@ -223,6 +437,191 @@ class LkTotalTransformNode(Node):
         rot = math.atan2(c, a)
         return tx, ty, rot, scale
 
+    @staticmethod
+    def _build_similarity(
+        tx: float,
+        ty: float,
+        rot: float,
+        scale: float,
+    ) -> np.ndarray:
+        cos_rot = math.cos(rot)
+        sin_rot = math.sin(rot)
+        return np.array([
+            [scale * cos_rot, -scale * sin_rot, tx],
+            [scale * sin_rot, scale * cos_rot, ty],
+            [0.0, 0.0, 1.0],
+        ], dtype=np.float64)
+
+    def _detect_hough_grid(
+        self,
+        gray_small: np.ndarray,
+    ) -> Optional[HoughGridObservation]:
+        if gray_small is None or gray_small.size == 0:
+            return None
+
+        blurred = cv2.GaussianBlur(gray_small, (5, 5), 0)
+        edges = cv2.Canny(
+            blurred,
+            self._hough_canny_low,
+            self._hough_canny_high,
+            apertureSize=3,
+        )
+
+        h, w = gray_small.shape[:2]
+        min_line_length = max(
+            1,
+            int(round(min(h, w) * self._hough_min_line_length_ratio)),
+        )
+        lines = cv2.HoughLinesP(
+            edges,
+            1,
+            np.pi / 180.0,
+            threshold=self._hough_threshold,
+            minLineLength=min_line_length,
+            maxLineGap=self._hough_max_line_gap_px,
+        )
+        if lines is None:
+            return None
+
+        segments = [
+            tuple(float(v) for v in line[0])
+            for line in lines
+        ]
+        return _grid_orientation_from_segments(
+            segments,
+            min_lines=self._hough_min_lines,
+        )
+
+    def _maybe_detect_hough_grid(
+        self,
+        gray_small: np.ndarray,
+    ) -> Optional[HoughGridObservation]:
+        if not (
+            self._enable_hough_yaw_correction
+            or self._publish_hough_debug_image
+        ):
+            return None
+        return self._detect_hough_grid(gray_small)
+
+    def _hough_angle_to_body(self, theta_image: float) -> float:
+        theta_body = _map_line_angle(theta_image, self._image_to_body)
+        return _wrap_to_period(theta_body, math.pi / 2.0)
+
+    def _apply_hough_yaw_correction(
+        self,
+        observation: Optional[HoughGridObservation],
+    ) -> None:
+        self._last_hough_yaw = None
+        self._last_hough_error = None
+        self._last_hough_confidence = 0.0
+
+        if not self._enable_hough_yaw_correction:
+            return
+
+        if observation is None:
+            return
+
+        self._last_hough_confidence = float(observation.confidence)
+        if observation.confidence < self._hough_min_confidence:
+            return
+
+        theta_body = self._hough_angle_to_body(observation.theta_rad)
+        if self._hough_reference_body_rad is None:
+            self._hough_reference_body_rad = theta_body
+
+        hough_yaw_mod = _relative_grid_yaw(
+            theta_body,
+            self._hough_reference_body_rad,
+        )
+        _, _, lk_yaw, _ = self._extract_similarity(self._total_comp_lk)
+        hough_yaw = _select_nearest_grid_yaw(hough_yaw_mod, lk_yaw)
+        self._last_hough_yaw = hough_yaw
+
+        tx, ty, current_yaw, scale = self._extract_similarity(self._total_comp)
+        self._last_hough_error = _wrap_to_pi(hough_yaw - current_yaw)
+        hough_lk_error = hough_yaw - lk_yaw
+        if abs(hough_lk_error) > self._hough_reject_error_rad:
+            return
+
+        corrected_yaw, _ = _bounded_yaw_correction(
+            current_yaw,
+            hough_yaw,
+            self._hough_correction_alpha,
+            self._hough_max_correction_step_rad,
+        )
+        self._total_comp = self._build_similarity(tx, ty, corrected_yaw, scale)
+        self._last_hough_error = _wrap_to_pi(hough_yaw - corrected_yaw)
+
+    def _publish_hough_debug(
+        self,
+        frame_bgr: np.ndarray,
+        observation: Optional[HoughGridObservation],
+        scale_factor: float,
+    ) -> None:
+        if self._hough_debug_pub is None or frame_bgr is None:
+            return
+
+        overlay = frame_bgr.copy()
+        if observation is None:
+            status_text = 'Hough: no lines'
+            color = (0, 0, 255)
+        else:
+            accepted = observation.confidence >= self._hough_min_confidence
+            color = (0, 255, 0) if accepted else (0, 255, 255)
+            for x1, y1, x2, y2 in observation.segments:
+                if scale_factor > 0 and scale_factor != 1.0:
+                    x1 /= scale_factor
+                    y1 /= scale_factor
+                    x2 /= scale_factor
+                    y2 /= scale_factor
+                cv2.line(
+                    overlay,
+                    (int(round(x1)), int(round(y1))),
+                    (int(round(x2)), int(round(y2))),
+                    color,
+                    2,
+                )
+            status = 'ok' if accepted else 'low'
+            status_text = (
+                f'Hough {status}: lines={observation.line_count} '
+                f'conf={observation.confidence:.2f}'
+            )
+
+            h, w = overlay.shape[:2]
+            cx = 0.5 * float(w)
+            cy = 0.5 * float(h)
+            axis_len = 0.35 * float(min(h, w))
+            dx = axis_len * math.cos(observation.theta_rad)
+            dy = axis_len * math.sin(observation.theta_rad)
+            cv2.line(
+                overlay,
+                (int(round(cx - dx)), int(round(cy - dy))),
+                (int(round(cx + dx)), int(round(cy + dy))),
+                (255, 255, 0),
+                2,
+            )
+
+        cv2.putText(
+            overlay,
+            status_text,
+            (8, 22),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.55,
+            color,
+            2,
+            cv2.LINE_AA,
+        )
+
+        try:
+            out = self._bridge.cv2_to_imgmsg(overlay, encoding='bgr8')
+        except Exception as exc:
+            self.get_logger().warn(
+                f'Failed to convert Hough debug image: {exc}',
+                throttle_duration_sec=5.0,
+            )
+            return
+        self._hough_debug_pub.publish(out)
+
     def _publish(self):
         # compensated output (main topic)
         tx, ty, rot, scale = self._extract_similarity(self._total_comp)
@@ -233,6 +632,24 @@ class LkTotalTransformNode(Node):
         self._publish_float(self._pub_y, ty)
         self._publish_float(self._pub_yaw, rot)
         self._publish_float(self._pub_scale, scale)
+        _, _, lk_rot, _ = self._extract_similarity(self._total_comp_lk)
+        self._publish_float(self._pub_yaw_lk_uncorrected, lk_rot)
+        self._publish_float(
+            self._pub_yaw_hough,
+            self._last_hough_yaw
+            if self._last_hough_yaw is not None
+            else math.nan,
+        )
+        self._publish_float(
+            self._pub_yaw_hough_error,
+            self._last_hough_error
+            if self._last_hough_error is not None
+            else math.nan,
+        )
+        self._publish_float(
+            self._pub_yaw_hough_confidence,
+            self._last_hough_confidence,
+        )
 
         # raw output (optional diagnostics)
         if self._pub_raw is not None:
@@ -245,7 +662,12 @@ class LkTotalTransformNode(Node):
         self._prev_gray = None
         self._prev_pts = None
         self._total_raw = np.eye(3, dtype=np.float64)
+        self._total_comp_lk = np.eye(3, dtype=np.float64)
         self._total_comp = np.eye(3, dtype=np.float64)
+        self._hough_reference_body_rad = None
+        self._last_hough_yaw = None
+        self._last_hough_error = None
+        self._last_hough_confidence = 0.0
         self._publish()
 
         response.success = True
@@ -296,6 +718,8 @@ class LkTotalTransformNode(Node):
         h_img, w_img = gray.shape[:2]
 
         gray_small, scale_factor = self._downscale_gray(gray)
+        hough_observation = self._maybe_detect_hough_grid(gray_small)
+        self._publish_hough_debug(frame_bgr, hough_observation, scale_factor)
 
         # init / re-init
         if (
@@ -410,7 +834,9 @@ class LkTotalTransformNode(Node):
 
         # Accumulate vehicle pose in world frame (world origin is the first frame)
         self._total_raw = self._total_raw @ H_motion_raw_body
+        self._total_comp_lk = self._total_comp_lk @ H_motion_comp_body
         self._total_comp = self._total_comp @ H_motion_comp_body
+        self._apply_hough_yaw_correction(hough_observation)
 
         # Publish totals
         self._publish()
