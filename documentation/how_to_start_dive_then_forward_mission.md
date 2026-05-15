@@ -69,12 +69,13 @@ ros2 run xy_control dive_then_forward_mission_node --ros-args -r __ns:=/orca_auv
 
 The default mission behavior is:
 
-- dive to `0.3 m`
 - enable `depth_hold`
 - enable `bottom_camera_hold`
 - use the current bottom-camera XY feedback as the origin
-- move to `(current_x + 2000 px, current_y)`
 - latch the startup bottom-camera yaw feedback and keep that heading
+- keep the startup bottom-camera X/Y position while diving
+- dive to `0.3 m`
+- move to `(startup_x + 2000 px, startup_y)`
 
 ### 6. Stop the mission node
 

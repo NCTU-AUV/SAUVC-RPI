@@ -102,6 +102,19 @@ class DiveThenForwardMissionNode(Node):
             10,
         )
 
+        # Bottom-camera XY hold targets for keeping startup position during dive.
+        self.x_target_pub = self.create_publisher(
+            Float64,
+            "control/pid/bottom_camera/x/reference_px",
+            10,
+        )
+
+        self.y_target_pub = self.create_publisher(
+            Float64,
+            "control/pid/bottom_camera/y/reference_px",
+            10,
+        )
+
         # Current depth feedback.
         self.depth_sub = self.create_subscription(
             Float64,
@@ -167,6 +180,9 @@ class DiveThenForwardMissionNode(Node):
         self.current_yaw_rad = None
         self.current_x_px = None
         self.current_y_px = None
+        self.startup_x_px = None
+        self.startup_y_px = None
+        self.startup_xy_logged = False
 
         self.depth_reached_since_s = None
 
@@ -209,10 +225,16 @@ class DiveThenForwardMissionNode(Node):
     def _on_x_feedback(self, msg: Float64):
         if math.isfinite(msg.data):
             self.current_x_px = float(msg.data)
+            if self.startup_x_px is None:
+                self.startup_x_px = self.current_x_px
+                self._log_startup_xy_if_ready()
 
     def _on_y_feedback(self, msg: Float64):
         if math.isfinite(msg.data):
             self.current_y_px = float(msg.data)
+            if self.startup_y_px is None:
+                self.startup_y_px = self.current_y_px
+                self._log_startup_xy_if_ready()
 
     # =========================
     # Main mission loop
@@ -225,6 +247,7 @@ class DiveThenForwardMissionNode(Node):
         if self.state not in (MissionState.DONE, MissionState.FAILED):
             self._publish_depth_target()
             self._publish_yaw_target()
+            self._publish_startup_xy_target()
 
         if self.state == MissionState.WAIT_SYSTEM:
             self._tick_wait_system()
@@ -233,7 +256,7 @@ class DiveThenForwardMissionNode(Node):
             self._call_trigger_service(
                 client=self.depth_hold_client,
                 service_name="depth_hold",
-                next_state=MissionState.WAIT_REACH_DEPTH,
+                next_state=MissionState.CALL_BOTTOM_CAMERA_HOLD,
             )
 
         elif self.state == MissionState.WAIT_TRIGGER_RESULT:
@@ -246,7 +269,7 @@ class DiveThenForwardMissionNode(Node):
             self._call_trigger_service(
                 client=self.bottom_camera_hold_client,
                 service_name="bottom_camera_hold",
-                next_state=MissionState.WAIT_MOVE_SERVER,
+                next_state=MissionState.WAIT_REACH_DEPTH,
             )
 
         elif self.state == MissionState.WAIT_MOVE_SERVER:
@@ -285,6 +308,13 @@ class DiveThenForwardMissionNode(Node):
         if self.target_yaw_rad is None:
             self.get_logger().info(
                 "Waiting for startup yaw feedback...",
+                throttle_duration_sec=2.0,
+            )
+            return
+
+        if self.startup_x_px is None or self.startup_y_px is None:
+            self.get_logger().info(
+                "Waiting for startup bottom-camera XY feedback...",
                 throttle_duration_sec=2.0,
             )
             return
@@ -339,7 +369,7 @@ class DiveThenForwardMissionNode(Node):
             )
 
             if stable_time_s >= self.depth_stable_time_s:
-                self._set_state(MissionState.CALL_BOTTOM_CAMERA_HOLD)
+                self._set_state(MissionState.WAIT_MOVE_SERVER)
 
         else:
             self.depth_reached_since_s = None
@@ -464,17 +494,17 @@ class DiveThenForwardMissionNode(Node):
     # =========================
 
     def _send_move_goal(self):
-        if self.current_x_px is None or self.current_y_px is None:
+        if self.startup_x_px is None or self.startup_y_px is None:
             self.get_logger().info(
-                "Waiting for current bottom-camera XY feedback before sending goal...",
+                "Waiting for startup bottom-camera XY feedback before sending goal...",
                 throttle_duration_sec=2.0,
             )
             return
 
         goal = MoveToPoint.Goal()
 
-        start_x_px = self.current_x_px
-        start_y_px = self.current_y_px
+        start_x_px = self.startup_x_px
+        start_y_px = self.startup_y_px
         goal.x_px = start_x_px + self.target_x_px
         goal.y_px = start_y_px + self.target_y_px
         goal.speed_px_s = self.speed_px_s
@@ -557,6 +587,16 @@ class DiveThenForwardMissionNode(Node):
         msg.data = self.target_yaw_rad
         self.yaw_target_pub.publish(msg)
 
+    def _publish_startup_xy_target(self):
+        if self.state in (MissionState.WAIT_GOAL_ACCEPT, MissionState.MOVING):
+            return
+
+        if self.startup_x_px is None or self.startup_y_px is None:
+            return
+
+        self._publish_float(self.x_target_pub, self.startup_x_px)
+        self._publish_float(self.y_target_pub, self.startup_y_px)
+
     # =========================
     # Utility functions
     # =========================
@@ -582,6 +622,25 @@ class DiveThenForwardMissionNode(Node):
 
     def _time_in_state_s(self) -> float:
         return self._now_s() - self.state_start_time_s
+
+    def _log_startup_xy_if_ready(self):
+        if self.startup_xy_logged:
+            return
+
+        if self.startup_x_px is None or self.startup_y_px is None:
+            return
+
+        self.startup_xy_logged = True
+        self.get_logger().info(
+            "Latched startup XY target = "
+            f"({self.startup_x_px:.1f}, {self.startup_y_px:.1f}) px"
+        )
+
+    @staticmethod
+    def _publish_float(pub, value: float):
+        msg = Float64()
+        msg.data = float(value)
+        pub.publish(msg)
 
     @staticmethod
     def _angle_error(target: float, current: float) -> float:
