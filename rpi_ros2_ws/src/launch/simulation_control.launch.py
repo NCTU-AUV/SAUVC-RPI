@@ -57,6 +57,8 @@ def generate_launch_description():
             parameters=[{
                 'image_topic': 'camera/bottom/image_raw',
                 'publish_debug_image': publish_lk_debug_image,
+                'publish_hough_debug_image': publish_lk_debug_image,
+                'enable_hough_yaw_correction': True,
             }],
         ),
         Node(

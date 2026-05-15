@@ -92,7 +92,11 @@ def generate_launch_description():
         executable='lk_total_transform_node',
         namespace=namespace,
         name='lk_total_transform_node',
-        parameters=[{'publish_debug_image': publish_lk_debug_image}],
+        parameters=[{
+            'publish_debug_image': publish_lk_debug_image,
+            'publish_hough_debug_image': publish_lk_debug_image,
+            'enable_hough_yaw_correction': True,
+        }],
     )
 
     depth_control_launch = IncludeLaunchDescription(
