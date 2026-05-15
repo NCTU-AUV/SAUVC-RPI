@@ -112,6 +112,10 @@ class GUINode(Node):
             Trigger,
             "camera/bottom/reset_pose",
         )
+        self._move_to_point_reset_client = self.create_client(
+            Trigger,
+            "control/targets/reset_move_to_point",
+        )
         self._supervisor_clients = {
             protocol.SUPERVISOR_SERVICE_SAFE_DISABLED: self.create_client(
                 Trigger,
@@ -521,9 +525,49 @@ class GUINode(Node):
             )
             return
 
+        if not response.success:
+            self.aiohttp_server.send_topic(
+                protocol.TOPIC_BOTTOM_CAMERA_POSE_RESET_STATUS,
+                {"success": False, "message": response.message},
+            )
+            return
+
+        msg = Float64()
+        msg.data = 0.0
+        self._target_yaw_publisher.publish(msg)
+
+        if not self._move_to_point_reset_client.service_is_ready():
+            message = "MoveToPoint reset service is not ready."
+            self.get_logger().warning(message)
+            self.aiohttp_server.send_topic(
+                protocol.TOPIC_BOTTOM_CAMERA_POSE_RESET_STATUS,
+                {"success": False, "message": message},
+            )
+            return
+
+        reset_future = self._move_to_point_reset_client.call_async(Trigger.Request())
+        reset_future.add_done_callback(self._on_move_to_point_reset_result)
+
+    def _on_move_to_point_reset_result(self, future):
+        try:
+            response = future.result()
+        except Exception as exc:  # noqa: BLE001
+            message = f"MoveToPoint reset failed: {exc}"
+            self.get_logger().error(message)
+            self.aiohttp_server.send_topic(
+                protocol.TOPIC_BOTTOM_CAMERA_POSE_RESET_STATUS,
+                {"success": False, "message": message},
+            )
+            return
+
+        if response.success:
+            message = "PID feedback and references reset."
+        else:
+            message = response.message
+
         self.aiohttp_server.send_topic(
             protocol.TOPIC_BOTTOM_CAMERA_POSE_RESET_STATUS,
-            {"success": response.success, "message": response.message},
+            {"success": response.success, "message": message},
         )
 
     def _send_move_to_point_goal(self, data):
