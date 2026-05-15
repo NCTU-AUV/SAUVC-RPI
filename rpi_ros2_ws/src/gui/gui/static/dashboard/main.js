@@ -7,6 +7,19 @@ const stm32LogState = {
     shouldAutoScroll: true,
 };
 
+function formatDisplayNumber(value, decimalPlaces) {
+    let numberValue = null;
+    if (typeof value === "number") {
+        numberValue = value;
+    } else if (typeof value === "string" && value.trim() !== "") {
+        numberValue = Number(value);
+    }
+    if (Number.isFinite(numberValue)) {
+        return numberValue.toFixed(decimalPlaces);
+    }
+    return value;
+}
+
 function isAtBottom(element, thresholdPx = 8) {
     return element.scrollTop + element.clientHeight >= element.scrollHeight - thresholdPx;
 }
@@ -38,7 +51,10 @@ websocket.onmessage = (event) => {
             document.getElementById("killed").innerHTML = msg_json_object.data.msg;
         }
         if (msg_json_object.data.topic_name == protocol.topics.depthM) {
-            document.getElementById("pressure_sensor_depth_m").innerHTML = msg_json_object.data.msg;
+            document.getElementById("pressure_sensor_depth_m").innerHTML = formatDisplayNumber(
+                msg_json_object.data.msg,
+                3
+            );
         }
         if (msg_json_object.data.topic_name == protocol.topics.thrustersPwmUs) {
             const pwmValues = msg_json_object.data.msg || [];
@@ -149,7 +165,7 @@ websocket.onmessage = (event) => {
         if (bottomCameraPidElementId) {
             const element = document.getElementById(bottomCameraPidElementId);
             if (element) {
-                element.innerHTML = msg_json_object.data.msg;
+                element.innerHTML = formatDisplayNumber(msg_json_object.data.msg, 2);
             }
         }
     }
