@@ -45,10 +45,10 @@ class DiveThenForwardMissionNode(Node):
         # Depth must stay within tolerance for this long before moving forward.
         self.declare_parameter("depth_stable_time_s", 2.0)
 
-        # Forward direction in your coordinate system is +Y.
-        # Therefore target point is x = 0, y = +2000.
-        self.declare_parameter("target_x_px", 0.0)
-        self.declare_parameter("target_y_px", 2000.0)
+        # Move relative to the current bottom-camera XY feedback.
+        # Forward direction is +X, so the default target is current x + 2000.
+        self.declare_parameter("target_x_px", 2000.0)
+        self.declare_parameter("target_y_px", 0.0)
 
         # Keep facing forward.
         # In this project, yaw target is in radians.
@@ -186,7 +186,7 @@ class DiveThenForwardMissionNode(Node):
         self.get_logger().info(
             "Mission node started. "
             f"Target depth = {self.target_depth_m:.3f} m, "
-            f"target point = ({self.target_x_px:.1f}, {self.target_y_px:.1f}) px, "
+            f"target offset = ({self.target_x_px:.1f}, {self.target_y_px:.1f}) px, "
             f"target yaw = {self.target_yaw_rad:.3f} rad, "
             f"speed = {self.speed_px_s:.1f} px/s"
         )
@@ -454,17 +454,25 @@ class DiveThenForwardMissionNode(Node):
     # =========================
 
     def _send_move_goal(self):
+        if self.current_x_px is None or self.current_y_px is None:
+            self.get_logger().info(
+                "Waiting for current bottom-camera XY feedback before sending goal...",
+                throttle_duration_sec=2.0,
+            )
+            return
+
         goal = MoveToPoint.Goal()
 
-        # Your coordinate definition:
-        # forward = +Y
-        # target = x 0, y +2000.
-        goal.x_px = self.target_x_px
-        goal.y_px = self.target_y_px
+        start_x_px = self.current_x_px
+        start_y_px = self.current_y_px
+        goal.x_px = start_x_px + self.target_x_px
+        goal.y_px = start_y_px + self.target_y_px
         goal.speed_px_s = self.speed_px_s
 
         self.get_logger().info(
             "Sending MoveToPoint goal: "
+            f"start = ({start_x_px:.1f}, {start_y_px:.1f}), "
+            f"offset = ({self.target_x_px:.1f}, {self.target_y_px:.1f}), "
             f"x = {goal.x_px:.1f}, "
             f"y = {goal.y_px:.1f}, "
             f"speed = {goal.speed_px_s:.1f}, "

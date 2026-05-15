@@ -72,7 +72,8 @@ The default mission behavior is:
 - dive to `0.3 m`
 - enable `depth_hold`
 - enable `bottom_camera_hold`
-- move to `(x=0 px, y=2000 px)`
+- use the current bottom-camera XY feedback as the origin
+- move to `(current_x + 2000 px, current_y)`
 
 ### 6. Stop the mission node
 
@@ -91,13 +92,13 @@ To test a shorter forward distance, run inside the container:
 cd rpi_ros2_ws
 source /opt/ros/humble/setup.bash
 source install/setup.bash
-ros2 run xy_control dive_then_forward_mission_node --ros-args -r __ns:=/orca_auv -p target_y_px:=200.0
+ros2 run xy_control dive_then_forward_mission_node --ros-args -r __ns:=/orca_auv -p target_x_px:=200.0
 ```
 
 You can also adjust motion speed:
 
 ```bash
-ros2 run xy_control dive_then_forward_mission_node --ros-args -r __ns:=/orca_auv -p target_y_px:=200.0 -p speed_px_s:=80.0
+ros2 run xy_control dive_then_forward_mission_node --ros-args -r __ns:=/orca_auv -p target_x_px:=200.0 -p speed_px_s:=80.0
 ```
 
 ## One-Line Alternative
