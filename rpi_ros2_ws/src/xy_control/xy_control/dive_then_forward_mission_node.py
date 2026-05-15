@@ -50,10 +50,8 @@ class DiveThenForwardMissionNode(Node):
         self.declare_parameter("target_x_px", 2000.0)
         self.declare_parameter("target_y_px", 0.0)
 
-        # Keep facing forward.
-        # In this project, yaw target is in radians.
-        # 0.0 rad means keep the forward heading defined by the bottom-camera frame.
-        self.declare_parameter("target_yaw_rad", 0.0)
+        # The yaw target is latched from the first bottom-camera yaw feedback.
+        # This keeps the startup heading instead of forcing a fixed yaw angle.
 
         # Only used for warning logs. The controller itself still tries to correct yaw.
         self.declare_parameter("yaw_tolerance_rad", 0.10)
@@ -77,7 +75,7 @@ class DiveThenForwardMissionNode(Node):
         self.target_x_px = float(self.get_parameter("target_x_px").value)
         self.target_y_px = float(self.get_parameter("target_y_px").value)
 
-        self.target_yaw_rad = float(self.get_parameter("target_yaw_rad").value)
+        self.target_yaw_rad = None
         self.yaw_tolerance_rad = float(self.get_parameter("yaw_tolerance_rad").value)
 
         self.speed_px_s = float(self.get_parameter("speed_px_s").value)
@@ -187,7 +185,7 @@ class DiveThenForwardMissionNode(Node):
             "Mission node started. "
             f"Target depth = {self.target_depth_m:.3f} m, "
             f"target offset = ({self.target_x_px:.1f}, {self.target_y_px:.1f}) px, "
-            f"target yaw = {self.target_yaw_rad:.3f} rad, "
+            "target yaw = startup yaw, "
             f"speed = {self.speed_px_s:.1f} px/s"
         )
 
@@ -202,6 +200,11 @@ class DiveThenForwardMissionNode(Node):
     def _on_yaw_feedback(self, msg: Float64):
         if math.isfinite(msg.data):
             self.current_yaw_rad = float(msg.data)
+            if self.target_yaw_rad is None:
+                self.target_yaw_rad = self.current_yaw_rad
+                self.get_logger().info(
+                    f"Latched startup yaw target = {self.target_yaw_rad:.3f} rad"
+                )
 
     def _on_x_feedback(self, msg: Float64):
         if math.isfinite(msg.data):
@@ -218,7 +221,7 @@ class DiveThenForwardMissionNode(Node):
     def _tick(self):
         # Keep depth and yaw targets alive during the whole active mission.
         # Depth target keeps the AUV at 0.3 m.
-        # Yaw target keeps the AUV facing forward.
+        # Yaw target keeps the AUV at its startup heading.
         if self.state not in (MissionState.DONE, MissionState.FAILED):
             self._publish_depth_target()
             self._publish_yaw_target()
@@ -275,6 +278,13 @@ class DiveThenForwardMissionNode(Node):
         if self.current_depth_m is None:
             self.get_logger().info(
                 "Waiting for state/depth_m...",
+                throttle_duration_sec=2.0,
+            )
+            return
+
+        if self.target_yaw_rad is None:
+            self.get_logger().info(
+                "Waiting for startup yaw feedback...",
                 throttle_duration_sec=2.0,
             )
             return
@@ -371,7 +381,7 @@ class DiveThenForwardMissionNode(Node):
                 )
 
         # Yaw warning. Yaw PID should still be correcting it.
-        if self.current_yaw_rad is not None:
+        if self.target_yaw_rad is not None and self.current_yaw_rad is not None:
             yaw_error = self._angle_error(self.target_yaw_rad, self.current_yaw_rad)
 
             if abs(yaw_error) > self.yaw_tolerance_rad:
@@ -540,6 +550,9 @@ class DiveThenForwardMissionNode(Node):
         self.depth_target_pub.publish(msg)
 
     def _publish_yaw_target(self):
+        if self.target_yaw_rad is None:
+            return
+
         msg = Float64()
         msg.data = self.target_yaw_rad
         self.yaw_target_pub.publish(msg)

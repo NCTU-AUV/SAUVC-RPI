@@ -74,6 +74,7 @@ The default mission behavior is:
 - enable `bottom_camera_hold`
 - use the current bottom-camera XY feedback as the origin
 - move to `(current_x + 2000 px, current_y)`
+- latch the startup bottom-camera yaw feedback and keep that heading
 
 ### 6. Stop the mission node
 
