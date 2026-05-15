@@ -69,6 +69,7 @@ ros2 run xy_control dive_then_forward_mission_node --ros-args -r __ns:=/orca_auv
 
 The default mission behavior is:
 
+- reset bottom-camera pose feedback and MoveToPoint setpoint to zero
 - enable `depth_hold`
 - enable `bottom_camera_hold`
 - use the current bottom-camera XY feedback as the origin

@@ -9,6 +9,7 @@ from cv_bridge import CvBridge
 from rclpy.node import Node
 from sensor_msgs.msg import CameraInfo, Image
 from std_msgs.msg import Float64, Float64MultiArray
+from std_srvs.srv import Trigger
 
 
 def _T(tx: float, ty: float) -> np.ndarray:
@@ -149,6 +150,11 @@ class LkTotalTransformNode(Node):
             self._debug_pub = self.create_publisher(Image, self._debug_image_topic, 10)
 
         self._sub_img = self.create_subscription(Image, self._image_topic, self._on_image, 10)
+        self._reset_service = self.create_service(
+            Trigger,
+            'camera/bottom/reset_pose',
+            self._on_reset_pose,
+        )
         self._sub_info = None
         if self._rotation_center_mode == 'principal_point':
             self._sub_info = self.create_subscription(
@@ -234,6 +240,18 @@ class LkTotalTransformNode(Node):
             msg2 = Float64MultiArray()
             msg2.data = [float(tx2), float(ty2), float(rot2), float(scale2)]
             self._pub_raw.publish(msg2)
+
+    def _on_reset_pose(self, request, response):
+        self._prev_gray = None
+        self._prev_pts = None
+        self._total_raw = np.eye(3, dtype=np.float64)
+        self._total_comp = np.eye(3, dtype=np.float64)
+        self._publish()
+
+        response.success = True
+        response.message = "Bottom-camera pose reset"
+        self.get_logger().info(response.message)
+        return response
 
     @staticmethod
     def _publish_float(pub, value: float):

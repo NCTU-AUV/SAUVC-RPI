@@ -14,6 +14,9 @@ from xy_translation_control_interfaces.action import MoveToPoint
 
 class MissionState(Enum):
     WAIT_SYSTEM = auto()
+    CALL_RESET_BOTTOM_CAMERA_POSE = auto()
+    CALL_RESET_MOVE_TO_POINT = auto()
+    WAIT_STARTUP_FEEDBACK = auto()
     CALL_DEPTH_HOLD = auto()
     WAIT_TRIGGER_RESULT = auto()
     WAIT_REACH_DEPTH = auto()
@@ -37,7 +40,7 @@ class DiveThenForwardMissionNode(Node):
         # =========================
 
         # Target depth in meters.
-        self.declare_parameter("target_depth_m", 0.3)
+        self.declare_parameter("target_depth_m", 0.1)
 
         # Allowed depth error before we consider the AUV to have reached target depth.
         self.declare_parameter("depth_tolerance_m", 0.03)
@@ -47,7 +50,7 @@ class DiveThenForwardMissionNode(Node):
 
         # Move relative to the current bottom-camera XY feedback.
         # Forward direction is +X, so the default target is current x + 2000.
-        self.declare_parameter("target_x_px", 2000.0)
+        self.declare_parameter("target_x_px", 500.0)
         self.declare_parameter("target_y_px", 0.0)
 
         # The yaw target is latched from the first bottom-camera yaw feedback.
@@ -160,6 +163,16 @@ class DiveThenForwardMissionNode(Node):
             "system_manager/set_mode/bottom_camera_hold",
         )
 
+        self.bottom_camera_reset_client = self.create_client(
+            Trigger,
+            "camera/bottom/reset_pose",
+        )
+
+        self.move_to_point_reset_client = self.create_client(
+            Trigger,
+            "control/targets/reset_move_to_point",
+        )
+
         # =========================
         # MoveToPoint action client
         # =========================
@@ -183,6 +196,7 @@ class DiveThenForwardMissionNode(Node):
         self.startup_x_px = None
         self.startup_y_px = None
         self.startup_xy_logged = False
+        self.bottom_camera_pose_reset_done = False
 
         self.depth_reached_since_s = None
 
@@ -216,7 +230,7 @@ class DiveThenForwardMissionNode(Node):
     def _on_yaw_feedback(self, msg: Float64):
         if math.isfinite(msg.data):
             self.current_yaw_rad = float(msg.data)
-            if self.target_yaw_rad is None:
+            if self.bottom_camera_pose_reset_done and self.target_yaw_rad is None:
                 self.target_yaw_rad = self.current_yaw_rad
                 self.get_logger().info(
                     f"Latched startup yaw target = {self.target_yaw_rad:.3f} rad"
@@ -225,14 +239,14 @@ class DiveThenForwardMissionNode(Node):
     def _on_x_feedback(self, msg: Float64):
         if math.isfinite(msg.data):
             self.current_x_px = float(msg.data)
-            if self.startup_x_px is None:
+            if self.bottom_camera_pose_reset_done and self.startup_x_px is None:
                 self.startup_x_px = self.current_x_px
                 self._log_startup_xy_if_ready()
 
     def _on_y_feedback(self, msg: Float64):
         if math.isfinite(msg.data):
             self.current_y_px = float(msg.data)
-            if self.startup_y_px is None:
+            if self.bottom_camera_pose_reset_done and self.startup_y_px is None:
                 self.startup_y_px = self.current_y_px
                 self._log_startup_xy_if_ready()
 
@@ -251,6 +265,23 @@ class DiveThenForwardMissionNode(Node):
 
         if self.state == MissionState.WAIT_SYSTEM:
             self._tick_wait_system()
+
+        elif self.state == MissionState.CALL_RESET_BOTTOM_CAMERA_POSE:
+            self._call_trigger_service(
+                client=self.bottom_camera_reset_client,
+                service_name="bottom_camera_reset_pose",
+                next_state=MissionState.CALL_RESET_MOVE_TO_POINT,
+            )
+
+        elif self.state == MissionState.CALL_RESET_MOVE_TO_POINT:
+            self._call_trigger_service(
+                client=self.move_to_point_reset_client,
+                service_name="move_to_point_reset",
+                next_state=MissionState.WAIT_STARTUP_FEEDBACK,
+            )
+
+        elif self.state == MissionState.WAIT_STARTUP_FEEDBACK:
+            self._tick_wait_startup_feedback()
 
         elif self.state == MissionState.CALL_DEPTH_HOLD:
             self._call_trigger_service(
@@ -305,16 +336,16 @@ class DiveThenForwardMissionNode(Node):
             )
             return
 
-        if self.target_yaw_rad is None:
+        if self.current_x_px is None or self.current_y_px is None:
             self.get_logger().info(
-                "Waiting for startup yaw feedback...",
+                "Waiting for bottom-camera XY feedback...",
                 throttle_duration_sec=2.0,
             )
             return
 
-        if self.startup_x_px is None or self.startup_y_px is None:
+        if self.current_yaw_rad is None:
             self.get_logger().info(
-                "Waiting for startup bottom-camera XY feedback...",
+                "Waiting for bottom-camera yaw feedback...",
                 throttle_duration_sec=2.0,
             )
             return
@@ -329,6 +360,37 @@ class DiveThenForwardMissionNode(Node):
         if not self.bottom_camera_hold_client.service_is_ready():
             self.get_logger().info(
                 "Waiting for system_manager/set_mode/bottom_camera_hold service...",
+                throttle_duration_sec=2.0,
+            )
+            return
+
+        if not self.bottom_camera_reset_client.service_is_ready():
+            self.get_logger().info(
+                "Waiting for camera/bottom/reset_pose service...",
+                throttle_duration_sec=2.0,
+            )
+            return
+
+        if not self.move_to_point_reset_client.service_is_ready():
+            self.get_logger().info(
+                "Waiting for control/targets/reset_move_to_point service...",
+                throttle_duration_sec=2.0,
+            )
+            return
+
+        self._set_state(MissionState.CALL_RESET_BOTTOM_CAMERA_POSE)
+
+    def _tick_wait_startup_feedback(self):
+        if self.target_yaw_rad is None:
+            self.get_logger().info(
+                "Waiting for reset bottom-camera yaw feedback...",
+                throttle_duration_sec=2.0,
+            )
+            return
+
+        if self.startup_x_px is None or self.startup_y_px is None:
+            self.get_logger().info(
+                "Waiting for reset bottom-camera XY feedback...",
                 throttle_duration_sec=2.0,
             )
             return
@@ -481,11 +543,15 @@ class DiveThenForwardMissionNode(Node):
             f"message = {response.message}"
         )
 
+        trigger_name = self.pending_trigger_name
         next_state = self.pending_trigger_next_state
 
         self.pending_trigger_future = None
         self.pending_trigger_name = ""
         self.pending_trigger_next_state = None
+
+        if trigger_name == "bottom_camera_reset_pose":
+            self._clear_startup_feedback_latch()
 
         self._set_state(next_state)
 
@@ -622,6 +688,13 @@ class DiveThenForwardMissionNode(Node):
 
     def _time_in_state_s(self) -> float:
         return self._now_s() - self.state_start_time_s
+
+    def _clear_startup_feedback_latch(self):
+        self.bottom_camera_pose_reset_done = True
+        self.target_yaw_rad = None
+        self.startup_x_px = None
+        self.startup_y_px = None
+        self.startup_xy_logged = False
 
     def _log_startup_xy_if_ready(self):
         if self.startup_xy_logged:
