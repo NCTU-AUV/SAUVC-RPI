@@ -25,6 +25,7 @@ ACTION_SET_SUPERVISOR_SIMULATION_MODE = "set_supervisor_simulation_mode"
 ACTION_SET_SUPERVISOR_MANUAL_MODE = "set_supervisor_manual_mode"
 ACTION_MOVE_TO_POINT = "move_to_point"
 ACTION_CANCEL_MOVE_TO_POINT = "cancel_move_to_point"
+ACTION_RESET_BOTTOM_CAMERA_POSE = "reset_bottom_camera_pose"
 
 PROCESS_BOTTOM_CAMERA_PID_FBC_LAUNCH = "bottom_camera_pid_fbc_launch"
 PROCESS_DEPTH_CONTROL_LAUNCH = "depth_control_launch"
@@ -68,6 +69,7 @@ TOPIC_WRENCH_COMMAND = "control/wrench_command"
 TOPIC_TARGET_DEPTH_M = "control/targets/depth_m"
 TOPIC_FLASH_STM32_STATUS = "flash_stm32_status"
 TOPIC_MOVE_TO_POINT_STATUS = "control/targets/move_to_point/gui_status"
+TOPIC_BOTTOM_CAMERA_POSE_RESET_STATUS = "camera/bottom/reset_pose/gui_status"
 
 MOVE_TO_POINT_ACTION_NAME = "control/targets/move_to_point"
 

@@ -25,6 +25,7 @@ const GuiProtocol = Object.freeze({
         setSupervisorManualMode: "set_supervisor_manual_mode",
         moveToPoint: "move_to_point",
         cancelMoveToPoint: "cancel_move_to_point",
+        resetBottomCameraPose: "reset_bottom_camera_pose",
     }),
     processTargets: Object.freeze({}),
     processActions: Object.freeze({
@@ -62,6 +63,7 @@ const GuiProtocol = Object.freeze({
         targetDepthM: "control/targets/depth_m",
         flashStm32Status: "flash_stm32_status",
         moveToPointStatus: "control/targets/move_to_point/gui_status",
+        bottomCameraPoseResetStatus: "camera/bottom/reset_pose/gui_status",
     }),
     makeWebsocketUrl(hostname) {
         return "ws://" + hostname + this.websocketPath;

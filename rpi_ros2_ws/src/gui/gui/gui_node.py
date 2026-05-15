@@ -108,6 +108,10 @@ class GUINode(Node):
             'thrusters/initialize_all',
         )
         self._flash_stm32_client = self.create_client(Trigger, '/flash_stm32')
+        self._bottom_camera_pose_reset_client = self.create_client(
+            Trigger,
+            "camera/bottom/reset_pose",
+        )
         self._supervisor_clients = {
             protocol.SUPERVISOR_SERVICE_SAFE_DISABLED: self.create_client(
                 Trigger,
@@ -303,6 +307,8 @@ class GUINode(Node):
                 self._send_move_to_point_goal(msg_data)
             elif action_name == protocol.ACTION_CANCEL_MOVE_TO_POINT:
                 self._cancel_move_to_point_goal()
+            elif action_name == protocol.ACTION_RESET_BOTTOM_CAMERA_POSE:
+                self._reset_bottom_camera_pose()
             else:
                 self.get_logger().warning(f"Unknown action request: {action_name}")
 
@@ -487,6 +493,36 @@ class GUINode(Node):
 
         self.aiohttp_server.send_topic(
             protocol.TOPIC_FLASH_STM32_STATUS,
+            {"success": response.success, "message": response.message},
+        )
+
+    def _reset_bottom_camera_pose(self):
+        if not self._bottom_camera_pose_reset_client.service_is_ready():
+            message = "Bottom-camera pose reset service is not ready."
+            self.get_logger().warning(message)
+            self.aiohttp_server.send_topic(
+                protocol.TOPIC_BOTTOM_CAMERA_POSE_RESET_STATUS,
+                {"success": False, "message": message},
+            )
+            return
+
+        future = self._bottom_camera_pose_reset_client.call_async(Trigger.Request())
+        future.add_done_callback(self._on_bottom_camera_pose_reset_result)
+
+    def _on_bottom_camera_pose_reset_result(self, future):
+        try:
+            response = future.result()
+        except Exception as exc:  # noqa: BLE001
+            message = f"Bottom-camera pose reset failed: {exc}"
+            self.get_logger().error(message)
+            self.aiohttp_server.send_topic(
+                protocol.TOPIC_BOTTOM_CAMERA_POSE_RESET_STATUS,
+                {"success": False, "message": message},
+            )
+            return
+
+        self.aiohttp_server.send_topic(
+            protocol.TOPIC_BOTTOM_CAMERA_POSE_RESET_STATUS,
             {"success": response.success, "message": response.message},
         )
 
@@ -782,6 +818,7 @@ class GUINode(Node):
             ]
             future = client.set_parameters(parameters)
             future.add_done_callback(lambda f, n=node_name: self._log_param_result(n, f))
+
 
 def main(args=None):
     rclpy.init(args=args)

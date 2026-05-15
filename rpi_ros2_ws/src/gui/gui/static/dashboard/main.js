@@ -111,6 +111,14 @@ websocket.onmessage = (event) => {
                 element.innerHTML = text;
             }
         }
+        if (msg_json_object.data.topic_name == protocol.topics.bottomCameraPoseResetStatus) {
+            const status = msg_json_object.data.msg || {};
+            const element = document.getElementById("bottom_camera_pose_reset_status");
+            if (element) {
+                const successText = status.success === true ? "success" : "failed";
+                element.innerHTML = status.message ? `${successText}: ${status.message}` : successText;
+            }
+        }
         if (msg_json_object.data.topic_name == protocol.topics.stm32Log) {
             const element = document.getElementById("stm32_debug_log");
             if (element) {
@@ -178,6 +186,16 @@ function reset_bottom_camera_pid_fbc() {
         protocol.controllerGroups.bottomCameraPidFbc,
         protocol.controllerActions.reset
     );
+}
+
+function reset_bottom_camera_pose_button_onclick() {
+    const element = document.getElementById("bottom_camera_pose_reset_status");
+    if (element) {
+        element.innerHTML = "resetting...";
+    }
+    websocket.send(JSON.stringify(protocol.makeActionMessage(
+        protocol.actions.resetBottomCameraPose
+    )));
 }
 
 function enable_depth_control() {
