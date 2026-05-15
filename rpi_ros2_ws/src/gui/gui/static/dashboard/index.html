@@ -60,6 +60,10 @@
             grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 8px 12px;
         }
+        .nowrap-readout {
+            min-width: 0;
+            white-space: nowrap;
+        }
         .stack {
             display: flex;
             flex-direction: column;
@@ -281,7 +285,7 @@
                 <div title="control/pid/bottom_camera/yaw/reference_rad">PID yaw ref rad: <i id="bottom_camera_pid_yaw_reference_rad">none</i></div>
                 <div title="control/pid/bottom_camera/x/feedback_px">PID x feedback px: <i id="bottom_camera_pid_x_feedback_px">none</i></div>
                 <div title="control/pid/bottom_camera/y/feedback_px">PID y feedback px: <i id="bottom_camera_pid_y_feedback_px">none</i></div>
-                <div title="state/bottom_camera/yaw_rad">PID yaw feedback rad: <i id="bottom_camera_pid_yaw_feedback_rad">none</i></div>
+                <div class="nowrap-readout" title="state/bottom_camera/yaw_rad">PID yaw feedback rad: <i id="bottom_camera_pid_yaw_feedback_rad">none</i></div>
             </div>
             <div class="row">
                 <button onclick="reset_bottom_camera_pose_button_onclick()">reset PID feedback/ref</button>
