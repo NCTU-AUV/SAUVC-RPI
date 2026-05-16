@@ -73,10 +73,13 @@ The default mission behavior is:
 - enable `depth_hold`
 - enable `bottom_camera_hold`
 - use the current bottom-camera XY feedback as the origin
-- latch the startup bottom-camera yaw feedback and keep that heading
+- latch the startup bottom-camera yaw feedback and keep that heading while diving
 - keep the startup bottom-camera X/Y position while diving
-- dive to `0.3 m`
-- move to `(startup_x + 2000 px, startup_y)`
+- dive to `0.1 m`
+- move to `(startup_x + 1000 px, startup_y)` while holding `0.1 m`
+- rotate in place to `startup_yaw + 180 deg`
+- move back to `(startup_x, startup_y)` while holding `0.1 m`
+- surface to `0.0 m`
 
 ### 6. Stop the mission node
 
@@ -102,6 +105,12 @@ You can also adjust motion speed:
 
 ```bash
 ros2 run xy_control dive_then_forward_mission_node --ros-args -r __ns:=/orca_auv -p target_x_px:=200.0 -p speed_px_s:=80.0
+```
+
+To adjust the surfacing target or the turn amount:
+
+```bash
+ros2 run xy_control dive_then_forward_mission_node --ros-args -r __ns:=/orca_auv -p surface_depth_m:=0.0 -p turn_yaw_offset_rad:=3.141592653589793
 ```
 
 ## One-Line Alternative
