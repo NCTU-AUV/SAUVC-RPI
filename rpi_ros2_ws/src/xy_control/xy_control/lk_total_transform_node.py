@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import math
 from dataclasses import dataclass
-from typing import Iterable, Optional, Tuple
+from typing import Callable, Iterable, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -30,6 +30,25 @@ class HoughGridObservation:
     confidence: float
     line_count: int
     segments: Tuple[Tuple[float, float, float, float], ...] = ()
+    hough_threshold: int = 0
+    min_line_length_px: int = 0
+    min_lines_required: int = 0
+    adaptive_attempt: bool = False
+
+
+@dataclass(frozen=True)
+class FeatureDetectionSettings:
+    quality_level: float
+    min_distance: float
+    adaptive_attempt: bool = False
+
+
+@dataclass(frozen=True)
+class HoughDetectionSettings:
+    threshold: int
+    min_line_length_ratio: float
+    min_lines: int
+    adaptive_attempt: bool = False
 
 
 def _wrap_to_period(angle: float, period: float) -> float:
@@ -44,9 +63,194 @@ def _clamp(value: float, lower: float, upper: float) -> float:
     return min(max(value, lower), upper)
 
 
+def _unique_floats(values: Iterable[float], precision: int = 9) -> Tuple[float, ...]:
+    unique = []
+    seen = set()
+    for value in values:
+        if not math.isfinite(value) or value <= 0.0:
+            continue
+        key = round(float(value), precision)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(float(value))
+    return tuple(unique)
+
+
+def _as_float_sequence(value, fallback: Sequence[float]) -> Tuple[float, ...]:
+    if isinstance(value, (str, bytes)):
+        return tuple(float(v) for v in fallback)
+    try:
+        return tuple(float(v) for v in value)
+    except (TypeError, ValueError):
+        try:
+            return (float(value),)
+        except (TypeError, ValueError):
+            return tuple(float(v) for v in fallback)
+
+
+def _feature_detection_attempts(
+    quality_level: float,
+    min_distance: float,
+    adaptive_quality_levels: Sequence[float],
+    min_distance_scale_min: float,
+    enable_adaptive: bool,
+) -> Tuple[FeatureDetectionSettings, ...]:
+    base = FeatureDetectionSettings(float(quality_level), float(min_distance), False)
+    if not enable_adaptive:
+        return (base,)
+
+    qualities = _unique_floats(
+        (
+            quality_level,
+            *(
+                quality
+                for quality in adaptive_quality_levels
+                if float(quality) <= float(quality_level)
+            ),
+        )
+    )
+    if not qualities:
+        qualities = (float(quality_level),)
+
+    scale = _clamp(float(min_distance_scale_min), 0.0, 1.0)
+    reduced_distance = float(min_distance) * scale
+    distances = _unique_floats((min_distance, reduced_distance))
+    if not distances:
+        distances = (float(min_distance),)
+
+    attempts = []
+    seen = set()
+    for distance_index, distance in enumerate(distances):
+        for quality in qualities:
+            key = (round(quality, 9), round(distance, 9))
+            if key in seen:
+                continue
+            seen.add(key)
+            attempts.append(
+                FeatureDetectionSettings(
+                    quality,
+                    distance,
+                    adaptive_attempt=distance_index > 0 or key != (
+                        round(float(quality_level), 9),
+                        round(float(min_distance), 9),
+                    ),
+                )
+            )
+    return tuple(attempts)
+
+
+def _count_points(points: Optional[np.ndarray]) -> int:
+    if points is None:
+        return 0
+    return int(points.reshape(-1, 2).shape[0])
+
+
+def _detect_features_with_attempts(
+    gray_small: np.ndarray,
+    attempts: Sequence[FeatureDetectionSettings],
+    target_count: int,
+    detector: Callable[[np.ndarray, FeatureDetectionSettings], Optional[np.ndarray]],
+) -> Optional[np.ndarray]:
+    best_points = None
+    best_count = 0
+    for settings in attempts:
+        points = detector(gray_small, settings)
+        point_count = _count_points(points)
+        if point_count > best_count:
+            best_points = points
+            best_count = point_count
+        if point_count >= target_count:
+            return points.astype(np.float32)
+    if best_points is None:
+        return None
+    return best_points.astype(np.float32)
+
+
+def _adaptive_tracked_points_threshold(
+    prev_feature_count: int,
+    min_tracked_points: int,
+    enable_adaptive: bool,
+    floor: int,
+    ratio: float,
+) -> int:
+    if not enable_adaptive:
+        return max(1, int(min_tracked_points))
+    ratio_count = int(round(max(0, int(prev_feature_count)) * max(0.0, float(ratio))))
+    return max(1, int(floor), min(int(min_tracked_points), ratio_count))
+
+
+def _adaptive_inlier_threshold(
+    good_track_count: int,
+    min_inliers: int,
+    enable_adaptive: bool,
+    floor: int,
+    ratio: float,
+) -> int:
+    if not enable_adaptive:
+        return max(1, int(min_inliers))
+    ratio_count = int(round(max(0, int(good_track_count)) * max(0.0, float(ratio))))
+    dynamic = max(1, int(floor), ratio_count)
+    cap = max(int(floor), int(min_inliers) * 2)
+    return min(dynamic, cap)
+
+
+def _hough_detection_attempts(
+    threshold: int,
+    min_line_length_ratio: float,
+    min_lines: int,
+    enable_adaptive: bool,
+    threshold_floor: int,
+    min_line_length_ratio_floor: float,
+    min_lines_floor: int,
+) -> Tuple[HoughDetectionSettings, ...]:
+    base = HoughDetectionSettings(
+        max(1, int(threshold)),
+        max(0.0, float(min_line_length_ratio)),
+        max(1, int(min_lines)),
+        False,
+    )
+    if not enable_adaptive:
+        return (base,)
+
+    threshold_floor = max(1, min(base.threshold, int(threshold_floor)))
+    ratio_floor = max(0.0, min(base.min_line_length_ratio, float(min_line_length_ratio_floor)))
+    min_lines_floor = max(1, min(base.min_lines, int(min_lines_floor)))
+
+    midpoint = HoughDetectionSettings(
+        max(threshold_floor, int(round((base.threshold + threshold_floor) * 0.5))),
+        max(ratio_floor, (base.min_line_length_ratio + ratio_floor) * 0.5),
+        max(min_lines_floor, int(round((base.min_lines + min_lines_floor) * 0.5))),
+        True,
+    )
+    floor = HoughDetectionSettings(
+        threshold_floor,
+        ratio_floor,
+        min_lines_floor,
+        True,
+    )
+
+    attempts = []
+    seen = set()
+    for settings in (base, midpoint, floor):
+        key = (
+            settings.threshold,
+            round(settings.min_line_length_ratio, 9),
+            settings.min_lines,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        attempts.append(settings)
+    return tuple(attempts)
+
+
 def _grid_orientation_from_segments(
     segments: Iterable[Tuple[float, float, float, float]],
     min_lines: int,
+    hough_threshold: int = 0,
+    min_line_length_px: int = 0,
+    adaptive_attempt: bool = False,
 ) -> Optional[HoughGridObservation]:
     total_weight = 0.0
     sum_cos = 0.0
@@ -80,6 +284,10 @@ def _grid_orientation_from_segments(
         confidence,
         line_count,
         tuple(valid_segments),
+        int(hough_threshold),
+        int(min_line_length_px),
+        int(min_lines),
+        bool(adaptive_attempt),
     )
 
 
@@ -196,6 +404,20 @@ class LkTotalTransformNode(Node):
         self.declare_parameter('min_tracked_points', 100)
         self.declare_parameter('reinit_if_fail', True)
 
+        # ---- Params (adaptive detection for low-feature pool floors) ----
+        self.declare_parameter('enable_adaptive_detection', True)
+        self.declare_parameter('adaptive_min_tracked_points_floor', 20)
+        self.declare_parameter('adaptive_min_inliers_floor', 8)
+        self.declare_parameter('adaptive_min_inlier_ratio', 0.35)
+        self.declare_parameter(
+            'adaptive_feature_quality_levels',
+            [0.01, 0.005, 0.002, 0.001],
+        )
+        self.declare_parameter('adaptive_min_distance_scale_min', 0.5)
+        self.declare_parameter('adaptive_hough_min_lines_floor', 2)
+        self.declare_parameter('adaptive_hough_threshold_floor', 15)
+        self.declare_parameter('adaptive_hough_min_line_length_ratio_floor', 0.08)
+
         # ---- Params (Hough square-grid yaw correction) ----
         self.declare_parameter('enable_hough_yaw_correction', True)
         self.declare_parameter('hough_correction_alpha', 0.15)
@@ -274,6 +496,42 @@ class LkTotalTransformNode(Node):
         self._min_tracked_points = int(self.get_parameter('min_tracked_points').value)
         self._reinit_if_fail = bool(self.get_parameter('reinit_if_fail').value)
 
+        self._enable_adaptive_detection = bool(
+            self.get_parameter('enable_adaptive_detection').value
+        )
+        self._adaptive_min_tracked_points_floor = int(
+            self.get_parameter('adaptive_min_tracked_points_floor').value
+        )
+        self._adaptive_min_inliers_floor = int(
+            self.get_parameter('adaptive_min_inliers_floor').value
+        )
+        self._adaptive_min_inlier_ratio = float(
+            self.get_parameter('adaptive_min_inlier_ratio').value
+        )
+        quality_levels_value = self.get_parameter(
+            'adaptive_feature_quality_levels'
+        ).value
+        self._adaptive_feature_quality_levels = _unique_floats(
+            _as_float_sequence(
+                quality_levels_value,
+                [0.01, 0.005, 0.002, 0.001],
+            )
+        )
+        if not self._adaptive_feature_quality_levels:
+            self._adaptive_feature_quality_levels = (self._quality_level,)
+        self._adaptive_min_distance_scale_min = float(
+            self.get_parameter('adaptive_min_distance_scale_min').value
+        )
+        self._adaptive_hough_min_lines_floor = int(
+            self.get_parameter('adaptive_hough_min_lines_floor').value
+        )
+        self._adaptive_hough_threshold_floor = int(
+            self.get_parameter('adaptive_hough_threshold_floor').value
+        )
+        self._adaptive_hough_min_line_length_ratio_floor = float(
+            self.get_parameter('adaptive_hough_min_line_length_ratio_floor').value
+        )
+
         self._enable_hough_yaw_correction = bool(
             self.get_parameter('enable_hough_yaw_correction').value
         )
@@ -319,6 +577,7 @@ class LkTotalTransformNode(Node):
         self._last_hough_yaw: Optional[float] = None
         self._last_hough_error: Optional[float] = None
         self._last_hough_confidence = 0.0
+        self._last_hough_settings: Optional[HoughDetectionSettings] = None
 
         # ---- Pub/Sub ----
         self._pub_comp = self.create_publisher(Float64MultiArray, self._output_topic, 10)
@@ -384,7 +643,8 @@ class LkTotalTransformNode(Node):
             f'scalar outputs: x={self._output_x_topic}, y={self._output_y_topic}, '
             f'yaw={self._output_yaw_topic}, scale={self._output_scale_topic}, '
             f'hough_yaw_correction={self._enable_hough_yaw_correction}, '
-            f'hough_debug={self._hough_debug_image_topic}'
+            f'hough_debug={self._hough_debug_image_topic}, '
+            f'adaptive_detection={self._enable_adaptive_detection}'
         )
 
     def _on_camerainfo(self, msg: CameraInfo):
@@ -414,18 +674,63 @@ class LkTotalTransformNode(Node):
         small = cv2.resize(gray, (new_w, new_h), interpolation=cv2.INTER_AREA)
         return small, scale
 
-    def _detect_features(self, gray_small: np.ndarray) -> Optional[np.ndarray]:
+    def _feature_detection_target(self) -> int:
+        if not self._enable_adaptive_detection:
+            return max(1, self._min_tracked_points)
+        return max(
+            1,
+            min(self._max_corners, self._adaptive_min_tracked_points_floor),
+        )
+
+    def _detect_features_once(
+        self,
+        gray_small: np.ndarray,
+        settings: FeatureDetectionSettings,
+    ) -> Optional[np.ndarray]:
         pts = cv2.goodFeaturesToTrack(
             gray_small,
             mask=None,
             maxCorners=self._max_corners,
-            qualityLevel=self._quality_level,
-            minDistance=self._min_distance,
+            qualityLevel=settings.quality_level,
+            minDistance=settings.min_distance,
             blockSize=self._block_size,
         )
         if pts is None:
             return None
         return pts.astype(np.float32)
+
+    def _detect_features(self, gray_small: np.ndarray) -> Optional[np.ndarray]:
+        attempts = _feature_detection_attempts(
+            self._quality_level,
+            self._min_distance,
+            self._adaptive_feature_quality_levels,
+            self._adaptive_min_distance_scale_min,
+            self._enable_adaptive_detection,
+        )
+        return _detect_features_with_attempts(
+            gray_small,
+            attempts,
+            self._feature_detection_target(),
+            self._detect_features_once,
+        )
+
+    def _tracked_points_threshold(self, prev_feature_count: int) -> int:
+        return _adaptive_tracked_points_threshold(
+            prev_feature_count,
+            self._min_tracked_points,
+            self._enable_adaptive_detection,
+            self._adaptive_min_tracked_points_floor,
+            self._adaptive_min_inlier_ratio,
+        )
+
+    def _inlier_threshold(self, good_track_count: int) -> int:
+        return _adaptive_inlier_threshold(
+            good_track_count,
+            self._min_inliers,
+            self._enable_adaptive_detection,
+            self._adaptive_min_inliers_floor,
+            self._adaptive_min_inlier_ratio,
+        )
 
     @staticmethod
     def _extract_similarity(H: np.ndarray) -> Tuple[float, float, float, float]:
@@ -455,6 +760,7 @@ class LkTotalTransformNode(Node):
     def _detect_hough_grid(
         self,
         gray_small: np.ndarray,
+        settings: HoughDetectionSettings,
     ) -> Optional[HoughGridObservation]:
         if gray_small is None or gray_small.size == 0:
             return None
@@ -470,13 +776,13 @@ class LkTotalTransformNode(Node):
         h, w = gray_small.shape[:2]
         min_line_length = max(
             1,
-            int(round(min(h, w) * self._hough_min_line_length_ratio)),
+            int(round(min(h, w) * settings.min_line_length_ratio)),
         )
         lines = cv2.HoughLinesP(
             edges,
             1,
             np.pi / 180.0,
-            threshold=self._hough_threshold,
+            threshold=settings.threshold,
             minLineLength=min_line_length,
             maxLineGap=self._hough_max_line_gap_px,
         )
@@ -489,7 +795,10 @@ class LkTotalTransformNode(Node):
         ]
         return _grid_orientation_from_segments(
             segments,
-            min_lines=self._hough_min_lines,
+            min_lines=settings.min_lines,
+            hough_threshold=settings.threshold,
+            min_line_length_px=min_line_length,
+            adaptive_attempt=settings.adaptive_attempt,
         )
 
     def _maybe_detect_hough_grid(
@@ -501,7 +810,22 @@ class LkTotalTransformNode(Node):
             or self._publish_hough_debug_image
         ):
             return None
-        return self._detect_hough_grid(gray_small)
+        self._last_hough_settings = None
+        attempts = _hough_detection_attempts(
+            self._hough_threshold,
+            self._hough_min_line_length_ratio,
+            self._hough_min_lines,
+            self._enable_adaptive_detection,
+            self._adaptive_hough_threshold_floor,
+            self._adaptive_hough_min_line_length_ratio_floor,
+            self._adaptive_hough_min_lines_floor,
+        )
+        for settings in attempts:
+            self._last_hough_settings = settings
+            observation = self._detect_hough_grid(gray_small, settings)
+            if observation is not None:
+                return observation
+        return None
 
     def _hough_angle_to_body(self, theta_image: float) -> float:
         theta_body = _map_line_angle(theta_image, self._image_to_body)
@@ -563,7 +887,14 @@ class LkTotalTransformNode(Node):
 
         overlay = frame_bgr.copy()
         if observation is None:
-            status_text = 'Hough: no lines'
+            if self._last_hough_settings is None:
+                status_text = 'Hough: no lines'
+            else:
+                status_text = (
+                    'Hough rejected: no lines '
+                    f'thr={self._last_hough_settings.threshold} '
+                    f'min_lines={self._last_hough_settings.min_lines}'
+                )
             color = (0, 0, 255)
         else:
             accepted = observation.confidence >= self._hough_min_confidence
@@ -581,10 +912,14 @@ class LkTotalTransformNode(Node):
                     color,
                     2,
                 )
-            status = 'ok' if accepted else 'low'
+            status = 'accepted' if accepted else 'rejected'
+            adaptive = ' adaptive' if observation.adaptive_attempt else ''
             status_text = (
-                f'Hough {status}: lines={observation.line_count} '
-                f'conf={observation.confidence:.2f}'
+                f'Hough {status}{adaptive}: lines={observation.line_count} '
+                f'conf={observation.confidence:.2f} '
+                f'thr={observation.hough_threshold} '
+                f'min_len={observation.min_line_length_px} '
+                f'min_lines={observation.min_lines_required}'
             )
 
             h, w = overlay.shape[:2]
@@ -668,6 +1003,7 @@ class LkTotalTransformNode(Node):
         self._last_hough_yaw = None
         self._last_hough_error = None
         self._last_hough_confidence = 0.0
+        self._last_hough_settings = None
         self._publish()
 
         response.success = True
@@ -722,10 +1058,12 @@ class LkTotalTransformNode(Node):
         self._publish_hough_debug(frame_bgr, hough_observation, scale_factor)
 
         # init / re-init
+        prev_feature_count = _count_points(self._prev_pts)
+        tracked_points_threshold = self._tracked_points_threshold(prev_feature_count)
         if (
             self._prev_gray is None
             or self._prev_pts is None
-            or len(self._prev_pts) < self._min_tracked_points
+            or prev_feature_count < tracked_points_threshold
         ):
             self._prev_gray = gray_small
             self._prev_pts = self._detect_features(gray_small)
@@ -763,7 +1101,7 @@ class LkTotalTransformNode(Node):
                 good_new = good_new[mask]
                 good_old = good_old[mask]
 
-        if good_new.shape[0] < self._min_tracked_points:
+        if good_new.shape[0] < tracked_points_threshold:
             self._prev_gray = gray_small
             self._prev_pts = self._detect_features(gray_small)
             if self._publish_debug_image and self._prev_pts is not None:
@@ -788,9 +1126,11 @@ class LkTotalTransformNode(Node):
             return
 
         inlier_count = int(inliers.sum())
-        if inlier_count < self._min_inliers:
+        inlier_threshold = self._inlier_threshold(good_new.shape[0])
+        if inlier_count < inlier_threshold:
             self.get_logger().warn(
-                f'Insufficient inliers for LK transform: {inlier_count}',
+                'Insufficient inliers for LK transform: '
+                f'{inlier_count}/{inlier_threshold}',
                 throttle_duration_sec=5.0
             )
             if self._reinit_if_fail:
