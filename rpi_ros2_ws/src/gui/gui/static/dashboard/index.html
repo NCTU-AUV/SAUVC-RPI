@@ -287,6 +287,12 @@
                 <div title="control/pid/bottom_camera/y/feedback_px">PID y feedback px: <i id="bottom_camera_pid_y_feedback_px">none</i></div>
                 <div class="nowrap-readout" title="state/bottom_camera/yaw_rad">PID yaw feedback rad: <i id="bottom_camera_pid_yaw_feedback_rad">none</i></div>
             </div>
+            <div class="grid-2">
+                <div title="camera/bottom/pose_px">LK pose hz: <i id="bottom_camera_pose_hz">none</i></div>
+                <div title="state/bottom_camera/yaw_rad">yaw topic hz: <i id="bottom_camera_yaw_hz">none</i></div>
+                <div title="camera/bottom/image_raw">image raw hz: <i id="bottom_camera_image_raw_hz">none</i></div>
+                <div title="camera/bottom/image_raw">image size: <i id="bottom_camera_image_size">none</i></div>
+            </div>
             <div class="row">
                 <button onclick="reset_bottom_camera_pose_button_onclick()">reset PID feedback/ref</button>
                 <div>reset feedback status: <i id="bottom_camera_pose_reset_status">idle</i></div>

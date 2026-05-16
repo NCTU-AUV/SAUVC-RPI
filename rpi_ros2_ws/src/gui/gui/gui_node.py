@@ -2,15 +2,18 @@ import json
 import os
 import signal
 import subprocess
+from collections import deque
 
 import rclpy
 from rclpy.action import ActionClient
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rcl_interfaces.srv import SetParameters
+from sensor_msgs.msg import Image
 from std_msgs.msg import Bool
 from std_msgs.msg import Float32
 from std_msgs.msg import Float64
+from std_msgs.msg import Float64MultiArray
 from std_msgs.msg import Int32MultiArray
 from std_msgs.msg import String
 from geometry_msgs.msg import Wrench
@@ -19,6 +22,37 @@ from xy_translation_control_interfaces.action import MoveToPoint
 
 from .backend import protocol
 from .backend.aiohttp_server import AIOHTTPServer
+
+
+class _TopicRateTracker:
+    """Track recent message intervals and estimate publish frequency."""
+
+    def __init__(self, window_size: int = 30):
+        self._intervals = deque(maxlen=window_size)
+        self._last_message_time_s = None
+
+    def tick(self, now_s: float):
+        if self._last_message_time_s is not None:
+            interval_s = now_s - self._last_message_time_s
+            if interval_s > 0.0:
+                self._intervals.append(interval_s)
+        self._last_message_time_s = now_s
+
+    def get_hz(self, now_s: float):
+        if not self._intervals:
+            return None
+
+        avg_interval_s = sum(self._intervals) / len(self._intervals)
+        if avg_interval_s <= 0.0:
+            return None
+
+        stale_timeout_s = max(1.0, avg_interval_s * 3.0)
+        if self._last_message_time_s is None:
+            return None
+        if now_s - self._last_message_time_s > stale_timeout_s:
+            return 0.0
+
+        return 1.0 / avg_interval_s
 
 
 class _AsyncParameterClient:
@@ -51,6 +85,11 @@ class GUINode(Node):
         self.aiohttp_server = AIOHTTPServer(self._msg_callback)
         self.aiohttp_server.start_threading()
         self._robot_namespace = self.get_namespace().strip('/')
+        self._bottom_camera_pose_rate_tracker = _TopicRateTracker()
+        self._bottom_camera_yaw_rate_tracker = _TopicRateTracker()
+        self._bottom_camera_image_rate_tracker = _TopicRateTracker()
+        self._bottom_camera_image_width = None
+        self._bottom_camera_image_height = None
 
         self._killed_subscription = self.create_subscription(
                 msg_type=Bool,
@@ -82,6 +121,18 @@ class GUINode(Node):
                 callback=self._supervisor_status_callback,
                 qos_profile=10
             )
+        self._bottom_camera_pose_subscriber = self.create_subscription(
+            msg_type=Float64MultiArray,
+            topic=protocol.TOPIC_BOTTOM_CAMERA_POSE_PX,
+            callback=self._bottom_camera_pose_callback,
+            qos_profile=10,
+        )
+        self._bottom_camera_image_subscriber = self.create_subscription(
+            msg_type=Image,
+            topic=protocol.TOPIC_BOTTOM_CAMERA_IMAGE_RAW,
+            callback=self._bottom_camera_image_callback,
+            qos_profile=10,
+        )
         self._bottom_camera_pid_topic_subscribers = [
             self.create_subscription(
                 msg_type=Float64,
@@ -247,6 +298,10 @@ class GUINode(Node):
                 protocol.CONTROLLER_ACTION_RESET,
             ): protocol.SUPERVISOR_SERVICE_RESET_CONTROLLERS,
         }
+        self._bottom_camera_topic_stats_timer = self.create_timer(
+            0.5,
+            self._publish_bottom_camera_topic_stats,
+        )
 
     def _killed_callback(self, msg):
         self.aiohttp_server.send_topic(protocol.TOPIC_KILLED, msg.data)
@@ -263,8 +318,35 @@ class GUINode(Node):
     def _supervisor_status_callback(self, msg: String):
         self.aiohttp_server.send_topic(protocol.TOPIC_SYSTEM_MANAGER_STATUS, msg.data)
 
+    def _bottom_camera_pose_callback(self, msg: Float64MultiArray):
+        del msg
+        self._bottom_camera_pose_rate_tracker.tick(self._now_seconds())
+
+    def _bottom_camera_image_callback(self, msg: Image):
+        self._bottom_camera_image_rate_tracker.tick(self._now_seconds())
+        self._bottom_camera_image_width = int(msg.width)
+        self._bottom_camera_image_height = int(msg.height)
+
     def _float64_topic_callback(self, topic_name: str, msg: Float64):
+        if topic_name == protocol.TOPIC_BOTTOM_CAMERA_PID_YAW_FEEDBACK_RAD:
+            self._bottom_camera_yaw_rate_tracker.tick(self._now_seconds())
         self.aiohttp_server.send_topic(topic_name, msg.data)
+
+    def _publish_bottom_camera_topic_stats(self):
+        now_s = self._now_seconds()
+        self.aiohttp_server.send_topic(
+            protocol.TOPIC_BOTTOM_CAMERA_TOPIC_STATS,
+            {
+                "lk_pose_hz": self._bottom_camera_pose_rate_tracker.get_hz(now_s),
+                "yaw_hz": self._bottom_camera_yaw_rate_tracker.get_hz(now_s),
+                "image_raw_hz": self._bottom_camera_image_rate_tracker.get_hz(now_s),
+                "image_width": self._bottom_camera_image_width,
+                "image_height": self._bottom_camera_image_height,
+            },
+        )
+
+    def _now_seconds(self) -> float:
+        return self.get_clock().now().nanoseconds / 1_000_000_000.0
 
     def _pwm_output_signal_value_subscription_callback(self, msg: Int32MultiArray):
         values = list(msg.data)

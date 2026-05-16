@@ -32,6 +32,11 @@ function updateStm32LogAutoScrollState() {
     stm32LogState.shouldAutoScroll = isAtBottom(element);
 }
 
+function formatOptionalDisplayNumber(value, decimalPlaces) {
+    const formatted = formatDisplayNumber(value, decimalPlaces);
+    return formatted ?? "none";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const element = document.getElementById("stm32_debug_log");
     if (!element) {
@@ -133,6 +138,31 @@ websocket.onmessage = (event) => {
             if (element) {
                 const successText = status.success === true ? "success" : "failed";
                 element.innerHTML = status.message ? `${successText}: ${status.message}` : successText;
+            }
+        }
+        if (msg_json_object.data.topic_name == protocol.topics.bottomCameraTopicStats) {
+            const stats = msg_json_object.data.msg || {};
+            const lkPoseHzElement = document.getElementById("bottom_camera_pose_hz");
+            if (lkPoseHzElement) {
+                lkPoseHzElement.innerHTML = formatOptionalDisplayNumber(stats.lk_pose_hz, 2);
+            }
+            const yawHzElement = document.getElementById("bottom_camera_yaw_hz");
+            if (yawHzElement) {
+                yawHzElement.innerHTML = formatOptionalDisplayNumber(stats.yaw_hz, 2);
+            }
+            const imageRawHzElement = document.getElementById("bottom_camera_image_raw_hz");
+            if (imageRawHzElement) {
+                imageRawHzElement.innerHTML = formatOptionalDisplayNumber(stats.image_raw_hz, 2);
+            }
+            const imageSizeElement = document.getElementById("bottom_camera_image_size");
+            if (imageSizeElement) {
+                const width = Number(stats.image_width);
+                const height = Number(stats.image_height);
+                if (Number.isFinite(width) && Number.isFinite(height)) {
+                    imageSizeElement.innerHTML = `${width} x ${height}`;
+                } else {
+                    imageSizeElement.innerHTML = "none";
+                }
             }
         }
         if (msg_json_object.data.topic_name == protocol.topics.stm32Log) {
