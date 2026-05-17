@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import math
-from typing import Optional, Tuple
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -20,6 +21,20 @@ def _T(tx: float, ty: float) -> np.ndarray:
     ], dtype=np.float64)
 
 
+@dataclass
+class TileLine:
+    pos: float
+    angle_offset: float
+    weight: float
+
+
+@dataclass
+class TileLineDetection:
+    horizontal: List[TileLine]
+    vertical: List[TileLine]
+    segments: np.ndarray
+
+
 class LkTotalTransformNode(Node):
     """
     Subscribe:
@@ -32,11 +47,12 @@ class LkTotalTransformNode(Node):
       - (optional) output_topic_raw              : raw pose (no center compensation) [x, y, yaw, scale]
 
     Notes:
-      - Tracks corners with PyrLK, estimates a partial affine each frame (RANSAC).
-      - Translations are rescaled back to the original image size.
-      - The incoming image transform describes how the world moves in the image; the
-        vehicle motion is the inverse of that transform. We accumulate that inverse
-        to get pose in the world frame (world origin = first frame).
+      - Detects pool tile grout lines in the bottom camera image using Canny + Hough lines.
+      - Lines are grouped into horizontal and vertical tile families. Consecutive frames are
+        matched by line offset to estimate the image-space scene motion.
+      - The incoming image transform describes how the floor moves in the image; the vehicle
+        motion is the inverse of that transform. We accumulate that inverse to get pose in
+        the world frame (world origin = first frame).
       - Two running totals:
           raw: accumulated directly
           compensated: H_c = T(-c) * H_raw * T(c) (c = image center or principal point)
@@ -61,7 +77,7 @@ class LkTotalTransformNode(Node):
 
         # debug image overlay
         self.declare_parameter('publish_debug_image', False)
-        self.declare_parameter('debug_image_topic', 'camera/bottom/debug/lk_tracks')
+        self.declare_parameter('debug_image_topic', 'camera/bottom/debug/tile_lines')
 
         # ---- Params (rotation center) ----
         # 'image_center' or 'principal_point'
@@ -76,23 +92,18 @@ class LkTotalTransformNode(Node):
         # ---- Params (image scale) ----
         self.declare_parameter('resize_width_px', 320)
 
-        # ---- Params (feature detection) ----
-        self.declare_parameter('max_corners', 500)
-        self.declare_parameter('quality_level', 0.01)
-        self.declare_parameter('min_distance', 7.0)
-        self.declare_parameter('block_size', 7)
-
-        # ---- Params (LK / PyrLK) ----
-        self.declare_parameter('win_size', 21)
-        self.declare_parameter('max_level', 2)
-        self.declare_parameter('criteria_count', 20)
-        self.declare_parameter('criteria_eps', 0.03)
-        self.declare_parameter('max_track_error', 50.0)  # <=0 to disable
-
-        # ---- Params (robust estimation) ----
-        self.declare_parameter('ransac_reproj_threshold_px', 3.0)
-        self.declare_parameter('min_inliers', 10)
-        self.declare_parameter('min_tracked_points', 100)
+        # ---- Params (tile line detection) ----
+        self.declare_parameter('blur_kernel_size', 5)
+        self.declare_parameter('canny_threshold1', 60.0)
+        self.declare_parameter('canny_threshold2', 160.0)
+        self.declare_parameter('hough_threshold', 45)
+        self.declare_parameter('min_line_length_px', 45.0)
+        self.declare_parameter('max_line_gap_px', 12.0)
+        self.declare_parameter('axis_angle_tolerance_deg', 25.0)
+        self.declare_parameter('line_merge_distance_px', 8.0)
+        self.declare_parameter('min_lines_per_axis', 1)
+        self.declare_parameter('max_line_match_distance_px', 35.0)
+        self.declare_parameter('min_line_matches', 1)
         self.declare_parameter('reinit_if_fail', True)
 
         # ---- Load params ----
@@ -120,26 +131,19 @@ class LkTotalTransformNode(Node):
         self._body_to_image = np.linalg.inv(self._image_to_body)
 
         self._resize_width_px = int(self.get_parameter('resize_width_px').value)
-
-        self._max_corners = int(self.get_parameter('max_corners').value)
-        self._quality_level = float(self.get_parameter('quality_level').value)
-        self._min_distance = float(self.get_parameter('min_distance').value)
-        self._block_size = int(self.get_parameter('block_size').value)
-
-        self._win_size = int(self.get_parameter('win_size').value)
-        self._max_level = int(self.get_parameter('max_level').value)
-        self._criteria_count = int(self.get_parameter('criteria_count').value)
-        self._criteria_eps = float(self.get_parameter('criteria_eps').value)
-        self._max_track_error = float(self.get_parameter('max_track_error').value)
-        self._lk_criteria = (
-            cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
-            self._criteria_count,
-            self._criteria_eps,
+        self._blur_kernel_size = int(self.get_parameter('blur_kernel_size').value)
+        self._canny_threshold1 = float(self.get_parameter('canny_threshold1').value)
+        self._canny_threshold2 = float(self.get_parameter('canny_threshold2').value)
+        self._hough_threshold = int(self.get_parameter('hough_threshold').value)
+        self._min_line_length_px = float(self.get_parameter('min_line_length_px').value)
+        self._max_line_gap_px = float(self.get_parameter('max_line_gap_px').value)
+        self._axis_angle_tolerance = math.radians(
+            float(self.get_parameter('axis_angle_tolerance_deg').value)
         )
-
-        self._ransac_thresh = float(self.get_parameter('ransac_reproj_threshold_px').value)
-        self._min_inliers = int(self.get_parameter('min_inliers').value)
-        self._min_tracked_points = int(self.get_parameter('min_tracked_points').value)
+        self._line_merge_distance_px = float(self.get_parameter('line_merge_distance_px').value)
+        self._min_lines_per_axis = int(self.get_parameter('min_lines_per_axis').value)
+        self._max_line_match_distance_px = float(self.get_parameter('max_line_match_distance_px').value)
+        self._min_line_matches = int(self.get_parameter('min_line_matches').value)
         self._reinit_if_fail = bool(self.get_parameter('reinit_if_fail').value)
 
         # ---- CameraInfo principal point (optional) ----
@@ -148,8 +152,7 @@ class LkTotalTransformNode(Node):
         self._pp_cy = 0.0
 
         # ---- State ----
-        self._prev_gray: Optional[np.ndarray] = None
-        self._prev_pts: Optional[np.ndarray] = None  # (N,1,2) float32 on downscaled image
+        self._prev_lines: Optional[TileLineDetection] = None
 
         # running totals (vehicle pose in world frame)
         self._total_raw = np.eye(3, dtype=np.float64)
@@ -175,8 +178,9 @@ class LkTotalTransformNode(Node):
             self._sub_info = self.create_subscription(CameraInfo, self._camera_info_topic, self._on_camerainfo, 10)
 
         self.get_logger().info(
-            f'LK total transform node started. image_topic={self._image_topic}, output_topic={self._output_topic}, '
-            f'rotation_center_mode={self._rotation_center_mode}, publish_raw={self._publish_raw_output}\n'
+            f'Tile-line total transform node started. image_topic={self._image_topic}, '
+            f'output_topic={self._output_topic}, rotation_center_mode={self._rotation_center_mode}, '
+            f'publish_raw={self._publish_raw_output}\n'
             f'scalar outputs: x={self._output_x_topic}, y={self._output_y_topic}, '
             f'yaw={self._output_yaw_topic}, scale={self._output_scale_topic}'
         )
@@ -207,19 +211,6 @@ class LkTotalTransformNode(Node):
         new_h = max(1, int(round(h * scale)))
         small = cv2.resize(gray, (new_w, new_h), interpolation=cv2.INTER_AREA)
         return small, scale
-
-    def _detect_features(self, gray_small: np.ndarray) -> Optional[np.ndarray]:
-        pts = cv2.goodFeaturesToTrack(
-            gray_small,
-            mask=None,
-            maxCorners=self._max_corners,
-            qualityLevel=self._quality_level,
-            minDistance=self._min_distance,
-            blockSize=self._block_size,
-        )
-        if pts is None:
-            return None
-        return pts.astype(np.float32)
 
     @staticmethod
     def _extract_similarity(H: np.ndarray) -> Tuple[float, float, float, float]:
@@ -255,17 +246,158 @@ class LkTotalTransformNode(Node):
         msg.data = float(value)
         pub.publish(msg)
 
-    def _publish_debug(self, frame_bgr: np.ndarray, pts_small: np.ndarray, scale_factor: float):
-        if self._debug_pub is None or frame_bgr is None or pts_small is None:
+    def _detect_tile_lines(self, gray_small: np.ndarray) -> Optional[TileLineDetection]:
+        gray_eq = cv2.equalizeHist(gray_small)
+        blur_size = self._blur_kernel_size
+        if blur_size > 1:
+            if blur_size % 2 == 0:
+                blur_size += 1
+            gray_eq = cv2.GaussianBlur(gray_eq, (blur_size, blur_size), 0)
+
+        edges = cv2.Canny(gray_eq, self._canny_threshold1, self._canny_threshold2)
+        lines = cv2.HoughLinesP(
+            edges,
+            rho=1.0,
+            theta=np.pi / 180.0,
+            threshold=self._hough_threshold,
+            minLineLength=self._min_line_length_px,
+            maxLineGap=self._max_line_gap_px,
+        )
+
+        if lines is None:
+            return None
+
+        h, w = gray_small.shape[:2]
+        cx = 0.5 * float(w)
+        cy = 0.5 * float(h)
+        horizontal_obs = []
+        vertical_obs = []
+        kept_segments = []
+
+        for line in lines.reshape(-1, 4):
+            x1, y1, x2, y2 = [float(v) for v in line]
+            dx = x2 - x1
+            dy = y2 - y1
+            length = math.hypot(dx, dy)
+            if length <= 0.0:
+                continue
+
+            angle = math.atan2(dy, dx) % math.pi
+            horizontal_error = min(angle, math.pi - angle)
+            vertical_error = abs(angle - 0.5 * math.pi)
+
+            if horizontal_error <= self._axis_angle_tolerance:
+                signed_angle = angle if angle <= 0.5 * math.pi else angle - math.pi
+                tan_angle = math.tan(signed_angle)
+                pos = y1 + tan_angle * (cx - x1)
+                horizontal_obs.append((pos, signed_angle, length))
+                kept_segments.append(line.astype(np.int32))
+            elif vertical_error <= self._axis_angle_tolerance:
+                signed_angle = angle - 0.5 * math.pi
+                # For a vertical-ish line, solve x at image-center y using dx / dy.
+                if abs(dy) < 1e-6:
+                    continue
+                pos = x1 + (dx / dy) * (cy - y1)
+                vertical_obs.append((pos, signed_angle, length))
+                kept_segments.append(line.astype(np.int32))
+
+        horizontal = self._cluster_lines(horizontal_obs)
+        vertical = self._cluster_lines(vertical_obs)
+        if len(horizontal) < self._min_lines_per_axis and len(vertical) < self._min_lines_per_axis:
+            return None
+
+        segments = np.array(kept_segments, dtype=np.int32) if kept_segments else np.empty((0, 4), dtype=np.int32)
+        return TileLineDetection(horizontal=horizontal, vertical=vertical, segments=segments)
+
+    def _cluster_lines(self, observations) -> List[TileLine]:
+        if not observations:
+            return []
+
+        observations = sorted(observations, key=lambda item: item[0])
+        clusters = []
+        current = [observations[0]]
+        for obs in observations[1:]:
+            if abs(obs[0] - current[-1][0]) <= self._line_merge_distance_px:
+                current.append(obs)
+            else:
+                clusters.append(self._merge_cluster(current))
+                current = [obs]
+        clusters.append(self._merge_cluster(current))
+        return clusters
+
+    @staticmethod
+    def _merge_cluster(cluster) -> TileLine:
+        weights = np.array([item[2] for item in cluster], dtype=np.float64)
+        positions = np.array([item[0] for item in cluster], dtype=np.float64)
+        angles = np.array([item[1] for item in cluster], dtype=np.float64)
+        total_weight = float(weights.sum())
+        if total_weight <= 0.0:
+            total_weight = 1.0
+            weights = np.ones_like(weights)
+        pos = float(np.average(positions, weights=weights))
+        angle = float(np.average(angles, weights=weights))
+        return TileLine(pos=pos, angle_offset=angle, weight=total_weight)
+
+    def _estimate_scene_motion(
+        self,
+        prev_lines: TileLineDetection,
+        curr_lines: TileLineDetection,
+    ) -> Optional[Tuple[float, float, float, int]]:
+        dx_values, dx_angles = self._match_line_family(prev_lines.vertical, curr_lines.vertical)
+        dy_values, dy_angles = self._match_line_family(prev_lines.horizontal, curr_lines.horizontal)
+        match_count = len(dx_values) + len(dy_values)
+
+        if match_count < self._min_line_matches:
+            return None
+
+        tx = float(np.median(dx_values)) if dx_values else 0.0
+        ty = float(np.median(dy_values)) if dy_values else 0.0
+        angle_deltas = dx_angles + dy_angles
+        rot = float(np.median(angle_deltas)) if angle_deltas else 0.0
+        return tx, ty, rot, match_count
+
+    def _match_line_family(
+        self,
+        prev_lines: List[TileLine],
+        curr_lines: List[TileLine],
+    ) -> Tuple[List[float], List[float]]:
+        if not prev_lines or not curr_lines:
+            return [], []
+
+        curr_used = set()
+        pos_deltas = []
+        angle_deltas = []
+        for prev in prev_lines:
+            best_idx = -1
+            best_dist = self._max_line_match_distance_px
+            for idx, curr in enumerate(curr_lines):
+                if idx in curr_used:
+                    continue
+                dist = abs(curr.pos - prev.pos)
+                if dist < best_dist:
+                    best_idx = idx
+                    best_dist = dist
+            if best_idx < 0:
+                continue
+
+            curr_used.add(best_idx)
+            curr = curr_lines[best_idx]
+            pos_deltas.append(curr.pos - prev.pos)
+            angle_deltas.append(curr.angle_offset - prev.angle_offset)
+
+        return pos_deltas, angle_deltas
+
+    def _publish_debug(self, frame_bgr: np.ndarray, detection: TileLineDetection, scale_factor: float):
+        if self._debug_pub is None or frame_bgr is None or detection is None:
             return
 
-        pts = pts_small.reshape(-1, 2)
-        if scale_factor > 0 and scale_factor != 1.0:
-            pts = pts / scale_factor
-
         overlay = frame_bgr.copy()
-        for x, y in pts:
-            cv2.circle(overlay, (int(x), int(y)), 3, (0, 0, 255), -1)
+        if detection.segments.size > 0:
+            segments = detection.segments.astype(np.float64)
+            if scale_factor > 0.0 and scale_factor != 1.0:
+                segments /= scale_factor
+            for x1, y1, x2, y2 in segments.astype(np.int32):
+                cv2.line(overlay, (x1, y1), (x2, y2), (0, 255, 255), 2)
 
         try:
             out = self._bridge.cv2_to_imgmsg(overlay, encoding='bgr8')
@@ -287,92 +419,38 @@ class LkTotalTransformNode(Node):
 
         gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
         h_img, w_img = gray.shape[:2]
-
         gray_small, scale_factor = self._downscale_gray(gray)
+        curr_lines = self._detect_tile_lines(gray_small)
 
-        # init / re-init
-        if self._prev_gray is None or self._prev_pts is None or len(self._prev_pts) < self._min_tracked_points:
-            self._prev_gray = gray_small
-            self._prev_pts = self._detect_features(gray_small)
-            if self._publish_debug_image and self._prev_pts is not None:
-                self._publish_debug(frame_bgr, self._prev_pts, scale_factor)
-            return
-
-        # LK track
-        p1, st, err = cv2.calcOpticalFlowPyrLK(
-            self._prev_gray,
-            gray_small,
-            self._prev_pts,
-            None,
-            winSize=(self._win_size, self._win_size),
-            maxLevel=self._max_level,
-            criteria=self._lk_criteria,
-        )
-
-        if p1 is None or st is None:
+        if curr_lines is None:
+            self.get_logger().warn('No tile lines detected in bottom camera image.', throttle_duration_sec=5.0)
             if self._reinit_if_fail:
-                self._prev_gray = gray_small
-                self._prev_pts = self._detect_features(gray_small)
+                self._prev_lines = None
             return
 
-        st = st.reshape(-1)
-        good_new = p1[st == 1].reshape(-1, 2)
-        good_old = self._prev_pts[st == 1].reshape(-1, 2)
-
-        # optional error filter
-        if err is not None:
-            err = err.reshape(-1)
-            good_err = err[st == 1]
-            if self._max_track_error > 0:
-                mask = good_err <= self._max_track_error
-                good_new = good_new[mask]
-                good_old = good_old[mask]
-
-        if good_new.shape[0] < self._min_tracked_points:
-            self._prev_gray = gray_small
-            self._prev_pts = self._detect_features(gray_small)
-            if self._publish_debug_image and self._prev_pts is not None:
-                self._publish_debug(frame_bgr, self._prev_pts, scale_factor)
+        if self._prev_lines is None:
+            self._prev_lines = curr_lines
+            if self._publish_debug_image:
+                self._publish_debug(frame_bgr, curr_lines, scale_factor)
             return
 
-        # Estimate affine (partial: rotation + scale + translation)
-        M2, inliers = cv2.estimateAffinePartial2D(
-            good_old,
-            good_new,
-            method=cv2.RANSAC,
-            ransacReprojThreshold=self._ransac_thresh,
-            maxIters=2000,
-            confidence=0.99,
-            refineIters=10,
-        )
-
-        if M2 is None or inliers is None:
+        motion = self._estimate_scene_motion(self._prev_lines, curr_lines)
+        if motion is None:
+            self.get_logger().warn('Insufficient matched tile lines for transform.', throttle_duration_sec=5.0)
             if self._reinit_if_fail:
-                self._prev_gray = gray_small
-                self._prev_pts = self._detect_features(gray_small)
+                self._prev_lines = curr_lines
             return
 
-        inlier_count = int(inliers.sum())
-        if inlier_count < self._min_inliers:
-            self.get_logger().warn(
-                f'Insufficient inliers for LK transform: {inlier_count}',
-                throttle_duration_sec=5.0
-            )
-            if self._reinit_if_fail:
-                self._prev_gray = gray_small
-                self._prev_pts = self._detect_features(gray_small)
-            return
-
-        # Build raw 3x3 increment in ORIGINAL pixel scale
-        m00, m01, tx = M2[0]
-        m10, m11, ty = M2[1]
-        if scale_factor > 0:
+        tx, ty, rot, match_count = motion
+        if scale_factor > 0.0:
             tx /= scale_factor
             ty /= scale_factor
 
+        cos_rot = math.cos(rot)
+        sin_rot = math.sin(rot)
         H_raw_img = np.array([
-            [m00, m01, tx],
-            [m10, m11, ty],
+            [cos_rot, -sin_rot, tx],
+            [sin_rot, cos_rot, ty],
             [0.0, 0.0, 1.0],
         ], dtype=np.float64)
 
@@ -388,25 +466,28 @@ class LkTotalTransformNode(Node):
             H_motion_raw_body = np.linalg.inv(H_scene_raw_body)
             H_motion_comp_body = np.linalg.inv(H_scene_comp_body)
         except np.linalg.LinAlgError:
-            self.get_logger().warn('Failed to invert LK transform; reinitializing tracks.', throttle_duration_sec=5.0)
+            self.get_logger().warn('Failed to invert tile-line transform; reinitializing.', throttle_duration_sec=5.0)
             if self._reinit_if_fail:
-                self._prev_gray = gray_small
-                self._prev_pts = self._detect_features(gray_small)
+                self._prev_lines = curr_lines
             return
 
         # Accumulate vehicle pose in world frame (world origin is the first frame)
         self._total_raw = self._total_raw @ H_motion_raw_body
         self._total_comp = self._total_comp @ H_motion_comp_body
 
+        self.get_logger().debug(
+            f'tile line transform: matches={match_count}, scene_tx={tx:.2f}, scene_ty={ty:.2f}, '
+            f'scene_yaw={rot:.4f}'
+        )
+
         # Publish totals
         self._publish()
 
-        # Update prev state (keep tracking points)
-        self._prev_gray = gray_small
-        self._prev_pts = good_new.reshape(-1, 1, 2).astype(np.float32)
+        # Update prev state
+        self._prev_lines = curr_lines
 
         if self._publish_debug_image:
-            self._publish_debug(frame_bgr, self._prev_pts, scale_factor)
+            self._publish_debug(frame_bgr, curr_lines, scale_factor)
 
     @staticmethod
     def _build_mapping_matrix(yaw_deg: float, flip_x: bool, flip_y: bool) -> np.ndarray:
