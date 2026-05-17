@@ -63,6 +63,41 @@ def _clamp(value: float, lower: float, upper: float) -> float:
     return min(max(value, lower), upper)
 
 
+def _debug_publish_period_ns(rate_hz: float) -> int:
+    if not math.isfinite(rate_hz) or rate_hz <= 0.0:
+        return 0
+    return int(round(1_000_000_000.0 / rate_hz))
+
+
+def _should_publish_debug_image(
+    now_ns: int,
+    last_publish_ns: Optional[int],
+    period_ns: int,
+) -> bool:
+    if period_ns <= 0 or last_publish_ns is None:
+        return True
+    return now_ns - last_publish_ns >= period_ns
+
+
+def _resize_debug_overlay(
+    overlay: np.ndarray,
+    width_px: int,
+    height_px: int,
+) -> np.ndarray:
+    if width_px <= 0 or height_px <= 0:
+        return overlay
+
+    h, w = overlay.shape[:2]
+    target_size = (max(1, int(width_px)), max(1, int(height_px)))
+    if (w, h) == target_size:
+        return overlay
+
+    interpolation = cv2.INTER_AREA
+    if target_size[0] > w or target_size[1] > h:
+        interpolation = cv2.INTER_LINEAR
+    return cv2.resize(overlay, target_size, interpolation=interpolation)
+
+
 def _unique_floats(values: Iterable[float], precision: int = 9) -> Tuple[float, ...]:
     unique = []
     seen = set()
@@ -371,6 +406,9 @@ class LkTotalTransformNode(Node):
             'hough_debug_image_topic',
             'camera/bottom/debug/hough_lines',
         )
+        self.declare_parameter('debug_publish_rate_hz', 5.0)
+        self.declare_parameter('debug_output_width_px', 80)
+        self.declare_parameter('debug_output_height_px', 60)
 
         # ---- Params (rotation center) ----
         # 'image_center' or 'principal_point'
@@ -463,6 +501,15 @@ class LkTotalTransformNode(Node):
         self._hough_debug_image_topic = self.get_parameter(
             'hough_debug_image_topic'
         ).value
+        self._debug_publish_period_ns = _debug_publish_period_ns(
+            float(self.get_parameter('debug_publish_rate_hz').value)
+        )
+        self._debug_output_width_px = int(
+            self.get_parameter('debug_output_width_px').value
+        )
+        self._debug_output_height_px = int(
+            self.get_parameter('debug_output_height_px').value
+        )
 
         self._rotation_center_mode = str(self.get_parameter('rotation_center_mode').value)
         self._camera_info_topic = str(self.get_parameter('camera_info_topic').value)
@@ -578,6 +625,8 @@ class LkTotalTransformNode(Node):
         self._last_hough_error: Optional[float] = None
         self._last_hough_confidence = 0.0
         self._last_hough_settings: Optional[HoughDetectionSettings] = None
+        self._last_lk_debug_publish_ns: Optional[int] = None
+        self._last_hough_debug_publish_ns: Optional[int] = None
 
         # ---- Pub/Sub ----
         self._pub_comp = self.create_publisher(Float64MultiArray, self._output_topic, 10)
@@ -884,6 +933,13 @@ class LkTotalTransformNode(Node):
     ) -> None:
         if self._hough_debug_pub is None or frame_bgr is None:
             return
+        now_ns = self.get_clock().now().nanoseconds
+        if not _should_publish_debug_image(
+            now_ns,
+            self._last_hough_debug_publish_ns,
+            self._debug_publish_period_ns,
+        ):
+            return
 
         overlay = frame_bgr.copy()
         if observation is None:
@@ -947,6 +1003,11 @@ class LkTotalTransformNode(Node):
             cv2.LINE_AA,
         )
 
+        overlay = _resize_debug_overlay(
+            overlay,
+            self._debug_output_width_px,
+            self._debug_output_height_px,
+        )
         try:
             out = self._bridge.cv2_to_imgmsg(overlay, encoding='bgr8')
         except Exception as exc:
@@ -956,6 +1017,7 @@ class LkTotalTransformNode(Node):
             )
             return
         self._hough_debug_pub.publish(out)
+        self._last_hough_debug_publish_ns = now_ns
 
     def _publish(self):
         # compensated output (main topic)
@@ -1020,6 +1082,13 @@ class LkTotalTransformNode(Node):
     def _publish_debug(self, frame_bgr: np.ndarray, pts_small: np.ndarray, scale_factor: float):
         if self._debug_pub is None or frame_bgr is None or pts_small is None:
             return
+        now_ns = self.get_clock().now().nanoseconds
+        if not _should_publish_debug_image(
+            now_ns,
+            self._last_lk_debug_publish_ns,
+            self._debug_publish_period_ns,
+        ):
+            return
 
         pts = pts_small.reshape(-1, 2)
         if scale_factor > 0 and scale_factor != 1.0:
@@ -1029,6 +1098,11 @@ class LkTotalTransformNode(Node):
         for x, y in pts:
             cv2.circle(overlay, (int(x), int(y)), 3, (0, 0, 255), -1)
 
+        overlay = _resize_debug_overlay(
+            overlay,
+            self._debug_output_width_px,
+            self._debug_output_height_px,
+        )
         try:
             out = self._bridge.cv2_to_imgmsg(overlay, encoding='bgr8')
         except Exception as exc:
@@ -1038,6 +1112,7 @@ class LkTotalTransformNode(Node):
             )
             return
         self._debug_pub.publish(out)
+        self._last_lk_debug_publish_ns = now_ns
 
     def _get_rotation_center(self, w: int, h: int) -> Tuple[float, float]:
         # Use principal point if requested & available; else image center

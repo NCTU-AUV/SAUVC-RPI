@@ -36,9 +36,34 @@ ROS_LOCALHOST_ONLY ?= 0
 RMW_IMPLEMENTATION ?= rmw_fastrtps_cpp
 ROS_NET_ENV := ROS_DOMAIN_ID=$(ROS_DOMAIN_ID) ROS_LOCALHOST_ONLY=$(ROS_LOCALHOST_ONLY) RMW_IMPLEMENTATION=$(RMW_IMPLEMENTATION)
 
-.PHONY: all compose_up compose_down compose_build compose_shell init launch launch_detached compose_init compose_launch compose_launch_detached compose_clean clean update_image
+.PHONY: all debug compose_up compose_down compose_build compose_shell init launch launch_debug launch_detached compose_init compose_launch compose_launch_detached compose_clean clean update_image
 
 all: init launch
+
+debug: init
+	@echo "Starting LK optical-flow and Hough-line debug viewers..."
+	@HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) exec -d orca /bin/bash -lc "\
+		$(ROS_SETUP) \
+		sleep 5; \
+		export XDG_RUNTIME_DIR=/tmp/runtime-root; \
+		mkdir -p \$$XDG_RUNTIME_DIR; \
+		chmod 700 \$$XDG_RUNTIME_DIR; \
+		export LIBGL_ALWAYS_SOFTWARE=1; \
+		export QT_X11_NO_MITSHM=1; \
+		exec rqt_image_view /orca_auv/camera/bottom/debug/lk_tracks"
+	@HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) exec -d orca /bin/bash -lc "\
+		$(ROS_SETUP) \
+		sleep 5; \
+		export XDG_RUNTIME_DIR=/tmp/runtime-root; \
+		mkdir -p \$$XDG_RUNTIME_DIR; \
+		chmod 700 \$$XDG_RUNTIME_DIR; \
+		export LIBGL_ALWAYS_SOFTWARE=1; \
+		export QT_X11_NO_MITSHM=1; \
+		exec rqt_image_view /orca_auv/camera/bottom/debug/hough_lines"
+	@echo "Starting hardware launch with LK/Hough debug image publishing enabled..."
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) exec orca /bin/bash -lc "\
+		$(ROS_SETUP) \
+		ros2 launch src/launch/orca_bringup.launch.py publish_lk_debug_image:=true"
 
 update_image:
 	docker buildx build --pull --platform=linux/arm64,linux/amd64 -t $(IMAGE_OWNER_NAME)/$(IMAGE_NAME):latest . --push
@@ -82,6 +107,11 @@ launch: compose_up
 		source /root/uros_ws/install/local_setup.bash && \
 		source install/setup.bash && \
 		ros2 launch src/launch/orca_bringup.launch.py"
+
+launch_debug: compose_up
+	HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) exec orca /bin/bash -lc "\
+		$(ROS_SETUP) \
+		ros2 launch src/launch/orca_bringup.launch.py publish_lk_debug_image:=true"
 
 launch_detached: compose_up
 	@echo "Launching ROS stack in detached mode"

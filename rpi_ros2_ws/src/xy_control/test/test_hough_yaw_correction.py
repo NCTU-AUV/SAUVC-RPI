@@ -9,12 +9,15 @@ from xy_control.lk_total_transform_node import LkTotalTransformNode
 from xy_control.lk_total_transform_node import _adaptive_inlier_threshold
 from xy_control.lk_total_transform_node import _adaptive_tracked_points_threshold
 from xy_control.lk_total_transform_node import _bounded_yaw_correction
+from xy_control.lk_total_transform_node import _debug_publish_period_ns
 from xy_control.lk_total_transform_node import _detect_features_with_attempts
 from xy_control.lk_total_transform_node import _feature_detection_attempts
 from xy_control.lk_total_transform_node import _grid_orientation_from_segments
 from xy_control.lk_total_transform_node import _hough_detection_attempts
 from xy_control.lk_total_transform_node import _relative_grid_yaw
+from xy_control.lk_total_transform_node import _resize_debug_overlay
 from xy_control.lk_total_transform_node import _select_nearest_grid_yaw
+from xy_control.lk_total_transform_node import _should_publish_debug_image
 from xy_control.lk_total_transform_node import _wrap_to_period
 
 
@@ -240,3 +243,20 @@ def test_adaptive_hough_attempts_end_at_configured_floors():
     assert attempts[-1].min_line_length_ratio == pytest.approx(0.08)
     assert attempts[-1].min_lines == 2
     assert attempts[-1].adaptive_attempt is True
+
+
+def test_debug_resize_can_reduce_overlay_to_eighty_by_sixty():
+    overlay = np.zeros((120, 160, 3), dtype=np.uint8)
+
+    resized = _resize_debug_overlay(overlay, 80, 60)
+
+    assert resized.shape == (60, 80, 3)
+
+
+def test_debug_publish_throttle_uses_five_hz_period():
+    period_ns = _debug_publish_period_ns(5.0)
+
+    assert period_ns == 200_000_000
+    assert _should_publish_debug_image(0, None, period_ns)
+    assert not _should_publish_debug_image(199_999_999, 0, period_ns)
+    assert _should_publish_debug_image(200_000_000, 0, period_ns)
