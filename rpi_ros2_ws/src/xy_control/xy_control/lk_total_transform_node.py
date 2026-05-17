@@ -35,6 +35,26 @@ class TileLineDetection:
     segments: np.ndarray
 
 
+@dataclass
+class LineMatch:
+    track: 'LineTrack'
+    observation: TileLine
+    observation_idx: int
+    pos_delta: float
+    angle_delta: float
+
+
+@dataclass
+class LineTrack:
+    pos: float
+    angle_offset: float
+    confidence: float
+    missed_count: int = 0
+    age: int = 1
+    seen_count: int = 1
+    confirmed: bool = False
+
+
 class LkTotalTransformNode(Node):
     """
     Subscribe:
@@ -48,8 +68,8 @@ class LkTotalTransformNode(Node):
 
     Notes:
       - Detects pool tile grout lines in the bottom camera image using Canny + Hough lines.
-      - Lines are grouped into horizontal and vertical tile families. Consecutive frames are
-        matched by line offset to estimate the image-space scene motion.
+      - Lines are grouped into horizontal and vertical tile families. Detections update
+        persistent line tracks, and confirmed tracks estimate image-space scene motion.
       - The incoming image transform describes how the floor moves in the image; the vehicle
         motion is the inverse of that transform. We accumulate that inverse to get pose in
         the world frame (world origin = first frame).
@@ -102,8 +122,12 @@ class LkTotalTransformNode(Node):
         self.declare_parameter('axis_angle_tolerance_deg', 25.0)
         self.declare_parameter('line_merge_distance_px', 8.0)
         self.declare_parameter('min_lines_per_axis', 1)
-        self.declare_parameter('max_line_match_distance_px', 35.0)
-        self.declare_parameter('min_line_matches', 1)
+        self.declare_parameter('track_confirm_frames', 3)
+        self.declare_parameter('track_max_missed_frames', 5)
+        self.declare_parameter('track_match_distance_px', 25.0)
+        self.declare_parameter('track_angle_match_tolerance_deg', 12.0)
+        self.declare_parameter('motion_outlier_threshold_px', 12.0)
+        self.declare_parameter('min_confirmed_line_matches', 2)
         self.declare_parameter('reinit_if_fail', True)
 
         # ---- Load params ----
@@ -142,8 +166,14 @@ class LkTotalTransformNode(Node):
         )
         self._line_merge_distance_px = float(self.get_parameter('line_merge_distance_px').value)
         self._min_lines_per_axis = int(self.get_parameter('min_lines_per_axis').value)
-        self._max_line_match_distance_px = float(self.get_parameter('max_line_match_distance_px').value)
-        self._min_line_matches = int(self.get_parameter('min_line_matches').value)
+        self._track_confirm_frames = int(self.get_parameter('track_confirm_frames').value)
+        self._track_max_missed_frames = int(self.get_parameter('track_max_missed_frames').value)
+        self._track_match_distance_px = float(self.get_parameter('track_match_distance_px').value)
+        self._track_angle_match_tolerance = math.radians(
+            float(self.get_parameter('track_angle_match_tolerance_deg').value)
+        )
+        self._motion_outlier_threshold_px = float(self.get_parameter('motion_outlier_threshold_px').value)
+        self._min_confirmed_line_matches = int(self.get_parameter('min_confirmed_line_matches').value)
         self._reinit_if_fail = bool(self.get_parameter('reinit_if_fail').value)
 
         # ---- CameraInfo principal point (optional) ----
@@ -152,7 +182,11 @@ class LkTotalTransformNode(Node):
         self._pp_cy = 0.0
 
         # ---- State ----
-        self._prev_lines: Optional[TileLineDetection] = None
+        self._horizontal_tracks: List[LineTrack] = []
+        self._vertical_tracks: List[LineTrack] = []
+        self._last_scene_tx_small = 0.0
+        self._last_scene_ty_small = 0.0
+        self._last_scene_yaw = 0.0
 
         # running totals (vehicle pose in world frame)
         self._total_raw = np.eye(3, dtype=np.float64)
@@ -338,54 +372,224 @@ class LkTotalTransformNode(Node):
         angle = float(np.average(angles, weights=weights))
         return TileLine(pos=pos, angle_offset=angle, weight=total_weight)
 
-    def _estimate_scene_motion(
+    def _estimate_scene_motion_from_tracks(
         self,
-        prev_lines: TileLineDetection,
-        curr_lines: TileLineDetection,
+        detection: TileLineDetection,
     ) -> Optional[Tuple[float, float, float, int]]:
-        dx_values, dx_angles = self._match_line_family(prev_lines.vertical, curr_lines.vertical)
-        dy_values, dy_angles = self._match_line_family(prev_lines.horizontal, curr_lines.horizontal)
-        match_count = len(dx_values) + len(dy_values)
+        vertical_matches, vertical_unmatched = self._match_track_family(
+            self._vertical_tracks,
+            detection.vertical,
+            self._last_scene_tx_small,
+        )
+        horizontal_matches, horizontal_unmatched = self._match_track_family(
+            self._horizontal_tracks,
+            detection.horizontal,
+            self._last_scene_ty_small,
+        )
 
-        if match_count < self._min_line_matches:
+        vertical_inliers = self._confirmed_inlier_matches(vertical_matches)
+        horizontal_inliers = self._confirmed_inlier_matches(horizontal_matches)
+        vertical_accepted, vertical_unmatched = self._accepted_matches(
+            vertical_matches,
+            vertical_inliers,
+            vertical_unmatched,
+        )
+        horizontal_accepted, horizontal_unmatched = self._accepted_matches(
+            horizontal_matches,
+            horizontal_inliers,
+            horizontal_unmatched,
+        )
+        inlier_count = len(vertical_inliers) + len(horizontal_inliers)
+
+        if inlier_count < self._min_confirmed_line_matches:
+            self._update_track_family(
+                self._vertical_tracks,
+                detection.vertical,
+                vertical_accepted,
+                vertical_unmatched,
+                self._last_scene_tx_small,
+            )
+            self._update_track_family(
+                self._horizontal_tracks,
+                detection.horizontal,
+                horizontal_accepted,
+                horizontal_unmatched,
+                self._last_scene_ty_small,
+            )
             return None
 
-        tx = float(np.median(dx_values)) if dx_values else 0.0
-        ty = float(np.median(dy_values)) if dy_values else 0.0
-        angle_deltas = dx_angles + dy_angles
+        tx = self._motion_from_matches(vertical_inliers, self._last_scene_tx_small)
+        ty = self._motion_from_matches(horizontal_inliers, self._last_scene_ty_small)
+        angle_deltas = [m.angle_delta for m in vertical_inliers + horizontal_inliers]
         rot = float(np.median(angle_deltas)) if angle_deltas else 0.0
-        return tx, ty, rot, match_count
 
-    def _match_line_family(
+        self._update_track_family(
+            self._vertical_tracks,
+            detection.vertical,
+            vertical_accepted,
+            vertical_unmatched,
+            tx,
+        )
+        self._update_track_family(
+            self._horizontal_tracks,
+            detection.horizontal,
+            horizontal_accepted,
+            horizontal_unmatched,
+            ty,
+        )
+        self._last_scene_tx_small = tx
+        self._last_scene_ty_small = ty
+        self._last_scene_yaw = rot
+        return tx, ty, rot, inlier_count
+
+    def _match_track_family(
         self,
-        prev_lines: List[TileLine],
-        curr_lines: List[TileLine],
-    ) -> Tuple[List[float], List[float]]:
-        if not prev_lines or not curr_lines:
+        tracks: List[LineTrack],
+        observations: List[TileLine],
+        predicted_delta: float,
+    ) -> Tuple[List[LineMatch], List[int]]:
+        if not tracks:
+            return [], list(range(len(observations)))
+        if not observations:
             return [], []
 
-        curr_used = set()
-        pos_deltas = []
-        angle_deltas = []
-        for prev in prev_lines:
-            best_idx = -1
-            best_dist = self._max_line_match_distance_px
-            for idx, curr in enumerate(curr_lines):
-                if idx in curr_used:
+        candidates = []
+        for track_idx, track in enumerate(tracks):
+            predicted_pos = track.pos + predicted_delta
+            for obs_idx, observation in enumerate(observations):
+                pos_dist = abs(observation.pos - predicted_pos)
+                angle_dist = abs(self._normalize_angle(observation.angle_offset - track.angle_offset))
+                if pos_dist > self._track_match_distance_px:
                     continue
-                dist = abs(curr.pos - prev.pos)
-                if dist < best_dist:
-                    best_idx = idx
-                    best_dist = dist
-            if best_idx < 0:
+                if angle_dist > self._track_angle_match_tolerance:
+                    continue
+                candidates.append((pos_dist + 10.0 * angle_dist, track_idx, obs_idx))
+
+        candidates.sort(key=lambda item: item[0])
+        used_tracks = set()
+        used_observations = set()
+        matches = []
+        for _, track_idx, obs_idx in candidates:
+            if track_idx in used_tracks or obs_idx in used_observations:
                 continue
+            track = tracks[track_idx]
+            observation = observations[obs_idx]
+            matches.append(LineMatch(
+                track=track,
+                observation=observation,
+                observation_idx=obs_idx,
+                pos_delta=observation.pos - track.pos,
+                angle_delta=self._normalize_angle(observation.angle_offset - track.angle_offset),
+            ))
+            used_tracks.add(track_idx)
+            used_observations.add(obs_idx)
 
-            curr_used.add(best_idx)
-            curr = curr_lines[best_idx]
-            pos_deltas.append(curr.pos - prev.pos)
-            angle_deltas.append(curr.angle_offset - prev.angle_offset)
+        unmatched = [idx for idx in range(len(observations)) if idx not in used_observations]
+        return matches, unmatched
 
-        return pos_deltas, angle_deltas
+    def _confirmed_inlier_matches(self, matches: List[LineMatch]) -> List[LineMatch]:
+        confirmed = [match for match in matches if match.track.confirmed]
+        if len(confirmed) < 2:
+            return confirmed
+
+        median_delta = float(np.median([match.pos_delta for match in confirmed]))
+        return [
+            match for match in confirmed
+            if abs(match.pos_delta - median_delta) <= self._motion_outlier_threshold_px
+        ]
+
+    @staticmethod
+    def _accepted_matches(
+        matches: List[LineMatch],
+        confirmed_inliers: List[LineMatch],
+        unmatched_observation_idxs: List[int],
+    ) -> Tuple[List[LineMatch], List[int]]:
+        inlier_ids = {id(match) for match in confirmed_inliers}
+        accepted = [
+            match for match in matches
+            if not match.track.confirmed or id(match) in inlier_ids
+        ]
+        accepted_ids = {id(match) for match in accepted}
+        rejected_observations = [
+            match.observation_idx for match in matches
+            if id(match) not in accepted_ids
+        ]
+        return accepted, unmatched_observation_idxs + rejected_observations
+
+    @staticmethod
+    def _motion_from_matches(matches: List[LineMatch], fallback: float) -> float:
+        if not matches:
+            return fallback
+        return float(np.median([match.pos_delta for match in matches]))
+
+    def _update_track_family(
+        self,
+        tracks: List[LineTrack],
+        observations: List[TileLine],
+        matches: List[LineMatch],
+        unmatched_observation_idxs: List[int],
+        scene_delta: float,
+    ):
+        matched_tracks = {id(match.track) for match in matches}
+        for match in matches:
+            track = match.track
+            observation = match.observation
+            track.pos = observation.pos
+            track.angle_offset = observation.angle_offset
+            track.confidence = min(1.0, track.confidence + 0.25)
+            track.missed_count = 0
+            track.age += 1
+            track.seen_count += 1
+            if track.seen_count >= self._track_confirm_frames:
+                track.confirmed = True
+
+        for track in tracks:
+            if id(track) in matched_tracks:
+                continue
+            track.pos += scene_delta
+            track.confidence = max(0.0, track.confidence - 0.25)
+            track.missed_count += 1
+            track.age += 1
+
+        for obs_idx in unmatched_observation_idxs:
+            observation = observations[obs_idx]
+            tracks.append(LineTrack(
+                pos=observation.pos,
+                angle_offset=observation.angle_offset,
+                confidence=0.25,
+                confirmed=self._track_confirm_frames <= 1,
+            ))
+
+        tracks[:] = [
+            track for track in tracks
+            if track.missed_count <= self._track_max_missed_frames and track.confidence > 0.0
+        ]
+
+    def _mark_tracks_missed(self):
+        self._mark_track_family_missed(self._vertical_tracks, self._last_scene_tx_small)
+        self._mark_track_family_missed(self._horizontal_tracks, self._last_scene_ty_small)
+
+    def _mark_track_family_missed(self, tracks: List[LineTrack], scene_delta: float):
+        for track in tracks:
+            track.pos += scene_delta
+            track.confidence = max(0.0, track.confidence - 0.25)
+            track.missed_count += 1
+            track.age += 1
+        tracks[:] = [
+            track for track in tracks
+            if track.missed_count <= self._track_max_missed_frames and track.confidence > 0.0
+        ]
+
+    def _reset_line_tracks(self):
+        self._horizontal_tracks = []
+        self._vertical_tracks = []
+        self._last_scene_tx_small = 0.0
+        self._last_scene_ty_small = 0.0
+        self._last_scene_yaw = 0.0
+
+    @staticmethod
+    def _normalize_angle(angle: float) -> float:
+        return math.atan2(math.sin(angle), math.cos(angle))
 
     def _publish_debug(self, frame_bgr: np.ndarray, detection: TileLineDetection, scale_factor: float):
         if self._debug_pub is None or frame_bgr is None or detection is None:
@@ -424,21 +628,17 @@ class LkTotalTransformNode(Node):
 
         if curr_lines is None:
             self.get_logger().warn('No tile lines detected in bottom camera image.', throttle_duration_sec=5.0)
-            if self._reinit_if_fail:
-                self._prev_lines = None
+            self._mark_tracks_missed()
             return
 
-        if self._prev_lines is None:
-            self._prev_lines = curr_lines
+        motion = self._estimate_scene_motion_from_tracks(curr_lines)
+        if motion is None:
+            self.get_logger().warn(
+                'Insufficient confirmed tile-line tracks for transform.',
+                throttle_duration_sec=5.0,
+            )
             if self._publish_debug_image:
                 self._publish_debug(frame_bgr, curr_lines, scale_factor)
-            return
-
-        motion = self._estimate_scene_motion(self._prev_lines, curr_lines)
-        if motion is None:
-            self.get_logger().warn('Insufficient matched tile lines for transform.', throttle_duration_sec=5.0)
-            if self._reinit_if_fail:
-                self._prev_lines = curr_lines
             return
 
         tx, ty, rot, match_count = motion
@@ -468,7 +668,7 @@ class LkTotalTransformNode(Node):
         except np.linalg.LinAlgError:
             self.get_logger().warn('Failed to invert tile-line transform; reinitializing.', throttle_duration_sec=5.0)
             if self._reinit_if_fail:
-                self._prev_lines = curr_lines
+                self._reset_line_tracks()
             return
 
         # Accumulate vehicle pose in world frame (world origin is the first frame)
@@ -482,9 +682,6 @@ class LkTotalTransformNode(Node):
 
         # Publish totals
         self._publish()
-
-        # Update prev state
-        self._prev_lines = curr_lines
 
         if self._publish_debug_image:
             self._publish_debug(frame_bgr, curr_lines, scale_factor)
