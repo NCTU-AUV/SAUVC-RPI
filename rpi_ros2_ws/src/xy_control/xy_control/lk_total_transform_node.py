@@ -33,6 +33,8 @@ class TileLineDetection:
     horizontal: List[TileLine]
     vertical: List[TileLine]
     segments: np.ndarray
+    horizontal_normal: np.ndarray
+    vertical_normal: np.ndarray
 
 
 @dataclass
@@ -68,7 +70,7 @@ class LkTotalTransformNode(Node):
 
     Notes:
       - Detects pool tile grout lines in the bottom camera image using Canny + Hough lines.
-      - Lines are grouped into horizontal and vertical tile families. Detections update
+      - Lines are grouped into the two dominant orthogonal tile families. Detections update
         persistent line tracks, and confirmed tracks estimate image-space scene motion.
       - The incoming image transform describes how the floor moves in the image; the vehicle
         motion is the inverse of that transform. We accumulate that inverse to get pose in
@@ -120,6 +122,7 @@ class LkTotalTransformNode(Node):
         self.declare_parameter('min_line_length_px', 45.0)
         self.declare_parameter('max_line_gap_px', 12.0)
         self.declare_parameter('axis_angle_tolerance_deg', 25.0)
+        self.declare_parameter('use_dynamic_grid_angles', True)
         self.declare_parameter('line_merge_distance_px', 8.0)
         self.declare_parameter('min_lines_per_axis', 1)
         self.declare_parameter('track_confirm_frames', 3)
@@ -164,6 +167,7 @@ class LkTotalTransformNode(Node):
         self._axis_angle_tolerance = math.radians(
             float(self.get_parameter('axis_angle_tolerance_deg').value)
         )
+        self._use_dynamic_grid_angles = bool(self.get_parameter('use_dynamic_grid_angles').value)
         self._line_merge_distance_px = float(self.get_parameter('line_merge_distance_px').value)
         self._min_lines_per_axis = int(self.get_parameter('min_lines_per_axis').value)
         self._track_confirm_frames = int(self.get_parameter('track_confirm_frames').value)
@@ -186,7 +190,10 @@ class LkTotalTransformNode(Node):
         self._vertical_tracks: List[LineTrack] = []
         self._last_scene_tx_small = 0.0
         self._last_scene_ty_small = 0.0
+        self._last_scene_translation_small = np.zeros(2, dtype=np.float64)
         self._last_scene_yaw = 0.0
+        self._have_grid_orientation = False
+        self._horizontal_family_dir = 0.0
 
         # running totals (vehicle pose in world frame)
         self._total_raw = np.eye(3, dtype=np.float64)
@@ -302,11 +309,11 @@ class LkTotalTransformNode(Node):
             return None
 
         h, w = gray_small.shape[:2]
-        cx = 0.5 * float(w)
-        cy = 0.5 * float(h)
+        center = np.array([0.5 * float(w), 0.5 * float(h)], dtype=np.float64)
         horizontal_obs = []
         vertical_obs = []
         kept_segments = []
+        raw_segments = []
 
         for line in lines.reshape(-1, 4):
             x1, y1, x2, y2 = [float(v) for v in line]
@@ -315,25 +322,39 @@ class LkTotalTransformNode(Node):
             length = math.hypot(dx, dy)
             if length <= 0.0:
                 continue
+            raw_segments.append((line.astype(np.int32), x1, y1, x2, y2, dx, dy, length))
 
+        if not raw_segments:
+            return None
+
+        if self._use_dynamic_grid_angles:
+            base_angle = self._estimate_grid_base_angle(raw_segments)
+        else:
+            base_angle = 0.0
+        base_angle = self._align_grid_base_angle(base_angle)
+
+        horizontal_dir = base_angle
+        vertical_dir = (base_angle + 0.5 * math.pi) % math.pi
+        horizontal_normal = self._line_normal(horizontal_dir)
+        vertical_normal = self._line_normal(vertical_dir)
+        self._horizontal_family_dir = horizontal_dir
+        self._have_grid_orientation = True
+
+        for segment, x1, y1, x2, y2, dx, dy, length in raw_segments:
             angle = math.atan2(dy, dx) % math.pi
-            horizontal_error = min(angle, math.pi - angle)
-            vertical_error = abs(angle - 0.5 * math.pi)
+            horizontal_error = abs(self._line_angle_diff(angle, horizontal_dir))
+            vertical_error = abs(self._line_angle_diff(angle, vertical_dir))
 
             if horizontal_error <= self._axis_angle_tolerance:
-                signed_angle = angle if angle <= 0.5 * math.pi else angle - math.pi
-                tan_angle = math.tan(signed_angle)
-                pos = y1 + tan_angle * (cx - x1)
-                horizontal_obs.append((pos, signed_angle, length))
-                kept_segments.append(line.astype(np.int32))
+                midpoint = np.array([0.5 * (x1 + x2), 0.5 * (y1 + y2)], dtype=np.float64)
+                pos = float(horizontal_normal @ (midpoint - center))
+                horizontal_obs.append((pos, angle, length))
+                kept_segments.append(segment)
             elif vertical_error <= self._axis_angle_tolerance:
-                signed_angle = angle - 0.5 * math.pi
-                # For a vertical-ish line, solve x at image-center y using dx / dy.
-                if abs(dy) < 1e-6:
-                    continue
-                pos = x1 + (dx / dy) * (cy - y1)
-                vertical_obs.append((pos, signed_angle, length))
-                kept_segments.append(line.astype(np.int32))
+                midpoint = np.array([0.5 * (x1 + x2), 0.5 * (y1 + y2)], dtype=np.float64)
+                pos = float(vertical_normal @ (midpoint - center))
+                vertical_obs.append((pos, angle, length))
+                kept_segments.append(segment)
 
         horizontal = self._cluster_lines(horizontal_obs)
         vertical = self._cluster_lines(vertical_obs)
@@ -341,7 +362,13 @@ class LkTotalTransformNode(Node):
             return None
 
         segments = np.array(kept_segments, dtype=np.int32) if kept_segments else np.empty((0, 4), dtype=np.int32)
-        return TileLineDetection(horizontal=horizontal, vertical=vertical, segments=segments)
+        return TileLineDetection(
+            horizontal=horizontal,
+            vertical=vertical,
+            segments=segments,
+            horizontal_normal=horizontal_normal,
+            vertical_normal=vertical_normal,
+        )
 
     def _cluster_lines(self, observations) -> List[TileLine]:
         if not observations:
@@ -360,6 +387,41 @@ class LkTotalTransformNode(Node):
         return clusters
 
     @staticmethod
+    def _estimate_grid_base_angle(raw_segments) -> float:
+        weighted_cos = 0.0
+        weighted_sin = 0.0
+        for _, _, _, _, _, dx, dy, length in raw_segments:
+            angle = math.atan2(dy, dx)
+            weighted_cos += length * math.cos(4.0 * angle)
+            weighted_sin += length * math.sin(4.0 * angle)
+
+        if abs(weighted_cos) < 1e-9 and abs(weighted_sin) < 1e-9:
+            return 0.0
+
+        base = 0.25 * math.atan2(weighted_sin, weighted_cos)
+        return base % (0.5 * math.pi)
+
+    def _align_grid_base_angle(self, base_angle: float) -> float:
+        if not self._have_grid_orientation:
+            return base_angle % math.pi
+
+        candidates = [
+            base_angle % math.pi,
+            (base_angle + 0.5 * math.pi) % math.pi,
+        ]
+        return min(
+            candidates,
+            key=lambda angle: abs(self._line_angle_diff(angle, self._horizontal_family_dir)),
+        )
+
+    @staticmethod
+    def _line_normal(direction_angle: float) -> np.ndarray:
+        return np.array([
+            -math.sin(direction_angle),
+            math.cos(direction_angle),
+        ], dtype=np.float64)
+
+    @staticmethod
     def _merge_cluster(cluster) -> TileLine:
         weights = np.array([item[2] for item in cluster], dtype=np.float64)
         positions = np.array([item[0] for item in cluster], dtype=np.float64)
@@ -369,22 +431,33 @@ class LkTotalTransformNode(Node):
             total_weight = 1.0
             weights = np.ones_like(weights)
         pos = float(np.average(positions, weights=weights))
-        angle = float(np.average(angles, weights=weights))
+        doubled_angles = 2.0 * angles
+        angle = 0.5 * math.atan2(
+            float(np.average(np.sin(doubled_angles), weights=weights)),
+            float(np.average(np.cos(doubled_angles), weights=weights)),
+        )
+        angle = angle % math.pi
         return TileLine(pos=pos, angle_offset=angle, weight=total_weight)
 
     def _estimate_scene_motion_from_tracks(
         self,
         detection: TileLineDetection,
     ) -> Optional[Tuple[float, float, float, int]]:
+        horizontal_prediction = float(
+            detection.horizontal_normal @ self._last_scene_translation_small
+        )
+        vertical_prediction = float(
+            detection.vertical_normal @ self._last_scene_translation_small
+        )
         vertical_matches, vertical_unmatched = self._match_track_family(
             self._vertical_tracks,
             detection.vertical,
-            self._last_scene_tx_small,
+            vertical_prediction,
         )
         horizontal_matches, horizontal_unmatched = self._match_track_family(
             self._horizontal_tracks,
             detection.horizontal,
-            self._last_scene_ty_small,
+            horizontal_prediction,
         )
 
         vertical_inliers = self._confirmed_inlier_matches(vertical_matches)
@@ -407,19 +480,27 @@ class LkTotalTransformNode(Node):
                 detection.vertical,
                 vertical_accepted,
                 vertical_unmatched,
-                self._last_scene_tx_small,
+                vertical_prediction,
             )
             self._update_track_family(
                 self._horizontal_tracks,
                 detection.horizontal,
                 horizontal_accepted,
                 horizontal_unmatched,
-                self._last_scene_ty_small,
+                horizontal_prediction,
             )
             return None
 
-        tx = self._motion_from_matches(vertical_inliers, self._last_scene_tx_small)
-        ty = self._motion_from_matches(horizontal_inliers, self._last_scene_ty_small)
+        vertical_delta = self._motion_from_matches(vertical_inliers, vertical_prediction)
+        horizontal_delta = self._motion_from_matches(horizontal_inliers, horizontal_prediction)
+        translation = self._solve_translation_from_line_deltas(
+            detection.horizontal_normal,
+            horizontal_delta,
+            detection.vertical_normal,
+            vertical_delta,
+        )
+        tx = float(translation[0])
+        ty = float(translation[1])
         angle_deltas = [m.angle_delta for m in vertical_inliers + horizontal_inliers]
         rot = float(np.median(angle_deltas)) if angle_deltas else 0.0
 
@@ -428,17 +509,18 @@ class LkTotalTransformNode(Node):
             detection.vertical,
             vertical_accepted,
             vertical_unmatched,
-            tx,
+            vertical_delta,
         )
         self._update_track_family(
             self._horizontal_tracks,
             detection.horizontal,
             horizontal_accepted,
             horizontal_unmatched,
-            ty,
+            horizontal_delta,
         )
         self._last_scene_tx_small = tx
         self._last_scene_ty_small = ty
+        self._last_scene_translation_small = translation
         self._last_scene_yaw = rot
         return tx, ty, rot, inlier_count
 
@@ -458,7 +540,7 @@ class LkTotalTransformNode(Node):
             predicted_pos = track.pos + predicted_delta
             for obs_idx, observation in enumerate(observations):
                 pos_dist = abs(observation.pos - predicted_pos)
-                angle_dist = abs(self._normalize_angle(observation.angle_offset - track.angle_offset))
+                angle_dist = abs(self._line_angle_diff(observation.angle_offset, track.angle_offset))
                 if pos_dist > self._track_match_distance_px:
                     continue
                 if angle_dist > self._track_angle_match_tolerance:
@@ -479,7 +561,7 @@ class LkTotalTransformNode(Node):
                 observation=observation,
                 observation_idx=obs_idx,
                 pos_delta=observation.pos - track.pos,
-                angle_delta=self._normalize_angle(observation.angle_offset - track.angle_offset),
+                angle_delta=self._line_angle_diff(observation.angle_offset, track.angle_offset),
             ))
             used_tracks.add(track_idx)
             used_observations.add(obs_idx)
@@ -521,6 +603,24 @@ class LkTotalTransformNode(Node):
         if not matches:
             return fallback
         return float(np.median([match.pos_delta for match in matches]))
+
+    def _solve_translation_from_line_deltas(
+        self,
+        horizontal_normal: np.ndarray,
+        horizontal_delta: float,
+        vertical_normal: np.ndarray,
+        vertical_delta: float,
+    ) -> np.ndarray:
+        A = np.vstack([horizontal_normal, vertical_normal])
+        b = np.array([horizontal_delta, vertical_delta], dtype=np.float64)
+        try:
+            return np.linalg.solve(A, b)
+        except np.linalg.LinAlgError:
+            self.get_logger().warn(
+                'Tile-line family normals are degenerate; using last scene translation.',
+                throttle_duration_sec=5.0,
+            )
+            return self._last_scene_translation_small.copy()
 
     def _update_track_family(
         self,
@@ -566,8 +666,8 @@ class LkTotalTransformNode(Node):
         ]
 
     def _mark_tracks_missed(self):
-        self._mark_track_family_missed(self._vertical_tracks, self._last_scene_tx_small)
-        self._mark_track_family_missed(self._horizontal_tracks, self._last_scene_ty_small)
+        self._mark_track_family_missed(self._vertical_tracks, 0.0)
+        self._mark_track_family_missed(self._horizontal_tracks, 0.0)
 
     def _mark_track_family_missed(self, tracks: List[LineTrack], scene_delta: float):
         for track in tracks:
@@ -585,11 +685,15 @@ class LkTotalTransformNode(Node):
         self._vertical_tracks = []
         self._last_scene_tx_small = 0.0
         self._last_scene_ty_small = 0.0
+        self._last_scene_translation_small = np.zeros(2, dtype=np.float64)
         self._last_scene_yaw = 0.0
+        self._have_grid_orientation = False
+        self._horizontal_family_dir = 0.0
 
     @staticmethod
-    def _normalize_angle(angle: float) -> float:
-        return math.atan2(math.sin(angle), math.cos(angle))
+    def _line_angle_diff(angle: float, reference: float) -> float:
+        diff = (angle - reference + 0.5 * math.pi) % math.pi - 0.5 * math.pi
+        return diff
 
     def _publish_debug(self, frame_bgr: np.ndarray, detection: TileLineDetection, scale_factor: float):
         if self._debug_pub is None or frame_bgr is None or detection is None:
