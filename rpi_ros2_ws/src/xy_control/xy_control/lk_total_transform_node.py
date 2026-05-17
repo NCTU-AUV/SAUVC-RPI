@@ -57,6 +57,15 @@ class LineTrack:
     confirmed: bool = False
 
 
+@dataclass
+class VisualMotion:
+    tx: float
+    ty: float
+    rot: float
+    scale: float
+    inliers: int
+
+
 class LkTotalTransformNode(Node):
     """
     Subscribe:
@@ -72,6 +81,8 @@ class LkTotalTransformNode(Node):
       - Detects pool tile grout lines in the bottom camera image using Canny + Hough lines.
       - Lines are grouped into the two dominant orthogonal tile families. Detections update
         persistent line tracks, and confirmed tracks estimate image-space scene motion.
+      - Feature tracking estimates frame-to-frame rotation/yaw continuity, avoiding the
+        90-degree ambiguity of a square tile grid when no IMU yaw is available.
       - The incoming image transform describes how the floor moves in the image; the vehicle
         motion is the inverse of that transform. We accumulate that inverse to get pose in
         the world frame (world origin = first frame).
@@ -133,6 +144,21 @@ class LkTotalTransformNode(Node):
         self.declare_parameter('min_confirmed_line_matches', 2)
         self.declare_parameter('reinit_if_fail', True)
 
+        # ---- Params (visual feature tracking for yaw continuity) ----
+        self.declare_parameter('use_visual_feature_tracking', True)
+        self.declare_parameter('max_corners', 500)
+        self.declare_parameter('quality_level', 0.01)
+        self.declare_parameter('min_distance', 7.0)
+        self.declare_parameter('block_size', 7)
+        self.declare_parameter('win_size', 21)
+        self.declare_parameter('max_level', 2)
+        self.declare_parameter('criteria_count', 20)
+        self.declare_parameter('criteria_eps', 0.03)
+        self.declare_parameter('max_track_error', 50.0)
+        self.declare_parameter('ransac_reproj_threshold_px', 3.0)
+        self.declare_parameter('min_visual_inliers', 10)
+        self.declare_parameter('min_visual_tracked_points', 30)
+
         # ---- Load params ----
         self._bridge = CvBridge()
         self._image_topic = self.get_parameter('image_topic').value
@@ -180,6 +206,25 @@ class LkTotalTransformNode(Node):
         self._min_confirmed_line_matches = int(self.get_parameter('min_confirmed_line_matches').value)
         self._reinit_if_fail = bool(self.get_parameter('reinit_if_fail').value)
 
+        self._use_visual_feature_tracking = bool(self.get_parameter('use_visual_feature_tracking').value)
+        self._max_corners = int(self.get_parameter('max_corners').value)
+        self._quality_level = float(self.get_parameter('quality_level').value)
+        self._min_distance = float(self.get_parameter('min_distance').value)
+        self._block_size = int(self.get_parameter('block_size').value)
+        self._win_size = int(self.get_parameter('win_size').value)
+        self._max_level = int(self.get_parameter('max_level').value)
+        self._criteria_count = int(self.get_parameter('criteria_count').value)
+        self._criteria_eps = float(self.get_parameter('criteria_eps').value)
+        self._max_track_error = float(self.get_parameter('max_track_error').value)
+        self._ransac_thresh = float(self.get_parameter('ransac_reproj_threshold_px').value)
+        self._min_visual_inliers = int(self.get_parameter('min_visual_inliers').value)
+        self._min_visual_tracked_points = int(self.get_parameter('min_visual_tracked_points').value)
+        self._lk_criteria = (
+            cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
+            self._criteria_count,
+            self._criteria_eps,
+        )
+
         # ---- CameraInfo principal point (optional) ----
         self._have_pp = False
         self._pp_cx = 0.0
@@ -194,6 +239,8 @@ class LkTotalTransformNode(Node):
         self._last_scene_yaw = 0.0
         self._have_grid_orientation = False
         self._horizontal_family_dir = 0.0
+        self._prev_gray: Optional[np.ndarray] = None
+        self._prev_pts: Optional[np.ndarray] = None
 
         # running totals (vehicle pose in world frame)
         self._total_raw = np.eye(3, dtype=np.float64)
@@ -252,6 +299,98 @@ class LkTotalTransformNode(Node):
         new_h = max(1, int(round(h * scale)))
         small = cv2.resize(gray, (new_w, new_h), interpolation=cv2.INTER_AREA)
         return small, scale
+
+    def _detect_features(self, gray_small: np.ndarray) -> Optional[np.ndarray]:
+        pts = cv2.goodFeaturesToTrack(
+            gray_small,
+            mask=None,
+            maxCorners=self._max_corners,
+            qualityLevel=self._quality_level,
+            minDistance=self._min_distance,
+            blockSize=self._block_size,
+        )
+        if pts is None:
+            return None
+        return pts.astype(np.float32)
+
+    def _estimate_visual_motion(self, gray_small: np.ndarray) -> Optional[VisualMotion]:
+        if not self._use_visual_feature_tracking:
+            return None
+
+        if (
+            self._prev_gray is None
+            or self._prev_pts is None
+            or len(self._prev_pts) < self._min_visual_tracked_points
+        ):
+            self._prev_gray = gray_small
+            self._prev_pts = self._detect_features(gray_small)
+            return None
+
+        p1, st, err = cv2.calcOpticalFlowPyrLK(
+            self._prev_gray,
+            gray_small,
+            self._prev_pts,
+            None,
+            winSize=(self._win_size, self._win_size),
+            maxLevel=self._max_level,
+            criteria=self._lk_criteria,
+        )
+
+        if p1 is None or st is None:
+            self._prev_gray = gray_small
+            self._prev_pts = self._detect_features(gray_small)
+            return None
+
+        st = st.reshape(-1)
+        good_new = p1[st == 1].reshape(-1, 2)
+        good_old = self._prev_pts[st == 1].reshape(-1, 2)
+
+        if err is not None:
+            err = err.reshape(-1)
+            good_err = err[st == 1]
+            if self._max_track_error > 0.0:
+                mask = good_err <= self._max_track_error
+                good_new = good_new[mask]
+                good_old = good_old[mask]
+
+        if good_new.shape[0] < self._min_visual_tracked_points:
+            self._prev_gray = gray_small
+            self._prev_pts = self._detect_features(gray_small)
+            return None
+
+        M2, inliers = cv2.estimateAffinePartial2D(
+            good_old,
+            good_new,
+            method=cv2.RANSAC,
+            ransacReprojThreshold=self._ransac_thresh,
+            maxIters=2000,
+            confidence=0.99,
+            refineIters=10,
+        )
+
+        self._prev_gray = gray_small
+        self._prev_pts = good_new.reshape(-1, 1, 2).astype(np.float32)
+
+        if M2 is None or inliers is None:
+            self._prev_pts = self._detect_features(gray_small)
+            return None
+
+        inlier_count = int(inliers.sum())
+        if inlier_count < self._min_visual_inliers:
+            self._prev_pts = self._detect_features(gray_small)
+            return None
+
+        m00, _, tx = M2[0]
+        m10, _, ty = M2[1]
+        scale = math.sqrt(float(m00) * float(m00) + float(m10) * float(m10))
+        rot = math.atan2(float(m10), float(m00))
+        return VisualMotion(
+            tx=float(tx),
+            ty=float(ty),
+            rot=float(rot),
+            scale=float(scale),
+            inliers=inlier_count,
+        )
 
     @staticmethod
     def _extract_similarity(H: np.ndarray) -> Tuple[float, float, float, float]:
@@ -622,6 +761,24 @@ class LkTotalTransformNode(Node):
             )
             return self._last_scene_translation_small.copy()
 
+    @staticmethod
+    def _center_compensated_translation(
+        tx: float,
+        ty: float,
+        rot: float,
+        cx: float,
+        cy: float,
+    ) -> np.ndarray:
+        cos_rot = math.cos(rot)
+        sin_rot = math.sin(rot)
+        rot_mat = np.array([
+            [cos_rot, -sin_rot],
+            [sin_rot, cos_rot],
+        ], dtype=np.float64)
+        center = np.array([cx, cy], dtype=np.float64)
+        raw_t = np.array([tx, ty], dtype=np.float64)
+        return raw_t + (rot_mat - np.eye(2, dtype=np.float64)) @ center
+
     def _update_track_family(
         self,
         tracks: List[LineTrack],
@@ -728,39 +885,74 @@ class LkTotalTransformNode(Node):
         gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
         h_img, w_img = gray.shape[:2]
         gray_small, scale_factor = self._downscale_gray(gray)
+        h_small, w_small = gray_small.shape[:2]
+        visual_motion = self._estimate_visual_motion(gray_small)
+        visual_translation_small = None
+        if visual_motion is not None:
+            visual_translation_small = self._center_compensated_translation(
+                visual_motion.tx,
+                visual_motion.ty,
+                visual_motion.rot,
+                0.5 * float(w_small),
+                0.5 * float(h_small),
+            )
         curr_lines = self._detect_tile_lines(gray_small)
+        line_motion = None
 
         if curr_lines is None:
             self.get_logger().warn('No tile lines detected in bottom camera image.', throttle_duration_sec=5.0)
             self._mark_tracks_missed()
-            return
+        else:
+            line_motion = self._estimate_scene_motion_from_tracks(curr_lines)
 
-        motion = self._estimate_scene_motion_from_tracks(curr_lines)
-        if motion is None:
+        if line_motion is None and curr_lines is not None:
             self.get_logger().warn(
                 'Insufficient confirmed tile-line tracks for transform.',
                 throttle_duration_sec=5.0,
             )
-            if self._publish_debug_image:
+
+        if line_motion is not None:
+            tx, ty, line_rot, match_count = line_motion
+            rot = visual_motion.rot if visual_motion is not None else line_rot
+            source = 'hybrid' if visual_motion is not None else 'tile_lines'
+        elif visual_motion is not None:
+            tx = visual_motion.tx
+            ty = visual_motion.ty
+            rot = visual_motion.rot
+            match_count = visual_motion.inliers
+            source = 'visual'
+            self._last_scene_tx_small = float(visual_translation_small[0])
+            self._last_scene_ty_small = float(visual_translation_small[1])
+            self._last_scene_translation_small = visual_translation_small
+            self._last_scene_yaw = rot
+        else:
+            if self._publish_debug_image and curr_lines is not None:
                 self._publish_debug(frame_bgr, curr_lines, scale_factor)
             return
 
-        tx, ty, rot, match_count = motion
         if scale_factor > 0.0:
             tx /= scale_factor
             ty /= scale_factor
 
         cos_rot = math.cos(rot)
         sin_rot = math.sin(rot)
-        H_raw_img = np.array([
-            [cos_rot, -sin_rot, tx],
-            [sin_rot, cos_rot, ty],
-            [0.0, 0.0, 1.0],
-        ], dtype=np.float64)
-
-        # Center-compensated increment: H_c = T(-c) * H_raw * T(c)
         cx, cy = self._get_rotation_center(w_img, h_img)
-        H_comp_img = _T(-cx, -cy) @ H_raw_img @ _T(cx, cy)
+        if line_motion is not None:
+            # Tile-line translation is already measured about the image center.
+            H_comp_img = np.array([
+                [cos_rot, -sin_rot, tx],
+                [sin_rot, cos_rot, ty],
+                [0.0, 0.0, 1.0],
+            ], dtype=np.float64)
+            H_raw_img = _T(cx, cy) @ H_comp_img @ _T(-cx, -cy)
+        else:
+            H_raw_img = np.array([
+                [cos_rot, -sin_rot, tx],
+                [sin_rot, cos_rot, ty],
+                [0.0, 0.0, 1.0],
+            ], dtype=np.float64)
+            # Center-compensated increment: H_c = T(-c) * H_raw * T(c)
+            H_comp_img = _T(-cx, -cy) @ H_raw_img @ _T(cx, cy)
 
         # Map to body frame (scene transform) then invert to recover vehicle motion
         H_scene_raw_body = self._change_of_basis(H_raw_img)
@@ -780,8 +972,8 @@ class LkTotalTransformNode(Node):
         self._total_comp = self._total_comp @ H_motion_comp_body
 
         self.get_logger().debug(
-            f'tile line transform: matches={match_count}, scene_tx={tx:.2f}, scene_ty={ty:.2f}, '
-            f'scene_yaw={rot:.4f}'
+            f'{source} transform: matches={match_count}, scene_tx={tx:.2f}, '
+            f'scene_ty={ty:.2f}, scene_yaw={rot:.4f}'
         )
 
         # Publish totals
