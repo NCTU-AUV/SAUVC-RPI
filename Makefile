@@ -154,7 +154,7 @@ clean: compose_clean
 # --------------------------------------------------------------------
 # Simulation targets
 # --------------------------------------------------------------------
-# These targets are for controlling SAUVC-Simulation from SAUVC-RPI.
+# These targets are for controlling SAUVC-Simulation from SAUVC-Control.
 # They intentionally DO NOT start hardware-only nodes:
 # - stm32_flasher_node
 # - micro_ros_agent
@@ -187,7 +187,7 @@ sim_launch: sim_launch_detached sim_status
 	@echo "Or from another device: http://<HOST_IP>/controller"
 
 sim_launch_detached: compose_up
-	@echo "Stopping old SAUVC-RPI simulation-control nodes..."
+	@echo "Stopping old SAUVC-Control simulation-control nodes..."
 	-@HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) exec orca /bin/bash -lc "\
 		$(STOP_STACK); \
 		source /opt/ros/humble/setup.bash; \
@@ -231,7 +231,7 @@ sim_activate_wrench_sum:
 sim_stop: stop
 
 stop:
-	@echo "Stopping SAUVC-RPI control-stack nodes..."
+	@echo "Stopping SAUVC-Control control-stack nodes..."
 	-@HOST_DISPLAY=$(HOST_DISPLAY) XAUTH_FILE=$(XAUTH_FILE) XAUTHORITY=$(XAUTHORITY) $(ROS_NET_ENV) $(COMPOSE) exec orca /bin/bash -lc "\
 		$(STOP_STACK); \
 		source /opt/ros/humble/setup.bash; \

@@ -107,7 +107,7 @@ TOPIC_MISSION_STATUS = "decision/status"
 # The decision node runs in the autonomy container under a fixed /orca prefix.
 # Both stacks share one ROS graph, so subscribing across works; what does not
 # work is the message type. /orca/decision/status carries
-# orca_interface/msg/DecisionStatus and orca_interface is a SAUVC-JETSON package
+# orca_interface/msg/DecisionStatus and orca_interface is a SAUVC-Autonomy package
 # that is not built into the control container, so this node cannot deserialise
 # it — which is why mission state used to be missing from the GUI entirely.
 # decision_node therefore mirrors the same fields as JSON in a std_msgs/String,

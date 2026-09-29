@@ -1,15 +1,15 @@
-# SAUVC-RPI —— Orca AUV 載具控制堆疊
+# SAUVC-Control —— Orca AUV 載具控制堆疊
 
-> **名稱說明**：repo 名還叫 `SAUVC-RPI`，但樹莓派已經退場。這裡是載具的
+> **名稱說明**：repo 名還叫 `SAUVC-Control`，但樹莓派已經退場。這裡是載具的
 > **控制堆疊**（vehicle control stack）：接收目標、跑 PID、把力分配給推進器。
-> 它跑在哪塊板子上是部署細節 —— 目前與感知決策堆疊（`SAUVC-JETSON`）
+> 它跑在哪塊板子上是部署細節 —— 目前與感知決策堆疊（`SAUVC-Autonomy`）
 > 一起跑在同一塊 Jetson Orin NX 上，各自在獨立 container 裡。
 > 改名會與 super-repo 的建立一併進行。
 
 ## 這個 repo 負責什麼
 
 ```text
-   SAUVC-JETSON  (separate container)
+   SAUVC-Autonomy  (separate container)
    perception -> BehaviorTree decision
             |
             |  control/wrench_sources/decision  (Wrench, 50 Hz)
@@ -54,8 +54,8 @@ make up && make build && make launch
 底下是單獨開發本 repo 時用的流程。
 
 ```shell
-git clone https://github.com/NCTU-AUV/SAUVC-RPI.git
-cd SAUVC-RPI
+git clone https://github.com/NCTU-AUV/SAUVC-Control.git
+cd SAUVC-Control
 git submodule update --init --recursive
 ```
 
