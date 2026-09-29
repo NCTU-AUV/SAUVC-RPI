@@ -27,14 +27,19 @@ RUN source /opt/ros/humble/setup.bash && \
 RUN echo "source ~/uros_ws/install/local_setup.bash" >> /etc/bash.bashrc
 
 # -----------------------------------------------------------------------------
-# 韌體燒錄與飛控介面
+# 韌體燒錄工具與 MAVLink Python 介面
+# 目前的 bringup 不啟動 MAVROS（只有舊的手動 script 仍有引用）；
+# 其 ROS Humble 套件在此 ARM64 套件庫不可用，因此不安裝 MAVROS
+# 與其 GeographicLib 資料集。
 # -----------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         stlink-tools \
-        ros-humble-mavros \
+        python3-pip \
  && rm -rf /var/lib/apt/lists/*
 
-RUN source /opt/ros/humble/setup.bash && ros2 run mavros install_geographiclib_datasets.sh
+# Ubuntu Jammy ARM64 的 apt 來源沒有 python3-pymavlink；使用 PyPI 的
+# CPython 3.10 aarch64 wheel，固定版本以免重新建置時取得不同的行為。
+RUN python3 -m pip install --no-cache-dir pymavlink==2.4.49
 
 # -----------------------------------------------------------------------------
 # Workspace 執行期相依
